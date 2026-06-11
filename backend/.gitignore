@@ -1,0 +1,14 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+uploads/*
+!uploads/.gitkeep
+!uploads/cotizaciones/
+uploads/cotizaciones/*
+!uploads/cotizaciones/.gitkeep
+*.log
+*.tmp

@@ -1,0 +1,51 @@
+# Git internals and nested repositories
+.git/
+.gitmodules
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Backend runtime files
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/cotizaciones/
+backend/uploads/cotizaciones/*
+!backend/uploads/cotizaciones/.gitkeep
+*.log
+*.tmp
+
+# Node / Vite
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.tsbuildinfo
+*.local
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
