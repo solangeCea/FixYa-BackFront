@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { Wrench, User, Shield, Briefcase, AlertCircle, LogIn } from "lucide-react";
+import {
+  Wrench,
+  User,
+  Shield,
+  Briefcase,
+  AlertCircle,
+  LogIn,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 import { login, obtenerUsuarioActual } from "../../services/authService";
@@ -29,6 +38,7 @@ function Login() {
   >(null);
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{
@@ -41,21 +51,21 @@ function Login() {
     {
       type: "cliente" as const,
       title: "Cliente",
-      description: "Solicita servicios y revisa cotizaciones.",
+      description: "Revisa tus solicitudes y cotizaciones.",
       icon: User,
       color: "bg-cyan-50 text-cyan-700",
     },
     {
       type: "tecnico" as const,
-      title: "Tecnico",
-      description: "Acepta trabajos y gestiona servicios.",
+      title: "Técnico",
+      description: "Gestiona trabajos y respuestas a clientes.",
       icon: Briefcase,
       color: "bg-emerald-50 text-emerald-700",
     },
     {
       type: "admin" as const,
-      title: "Admin",
-      description: "Modera y supervisa la plataforma.",
+      title: "Administrador",
+      description: "Administra usuarios, técnicos y solicitudes.",
       icon: Shield,
       color: "bg-teal-50 text-teal-700",
     },
@@ -66,12 +76,12 @@ function Login() {
     setError("");
     const nextErrors: typeof fieldErrors = {};
 
-    if (!selectedRole) nextErrors.role = "Selecciona el rol con el que quieres ingresar.";
-    if (!correo.trim()) nextErrors.correo = "Ingresa tu correo electronico.";
+    if (!selectedRole) nextErrors.role = "Selecciona cómo quieres ingresar.";
+    if (!correo.trim()) nextErrors.correo = "Ingresa tu correo electrónico.";
     if (correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
-      nextErrors.correo = "Ingresa un correo valido.";
+      nextErrors.correo = "Ingresa un correo válido.";
     }
-    if (!contrasena.trim()) nextErrors.contrasena = "Ingresa tu contrasena.";
+    if (!contrasena.trim()) nextErrors.contrasena = "Ingresa tu contraseña.";
 
     setFieldErrors(nextErrors);
 
@@ -92,7 +102,9 @@ function Login() {
 
       navigate(getDashboardPath(usuario.tipo_usuario));
     } catch (error) {
-      setError("No pudimos iniciar sesion con esas credenciales.");
+      setError(
+        "El correo o la contraseña no coinciden. Revisa los datos e inténtalo nuevamente."
+      );
       console.error(error);
     } finally {
       setLoading(false);
@@ -104,7 +116,7 @@ function Login() {
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid w-full max-w-6xl overflow-hidden rounded-3xl bg-white shadow-2xl shadow-slate-950/10 lg:grid-cols-[0.9fr_1.1fr]"
+        className="grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-950/10 lg:grid-cols-[0.88fr_1.12fr]"
       >
         <section className="hidden bg-gradient-to-br from-slate-950 via-teal-800 to-cyan-700 p-10 text-white lg:flex lg:flex-col lg:justify-between">
           <div>
@@ -114,18 +126,22 @@ function Login() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">FixYa</h1>
-                <p className="text-sm text-cyan-100">Servicios tecnicos</p>
+                <p className="text-sm text-cyan-100">Servicios para el hogar</p>
               </div>
             </div>
             <h2 className="text-4xl font-bold leading-tight">
-              Gestiona servicios del hogar con una experiencia clara y segura.
+              Todo lo que necesitas para seguir tus servicios en un solo lugar.
             </h2>
+            <p className="mt-5 max-w-md text-sm leading-6 text-cyan-50">
+              Entra a FixYa para revisar solicitudes, responder trabajos o
+              administrar la plataforma según tu rol.
+            </p>
           </div>
 
-          <div className="rounded-2xl bg-white/12 p-5 backdrop-blur">
+          <div className="rounded-2xl border border-white/15 bg-white/12 p-5 backdrop-blur">
             <p className="text-sm leading-6 text-cyan-50">
-              Clientes, tecnicos y administradores trabajan sobre una misma
-              plataforma con solicitudes, cotizaciones, reseñas y moderacion.
+              Una experiencia simple para clientes, técnicos y administradores:
+              cada persona ve solo lo que necesita hacer.
             </p>
           </div>
         </section>
@@ -135,15 +151,16 @@ function Login() {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-lg shadow-teal-700/25 lg:hidden">
               <Wrench size={28} />
             </div>
-            <h1 className="text-3xl font-bold text-slate-950">
-              Bienvenido de vuelta
+            <h1 className="text-3xl font-bold text-slate-950 md:text-4xl">
+              Bienvenido de nuevo a FixYa
             </h1>
-            <p className="mt-2 text-slate-600">
-              Selecciona tu rol e ingresa con tus credenciales.
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 md:text-base">
+              Ingresa a tu cuenta para revisar tus solicitudes, trabajos o
+              administrar la plataforma.
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} noValidate className="space-y-6">
             <div>
               <div className="grid gap-3 md:grid-cols-3">
                 {roles.map((role) => (
@@ -154,7 +171,7 @@ function Login() {
                       setSelectedRole(role.type);
                       setFieldErrors((prev) => ({ ...prev, role: undefined }));
                     }}
-                    className={`rounded-2xl border p-4 text-left transition ${
+                  className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${
                       selectedRole === role.type
                         ? "border-blue-500 bg-blue-50 shadow-sm"
                         : fieldErrors.role
@@ -183,7 +200,7 @@ function Login() {
             <div className="grid gap-4">
               <div>
                 <label className="mb-2 block text-sm font-bold text-slate-700">
-                  Correo electronico
+                  Correo electrónico
                 </label>
                 <input
                   type="email"
@@ -193,7 +210,7 @@ function Login() {
                     setFieldErrors((prev) => ({ ...prev, correo: undefined }));
                   }}
                   placeholder="tu@email.com"
-                  className={`fixya-input ${fieldErrors.correo ? "border-red-300 focus:border-red-500" : ""}`}
+                  className={`fixya-input ${fieldErrors.correo ? "border-red-300 bg-red-50/40 focus:border-red-500" : ""}`}
                 />
                 {fieldErrors.correo && (
                   <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-600">
@@ -205,18 +222,38 @@ function Login() {
 
               <div>
                 <label className="mb-2 block text-sm font-bold text-slate-700">
-                  Contrasena
+                  Contraseña
                 </label>
-                <input
-                  type="password"
-                  value={contrasena}
-                  onChange={(event) => {
-                    setContrasena(event.target.value);
-                    setFieldErrors((prev) => ({ ...prev, contrasena: undefined }));
-                  }}
-                  placeholder="********"
-                  className={`fixya-input ${fieldErrors.contrasena ? "border-red-300 focus:border-red-500" : ""}`}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={contrasena}
+                    onChange={(event) => {
+                      setContrasena(event.target.value);
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        contrasena: undefined,
+                      }));
+                    }}
+                    placeholder="********"
+                    className={`fixya-input pr-12 ${fieldErrors.contrasena ? "border-red-300 bg-red-50/40 focus:border-red-500" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={
+                      showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
+                    aria-pressed={showPassword}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
                 {fieldErrors.contrasena && (
                   <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-600">
                     <AlertCircle className="h-3.5 w-3.5" />
@@ -239,16 +276,16 @@ function Login() {
               className="fixya-btn-primary w-full px-5 py-4"
             >
               <LogIn size={18} />
-              {loading ? "Ingresando..." : "Iniciar sesion"}
+              {loading ? "Entrando a tu cuenta..." : "Iniciar sesión"}
             </button>
 
             <p className="text-center text-sm text-slate-600">
-              No tienes cuenta?{" "}
+              ¿No tienes cuenta?{" "}
               <Link
                 to="/register"
                 className="font-bold text-teal-700 hover:text-teal-800"
               >
-                Registrate aqui
+                Crea tu cuenta en FixYa
               </Link>
             </p>
           </form>

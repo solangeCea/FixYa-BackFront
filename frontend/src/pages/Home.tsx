@@ -11,16 +11,16 @@ const heroImages = [
 ];
 
 const services = [
-  { title: "Electricidad", detail: "Instalaciones, fallas y mantencion", icon: "E" },
-  { title: "Gasfiteria", detail: "Filtraciones, griferia y emergencias", icon: "G" },
-  { title: "Refrigeracion", detail: "Diagnostico y reparacion tecnica", icon: "R" },
-  { title: "Computacion", detail: "Soporte, redes y configuracion", icon: "C" },
+  { title: "Electricidad", detail: "Fallas, enchufes, luminarias y revisiones del hogar", icon: "E" },
+  { title: "Gasfitería", detail: "Filtraciones, grifería, cañerías y emergencias", icon: "G" },
+  { title: "Carpintería", detail: "Puertas, muebles, marcos y reparaciones de madera", icon: "C" },
+  { title: "Cerrajería", detail: "Aperturas, cambios de chapa y seguridad de acceso", icon: "C" },
 ];
 
 const metrics = [
-  { label: "Solicitudes ordenadas", value: "24/7" },
-  { label: "Roles protegidos", value: "JWT" },
-  { label: "Gestion trazable", value: "100%" },
+  { label: "Solicita ayuda cuando la necesites", value: "24/7" },
+  { label: "Técnicos verificados por FixYa", value: "Confianza" },
+  { label: "Seguimiento simple de cada solicitud", value: "Claridad" },
 ];
 
 function Home() {
@@ -41,16 +41,16 @@ function Home() {
             >
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-cyan-100 backdrop-blur">
                 <Sparkles className="h-4 w-4 text-cyan-300" />
-                Plataforma tecnica para servicios del hogar
+                Ayuda confiable para problemas del hogar
               </div>
 
               <h1 className="max-w-4xl text-5xl font-black leading-[1.02] tracking-tight text-white md:text-7xl">
-                Servicios tecnicos, cotizaciones y seguimiento en un solo lugar.
+                Encuentra técnicos confiables para solucionar problemas en tu hogar.
               </h1>
 
               <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-                FixYa conecta clientes con tecnicos verificados para resolver problemas
-                reales con solicitudes trazables, estados claros, reseñas y cotizaciones.
+                Solicita un servicio, revisa el estado de tu solicitud y recibe
+                ayuda de forma simple según el servicio y la comuna donde la necesitas.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -110,7 +110,7 @@ function Home() {
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-semibold text-cyan-200">Solicitud activa</p>
-                      <p className="mt-1 text-lg font-black">Reparacion electrica domiciliaria</p>
+                      <p className="mt-1 text-lg font-black">Reparación eléctrica domiciliaria</p>
                     </div>
                     <div className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-bold text-emerald-200">
                       <CheckCircle2 className="h-4 w-4" />
@@ -128,11 +128,11 @@ function Home() {
             <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
                 <p className="text-sm font-bold uppercase tracking-wide text-blue-600">Servicios</p>
-                <h2 className="mt-2 text-4xl font-black tracking-tight">Categorias listas para operar</h2>
+                <h2 className="mt-2 text-4xl font-black tracking-tight">Servicios para necesidades reales</h2>
               </div>
               <p className="max-w-xl text-sm leading-6 text-slate-600">
-                Cada solicitud conserva estado, comuna, tecnico asignado, cotizaciones y reseñas para
-                que el flujo sea claro desde el primer contacto.
+                Elige el tipo de ayuda que necesitas, indica tu comuna y sigue
+                el avance de la solicitud sin tener que adivinar qué está pasando.
               </p>
             </div>
 
@@ -157,9 +157,9 @@ function Home() {
         <section className="bg-white py-20 text-slate-950">
           <div className="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-3">
             {[
-              { icon: ShieldCheck, title: "Tecnicos verificados", text: "Perfiles revisados desde administracion antes de operar." },
-              { icon: Clock, title: "Seguimiento por estados", text: "Iniciado, asignado, en proceso, finalizado o cancelado." },
-              { icon: Star, title: "Reseñas moderadas", text: "Experiencias visibles con control de reportes ofensivos." },
+              { icon: ShieldCheck, title: "Técnicos verificados", text: "Revisa perfiles confiables antes de solicitar ayuda para tu hogar." },
+              { icon: Clock, title: "Avance claro", text: "Sabe si tu solicitud fue enviada, asignada, está en proceso o finalizada." },
+              { icon: Star, title: "Experiencias reales", text: "Lee opiniones de otros clientes para tomar una mejor decisión." },
             ].map((item) => (
               <div key={item.title} className="rounded-3xl border border-slate-200 bg-slate-50 p-7">
                 <item.icon className="h-8 w-8 text-blue-600" />
@@ -175,9 +175,9 @@ function Home() {
             <div>
               <div className="mb-3 flex items-center gap-2 text-cyan-200">
                 <Wrench className="h-5 w-5" />
-                <span className="text-sm font-bold uppercase tracking-wide">FixYa MVP</span>
+                <span className="text-sm font-bold uppercase tracking-wide">FixYa para el hogar</span>
               </div>
-              <h2 className="text-3xl font-black text-white">Listo para solicitar, cotizar y gestionar servicios.</h2>
+              <h2 className="text-3xl font-black text-white">Pide ayuda para tu hogar de manera simple y ordenada.</h2>
             </div>
             <Link
               to="/register"

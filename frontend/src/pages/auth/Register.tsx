@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FocusEvent, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Wrench, User, Briefcase, AlertCircle } from "lucide-react";
+import {
+  Wrench,
+  User,
+  Briefcase,
+  AlertCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 import { createUser } from "../../services/userService";
@@ -18,6 +25,7 @@ import {
 } from "../../services/technicianService";
 
 type UserType = "cliente" | "tecnico";
+type RegisterField = keyof RegisterForm | "documento";
 
 interface RegisterForm {
   nombre_completo: string;
@@ -72,6 +80,55 @@ function fieldClass(error?: string) {
   }`;
 }
 
+function PasswordVisibilityButton({
+  visible,
+  onToggle,
+  label,
+}: {
+  visible: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
+  const Icon = visible ? EyeOff : Eye;
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={label}
+      aria-pressed={visible}
+      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+    >
+      <Icon className="h-5 w-5" />
+    </button>
+  );
+}
+
+function normalizeRut(value: string) {
+  return value.replace(/\./g, "").replace(/\s/g, "").toUpperCase();
+}
+
+function isValidRut(value: string) {
+  const rut = normalizeRut(value);
+
+  if (!/^\d{7,8}-[\dK]$/.test(rut)) return false;
+
+  const [body, verifier] = rut.split("-");
+  let sum = 0;
+  let multiplier = 2;
+
+  for (let index = body.length - 1; index >= 0; index -= 1) {
+    sum += Number(body[index]) * multiplier;
+    multiplier = multiplier === 7 ? 2 : multiplier + 1;
+  }
+
+  const expected = 11 - (sum % 11);
+  const expectedVerifier =
+    expected === 11 ? "0" : expected === 10 ? "K" : String(expected);
+
+  return verifier === expectedVerifier;
+}
+
 function Register() {
   const [userType, setUserType] = useState<UserType>("cliente");
   const [form, setForm] = useState<RegisterForm>(initialForm);
@@ -83,6 +140,11 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [, setTouchedFields] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const navigate = useNavigate();
 
@@ -137,19 +199,19 @@ function Register() {
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
     const { name, value } = event.target;
+    const field = name as RegisterField;
+    const parsedValue =
+      name === "comuna_id_comuna" ||
+      name === "region_id_region" ||
+      name === "experiencia_anios" ||
+      name === "servicio_id_servicio"
+        ? Number(value)
+        : value;
 
-    setForm((prev) => ({
-      ...prev,
-      [name]:
-        name === "comuna_id_comuna" ||
-        name === "region_id_region" ||
-        name === "experiencia_anios" ||
-        name === "servicio_id_servicio"
-          ? Number(value)
-          : value,
-    }));
-
-    setFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    let nextForm: RegisterForm = {
+      ...form,
+      [name]: parsedValue,
+    };
 
     if (name === "region_id_region") {
       const regionId = Number(value);
@@ -157,28 +219,105 @@ function Register() {
         (comuna) => comuna.region_id_region === regionId
       );
 
-      setForm((prev) => ({
-        ...prev,
+      nextForm = {
+        ...nextForm,
         region_id_region: regionId,
         comuna_id_comuna: primeraComunaRegion?.id_comuna || 0,
-      }));
-      setFieldErrors((prev) => ({
-        ...prev,
-        region_id_region: "",
-        comuna_id_comuna: "",
-      }));
+      };
     }
+
+    setForm(nextForm);
+    setError("");
+    setTouchedFields((prev) => ({
+      ...prev,
+      [name]: true,
+      ...(name === "region_id_region" ? { comuna_id_comuna: true } : {}),
+    }));
+    setFieldErrors((prev) => {
+      const nextErrors = {
+        ...prev,
+        [name]: validateField(field, nextForm),
+      };
+
+      if (name === "region_id_region") {
+        nextErrors.comuna_id_comuna = validateField(
+          "comuna_id_comuna",
+          nextForm
+        );
+      }
+
+      if (name === "contrasena" || name === "confirmarContrasena") {
+        nextErrors.confirmarContrasena = validateField(
+          "confirmarContrasena",
+          nextForm
+        );
+      }
+
+      return nextErrors;
+    });
+  }
+
+  function handleBlur(
+    event: FocusEvent<HTMLInputElement | HTMLSelectElement>
+  ) {
+    const field = event.target.name as RegisterField;
+
+    setTouchedFields((prev) => ({ ...prev, [field]: true }));
+    setFieldErrors((prev) => {
+      const nextErrors = {
+        ...prev,
+        [field]: validateField(field),
+      };
+
+      if (field === "contrasena" || field === "confirmarContrasena") {
+        nextErrors.confirmarContrasena = validateField("confirmarContrasena");
+      }
+
+      return nextErrors;
+    });
+  }
+
+  function handleUserTypeChange(nextUserType: UserType) {
+    setUserType(nextUserType);
+    setError("");
+
+    if (nextUserType === "cliente") {
+      setFieldErrors((prev) => {
+        const nextErrors = { ...prev };
+
+        delete nextErrors.servicio_id_servicio;
+        delete nextErrors.experiencia_anios;
+        delete nextErrors.descripcion_perfil;
+        delete nextErrors.documento;
+
+        return nextErrors;
+      });
+    }
+  }
+
+  function handleDocumentChange(event: ChangeEvent<HTMLInputElement>) {
+    const selectedDocument = event.target.files?.[0] || null;
+
+    setDocumento(selectedDocument);
+    setTouchedFields((prev) => ({ ...prev, documento: true }));
+    setFieldErrors((prev) => ({
+      ...prev,
+      documento: validateField("documento", form, selectedDocument),
+    }));
   }
 
   const comunasFiltradas = comunas.filter(
     (comuna) => comuna.region_id_region === form.region_id_region
   );
 
-  function validarFormulario() {
-    const errors: Record<string, string> = {};
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  function validateField(
+    field: RegisterField,
+    values: RegisterForm = form,
+    currentDocumento: File | null = documento
+  ) {
+    const correoRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const telefonoRegex = /^\d{8,12}$/;
-    const nacimiento = new Date(`${form.fecha_nacimiento}T00:00:00`);
+    const nacimiento = new Date(`${values.fecha_nacimiento}T00:00:00`);
     const hoy = new Date();
     const edad =
       hoy.getFullYear() -
@@ -192,56 +331,139 @@ function Register() {
         ? 1
         : 0);
 
-    if (!form.nombre_completo.trim()) errors.nombre_completo = "Ingresa tu nombre completo.";
-    if (!form.rut.trim()) errors.rut = "Ingresa tu RUT.";
-    if (!form.correo.trim()) errors.correo = "Ingresa tu correo electronico.";
-    if (form.correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) {
-      errors.correo = "Ingresa un correo valido.";
+    if (field === "nombre_completo" && !values.nombre_completo.trim()) {
+      return "Este campo es obligatorio.";
     }
 
-    if (!telefonoRegex.test(form.telefono)) {
-      errors.telefono = "Usa solo numeros, entre 8 y 12 digitos.";
+    if (field === "rut") {
+      if (!values.rut.trim()) return "Este campo es obligatorio.";
+      if (!isValidRut(values.rut)) {
+        return "Ingresa un RUT válido, por ejemplo 12345678-9.";
+      }
     }
 
-    if (!passwordRegex.test(form.contrasena)) {
-      errors.contrasena = "Minimo 8 caracteres, mayuscula, minuscula y numero.";
+    if (field === "fecha_nacimiento") {
+      if (!values.fecha_nacimiento) return "Selecciona tu fecha de nacimiento.";
+      if (nacimiento > hoy || edad < 18) {
+        return "Debes tener al menos 18 años para registrarte.";
+      }
     }
 
-    if (!form.fecha_nacimiento || nacimiento > hoy || edad < 18) {
-      errors.fecha_nacimiento = "Debes tener al menos 18 anos y usar una fecha valida.";
+    if (field === "genero" && !values.genero) {
+      return "Selecciona una opción.";
     }
 
-    if (form.contrasena !== form.confirmarContrasena) {
-      errors.confirmarContrasena = "Las contrasenas no coinciden.";
+    if (field === "correo") {
+      if (!values.correo.trim()) return "Este campo es obligatorio.";
+      if (!correoRegex.test(values.correo)) return "Ingresa un correo válido.";
     }
 
-    if (!form.region_id_region) {
-      errors.region_id_region = "Selecciona una region.";
+    if (field === "telefono") {
+      if (!values.telefono.trim()) return "Este campo es obligatorio.";
+      if (!telefonoRegex.test(values.telefono)) {
+        return "Ingresa un teléfono válido, solo números entre 8 y 12 dígitos.";
+      }
     }
 
-    if (!form.comuna_id_comuna) {
-      errors.comuna_id_comuna = "Selecciona una comuna.";
+    if (field === "region_id_region" && !values.region_id_region) {
+      return "Selecciona una región.";
+    }
+
+    if (field === "comuna_id_comuna" && !values.comuna_id_comuna) {
+      return "Selecciona una comuna.";
+    }
+
+    if (field === "contrasena") {
+      if (!values.contrasena) return "Este campo es obligatorio.";
+      if (values.contrasena.length < 8) {
+        return "La contraseña debe tener al menos 8 caracteres.";
+      }
+      if (!/[A-Z]/.test(values.contrasena)) {
+        return "Incluye al menos una letra mayúscula.";
+      }
+      if (!/[a-z]/.test(values.contrasena)) {
+        return "Incluye al menos una letra minúscula.";
+      }
+      if (!/\d/.test(values.contrasena)) {
+        return "Incluye al menos un número.";
+      }
+    }
+
+    if (field === "confirmarContrasena") {
+      if (!values.confirmarContrasena) return "Confirma tu contraseña.";
+      if (values.contrasena !== values.confirmarContrasena) {
+        return "Las contraseñas no coinciden.";
+      }
     }
 
     if (userType === "tecnico") {
-      if (!form.descripcion_perfil.trim() || form.experiencia_anios < 0) {
-        errors.descripcion_perfil = "Describe tu experiencia y especialidad.";
+      if (field === "servicio_id_servicio" && !values.servicio_id_servicio) {
+        return "Selecciona el servicio que ofreces principalmente.";
       }
 
-      if (!form.servicio_id_servicio) {
-        errors.servicio_id_servicio = "Selecciona un servicio principal.";
+      if (field === "experiencia_anios" && values.experiencia_anios < 0) {
+        return "Ingresa años de experiencia válidos.";
       }
 
-      if (!documento) {
-        errors.documento = "Sube un documento tecnico.";
+      if (field === "descripcion_perfil" && !values.descripcion_perfil.trim()) {
+        return "Cuéntanos brevemente tu experiencia y especialidad.";
       }
 
-      const tiposPermitidos = ["application/pdf", "image/jpeg", "image/png"];
-      if (documento && !tiposPermitidos.includes(documento.type)) {
-        errors.documento = "El documento debe ser PDF, JPG o PNG.";
+      if (field === "documento") {
+        const tiposPermitidos = ["application/pdf", "image/jpeg", "image/png"];
+
+        if (!currentDocumento) return "Sube un documento técnico.";
+        if (!tiposPermitidos.includes(currentDocumento.type)) {
+          return "El documento debe ser PDF, JPG o PNG.";
+        }
       }
     }
 
+    return "";
+  }
+
+  function validarFormulario() {
+    const fieldsToValidate: RegisterField[] = [
+      "nombre_completo",
+      "rut",
+      "fecha_nacimiento",
+      "genero",
+      "correo",
+      "telefono",
+      "region_id_region",
+      "comuna_id_comuna",
+      "contrasena",
+      "confirmarContrasena",
+    ];
+
+    if (userType === "tecnico") {
+      fieldsToValidate.push(
+        "servicio_id_servicio",
+        "experiencia_anios",
+        "descripcion_perfil",
+        "documento"
+      );
+    }
+
+    const errors = fieldsToValidate.reduce<Record<string, string>>(
+      (nextErrors, field) => {
+        const message = validateField(field);
+
+        if (message) {
+          nextErrors[field] = message;
+        }
+
+        return nextErrors;
+      },
+      {}
+    );
+
+    setTouchedFields(
+      fieldsToValidate.reduce<Record<string, boolean>>((nextTouched, field) => {
+        nextTouched[field] = true;
+        return nextTouched;
+      }, {})
+    );
     setFieldErrors(errors);
     return errors;
   }
@@ -343,7 +565,7 @@ function Register() {
           <div className="mb-8 grid grid-cols-2 gap-4">
             <button
               type="button"
-              onClick={() => setUserType("cliente")}
+              onClick={() => handleUserTypeChange("cliente")}
               className={`rounded-xl border-2 p-4 transition-all ${
                 userType === "cliente"
                   ? "border-blue-600 bg-blue-50"
@@ -371,7 +593,7 @@ function Register() {
 
             <button
               type="button"
-              onClick={() => setUserType("tecnico")}
+              onClick={() => handleUserTypeChange("tecnico")}
               className={`rounded-xl border-2 p-4 transition-all ${
                 userType === "tecnico"
                   ? "border-blue-600 bg-blue-50"
@@ -405,7 +627,7 @@ function Register() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} noValidate className="space-y-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
                 <label className="mb-2 block font-medium text-gray-700">
@@ -416,6 +638,7 @@ function Register() {
                   name="nombre_completo"
                   value={form.nombre_completo}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   type="text"
                   required
                   placeholder="Juan Pérez"
@@ -433,6 +656,7 @@ function Register() {
                   name="rut"
                   value={form.rut}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   type="text"
                   required
                   placeholder="12345678-9"
@@ -452,6 +676,7 @@ function Register() {
                   name="fecha_nacimiento"
                   value={form.fecha_nacimiento}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   type="date"
                   required
                   className={fieldClass(fieldErrors.fecha_nacimiento)}
@@ -468,6 +693,7 @@ function Register() {
                   name="genero"
                   value={form.genero}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 >
@@ -487,6 +713,7 @@ function Register() {
                 name="correo"
                 value={form.correo}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 type="email"
                 required
                 placeholder="correo@gmail.com"
@@ -504,6 +731,7 @@ function Register() {
                 name="telefono"
                 value={form.telefono}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 type="tel"
                 required
                 placeholder="912345678"
@@ -522,6 +750,7 @@ function Register() {
                   name="region_id_region"
                   value={form.region_id_region}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
                   disabled={loadingComunas || regiones.length === 0}
                   className={fieldClass(fieldErrors.region_id_region)}
@@ -547,6 +776,7 @@ function Register() {
                   name="comuna_id_comuna"
                   value={form.comuna_id_comuna}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
                   disabled={loadingComunas || comunasFiltradas.length === 0}
                   className={fieldClass(fieldErrors.comuna_id_comuna)}
@@ -575,6 +805,7 @@ function Register() {
                       name="servicio_id_servicio"
                       value={form.servicio_id_servicio}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       disabled={servicios.length === 0}
                       className={fieldClass(fieldErrors.servicio_id_servicio)}
                     >
@@ -595,12 +826,13 @@ function Register() {
 
                   <div>
                     <label className="mb-2 block font-medium text-gray-700">
-                      Nivel tecnico
+                      Nivel técnico
                     </label>
                     <select
                       name="nivel_tecnico"
                       value={form.nivel_tecnico}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
                     >
                       <option value="Inicial">Inicial</option>
@@ -618,6 +850,7 @@ function Register() {
                     name="experiencia_anios"
                     value={form.experiencia_anios}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     type="number"
                     min="0"
                     className={fieldClass(fieldErrors.experiencia_anios)}
@@ -633,6 +866,7 @@ function Register() {
                     name="descripcion_perfil"
                     value={form.descripcion_perfil}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     type="text"
                     placeholder="Especialidad, experiencia y tipo de trabajos"
                     className={fieldClass(fieldErrors.descripcion_perfil)}
@@ -642,15 +876,14 @@ function Register() {
 
                 <div>
                   <label className="mb-2 block font-medium text-gray-700">
-                    Documento tecnico
+                    Documento técnico
                   </label>
                   <input
+                    name="documento"
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(event) => {
-                      setDocumento(event.target.files?.[0] || null);
-                      setFieldErrors((prev) => ({ ...prev, documento: "" }));
-                    }}
+                    onChange={handleDocumentChange}
+                    onBlur={handleBlur}
                     className={fieldClass(fieldErrors.documento)}
                   />
                   <FieldError message={fieldErrors.documento} />
@@ -667,15 +900,27 @@ function Register() {
                   Contraseña
                 </label>
 
-                <input
-                  name="contrasena"
-                  value={form.contrasena}
-                  onChange={handleChange}
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  className={fieldClass(fieldErrors.contrasena)}
-                />
+                <div className="relative">
+                  <input
+                    name="contrasena"
+                    value={form.contrasena}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder="••••••••"
+                    className={`${fieldClass(fieldErrors.contrasena)} pr-12`}
+                  />
+                  <PasswordVisibilityButton
+                    visible={showPassword}
+                    onToggle={() => setShowPassword((prev) => !prev)}
+                    label={
+                      showPassword
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
+                  />
+                </div>
                 <FieldError message={fieldErrors.contrasena} />
               </div>
 
@@ -684,15 +929,27 @@ function Register() {
                   Confirmar contraseña
                 </label>
 
-                <input
-                  name="confirmarContrasena"
-                  value={form.confirmarContrasena}
-                  onChange={handleChange}
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  className={fieldClass(fieldErrors.confirmarContrasena)}
-                />
+                <div className="relative">
+                  <input
+                    name="confirmarContrasena"
+                    value={form.confirmarContrasena}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    placeholder="••••••••"
+                    className={`${fieldClass(fieldErrors.confirmarContrasena)} pr-12`}
+                  />
+                  <PasswordVisibilityButton
+                    visible={showConfirmPassword}
+                    onToggle={() => setShowConfirmPassword((prev) => !prev)}
+                    label={
+                      showConfirmPassword
+                        ? "Ocultar confirmación de contraseña"
+                        : "Mostrar confirmación de contraseña"
+                    }
+                  />
+                </div>
                 <FieldError message={fieldErrors.confirmarContrasena} />
               </div>
             </div>
