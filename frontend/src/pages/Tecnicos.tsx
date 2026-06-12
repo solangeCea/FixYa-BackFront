@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Briefcase, CheckCircle, Mail, Phone, RefreshCw, Search, Star } from "lucide-react";
 
 import Navbar from "../components/Navbar";
+import EmptyState from "../components/ui/EmptyState";
 import { getPublicTechnicianProfiles } from "../services/technicianService";
 import type { TecnicoPublicProfile } from "../services/technicianService";
 
@@ -62,7 +63,7 @@ function Tecnicos() {
             className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
           >
             <RefreshCw size={16} />
-            Actualizar
+            Actualizar técnicos
           </button>
         </div>
 
@@ -146,14 +147,18 @@ function Tecnicos() {
                   onClick={() => setSelectedTecnico(tecnico)}
                   className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
                 >
-                  Ver perfil
+                  Ver perfil técnico
                 </button>
               </article>
             ))}
 
             {filteredTecnicos.length === 0 && (
-              <div className="rounded-2xl bg-white p-8 text-center text-gray-600 shadow-sm md:col-span-2 xl:col-span-3">
-                No hay tecnicos verificados para mostrar.
+              <div className="md:col-span-2 xl:col-span-3">
+                <EmptyState
+                  title="No encontramos técnicos verificados"
+                  description="Ajusta la búsqueda o vuelve más tarde. Cuando administración verifique nuevos perfiles, aparecerán aquí."
+                  icon={Briefcase}
+                />
               </div>
             )}
           </div>

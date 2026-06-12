@@ -1,8 +1,9 @@
 interface StatusBadgeProps {
   status: string;
+  label?: string;
 }
 
-function StatusBadge({ status }: StatusBadgeProps) {
+function StatusBadge({ status, label }: StatusBadgeProps) {
   const normalized = status.toUpperCase();
 
   const className =
@@ -18,7 +19,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 ${className}`}>
-      {status}
+      {label ?? status}
     </span>
   );
 }

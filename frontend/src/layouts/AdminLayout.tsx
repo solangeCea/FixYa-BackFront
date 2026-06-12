@@ -11,15 +11,16 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
+    logout();
     navigate("/login");
   };
 
@@ -121,7 +122,7 @@ function AdminLayout() {
               </button>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-teal-700">
-                  Administracion
+                Administración
                 </p>
                 <h2 className="text-xl font-bold text-slate-950 md:text-2xl">
                   {activeItem?.label || "Panel Admin"}

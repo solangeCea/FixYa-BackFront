@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   AlertCircle,
   ArrowRight,
   Briefcase,
   CheckCircle,
+  ClipboardList,
   Hammer,
   Home,
   KeyRound,
@@ -18,6 +20,8 @@ import {
 } from "lucide-react";
 
 import Navbar from "../components/Navbar";
+import EmptyState from "../components/ui/EmptyState";
+import { useAuth } from "../context/AuthContext";
 import { getComunas, getServicios } from "../services/catalogService";
 import type { Comuna, Servicio } from "../services/catalogService";
 import { getPublicTechnicianProfiles } from "../services/technicianService";
@@ -38,7 +42,7 @@ const serviceStyle: Record<string, ServiceStyle> = {
   Gasfiteria: {
     icon: ShowerHead,
     accent: "bg-cyan-100 text-cyan-700",
-    label: "Filtraciones, agua, canerias y artefactos",
+    label: "Filtraciones, agua, cañerías y artefactos",
   },
   Carpinteria: {
     icon: Hammer,
@@ -74,7 +78,7 @@ function getServiceStyle(nombreServicio: string): ServiceStyle {
   return {
     icon: Wrench,
     accent: "bg-blue-100 text-blue-700",
-    label: "Servicio tecnico verificado por FixYa",
+    label: "Servicio técnico verificado por FixYa",
   };
 }
 
@@ -103,6 +107,7 @@ function technicianMatchesComuna(
 }
 
 function Servicios() {
+  const { usuario } = useAuth();
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [comunas, setComunas] = useState<Comuna[]>([]);
   const [tecnicos, setTecnicos] = useState<TecnicoPublicProfile[]>([]);
@@ -188,6 +193,11 @@ function Servicios() {
     [servicios, selectedServicioId]
   );
 
+  const selectedComuna = useMemo(
+    () => comunas.find((comuna) => comuna.id_comuna === selectedComunaId) ?? null,
+    [comunas, selectedComunaId]
+  );
+
   const tecnicosDisponibles = useMemo(() => {
     return tecnicos.filter(
       (tecnico) =>
@@ -195,6 +205,25 @@ function Servicios() {
         technicianMatchesComuna(tecnico, selectedComunaId, comunas)
     );
   }, [tecnicos, selectedServicio, selectedComunaId, comunas]);
+
+  const solicitudPath = useMemo(() => {
+    const params = new URLSearchParams();
+
+    if (selectedServicio) {
+      params.set("servicio", String(selectedServicio.id_servicio));
+    }
+
+    if (selectedComunaId) {
+      params.set("comuna", String(selectedComunaId));
+    }
+
+    const query = params.toString();
+    return `/cliente/dashboard${query ? `?${query}` : ""}`;
+  }, [selectedServicio, selectedComunaId]);
+
+  const loginPath = `/login?next=${encodeURIComponent(solicitudPath)}`;
+  const canRequestService = !usuario || usuario.tipo_usuario === "CLIENTE";
+  const requestHref = usuario ? solicitudPath : loginPath;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -211,8 +240,8 @@ function Servicios() {
               Servicios para el hogar
             </h1>
             <p className="mt-2 max-w-2xl text-gray-600">
-              Elige una categoria, filtra por comuna y revisa tecnicos
-              verificados disponibles para ese servicio.
+              Elige una categoría, filtra por comuna y solicita ayuda con un
+              flujo guiado desde tu panel de cliente.
             </p>
           </div>
 
@@ -226,7 +255,7 @@ function Servicios() {
               size={16}
               className={loading ? "animate-spin" : undefined}
             />
-            Actualizar
+            Actualizar resultados
           </button>
         </div>
 
@@ -282,7 +311,7 @@ function Servicios() {
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
                         <ShieldCheck className="h-3.5 w-3.5" />
                         {totalTecnicos}{" "}
-                        {pluralize(totalTecnicos, "tecnico", "tecnicos")}
+                        {pluralize(totalTecnicos, "técnico", "técnicos")}
                       </span>
                       <ArrowRight className="h-5 w-5 text-blue-600" />
                     </div>
@@ -292,9 +321,11 @@ function Servicios() {
             </section>
 
             {servicios.length === 0 && (
-              <div className="rounded-2xl bg-white p-8 text-center text-gray-600 shadow-sm">
-                No hay servicios activos registrados.
-              </div>
+              <EmptyState
+                title="No hay servicios activos para solicitar"
+                description="Cuando administración habilite servicios, aparecerán aquí para que puedas filtrarlos por comuna."
+                icon={Wrench}
+              />
             )}
 
             {selectedServicio && (
@@ -303,7 +334,7 @@ function Servicios() {
                   <div>
                     <p className="flex items-center gap-2 text-sm font-bold uppercase text-blue-700">
                       <Search className="h-4 w-4" />
-                      Tecnicos disponibles
+                      Técnicos disponibles
                     </p>
                     <h2 className="mt-1 text-2xl font-black text-slate-950">
                       {selectedServicio.nombre_servicio}
@@ -319,30 +350,68 @@ function Servicios() {
                     </p>
                   </div>
 
-                  <div className="w-full lg:w-80">
-                    <label className="mb-2 block text-xs font-bold uppercase text-slate-500">
-                      Comuna
-                    </label>
-                    <select
-                      value={selectedComunaId}
-                      onChange={(event) =>
-                        setSelectedComunaId(Number(event.target.value))
-                      }
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    >
-                      <option value={0}>Todas las comunas</option>
-                      {comunas.map((comuna) => (
-                        <option key={comuna.id_comuna} value={comuna.id_comuna}>
-                          {comuna.nombre_comuna}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="grid w-full gap-3 lg:w-auto lg:grid-cols-[20rem_auto] lg:items-end">
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase text-slate-500">
+                        Filtrar por comuna
+                      </label>
+                      <select
+                        value={selectedComunaId}
+                        onChange={(event) =>
+                          setSelectedComunaId(Number(event.target.value))
+                        }
+                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                      >
+                        <option value={0}>Todas las comunas</option>
+                        {comunas.map((comuna) => (
+                          <option key={comuna.id_comuna} value={comuna.id_comuna}>
+                            {comuna.nombre_comuna}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {canRequestService ? (
+                      <Link
+                        to={requestHref}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800"
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                        Solicitar este servicio
+                      </Link>
+                    ) : (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+                        Este flujo está disponible para clientes. Usa tu panel
+                        para gestionar las acciones de tu rol.
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {tecnicosDisponibles.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-slate-600">
-                    No hay tecnicos disponibles para este servicio y comuna.
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm">
+                      <MapPin className="h-6 w-6" />
+                    </div>
+                    <h3 className="font-bold text-slate-900">
+                      {selectedComuna
+                        ? `No encontramos técnicos disponibles en ${selectedComuna.nombre_comuna}`
+                        : "No hay técnicos disponibles para este servicio en este momento"}
+                    </h3>
+                    <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                      {selectedComuna
+                        ? "No encontramos técnicos disponibles en esta comuna para el servicio seleccionado. Puedes cambiar la comuna o dejar la solicitud registrada para seguimiento."
+                        : "Prueba filtrando por una comuna específica o solicita el servicio para que quede registrado en tu panel."}
+                    </p>
+                    {canRequestService && (
+                      <Link
+                        to={requestHref}
+                        className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-teal-800"
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                        Solicitar este servicio
+                      </Link>
+                    )}
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2">
@@ -362,7 +431,7 @@ function Servicios() {
                               </h3>
                               <p className="text-sm text-slate-500">
                                 {tecnico.nivel_tecnico} -{" "}
-                                {tecnico.experiencia_anios} anos
+                                {tecnico.experiencia_anios} años
                               </p>
                             </div>
                           </div>
@@ -385,7 +454,8 @@ function Servicios() {
                           </span>
                           <span className="inline-flex items-center gap-1.5">
                             <MapPin className="h-4 w-4 text-slate-400" />
-                            {tecnico.comunas.slice(0, 2).join(", ")}
+                            {tecnico.comunas.slice(0, 2).join(", ") ||
+                              "Comunas por confirmar"}
                           </span>
                         </div>
                       </article>

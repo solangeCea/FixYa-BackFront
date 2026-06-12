@@ -5,7 +5,9 @@ import { getSolicitudes } from "../../services/solicitudService";
 import type { Solicitud } from "../../services/solicitudService";
 import { getComunas, getServicios } from "../../services/catalogService";
 import type { Comuna, Servicio } from "../../services/catalogService";
+import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
+import { getSolicitudStatusLabel } from "../../utils/requestStatus";
 
 function getEstadoStyle(estado: string) {
   if (estado === "INICIADO") return "bg-cyan-100 text-cyan-700";
@@ -99,10 +101,11 @@ function RequestManagement() {
     <div className="space-y-8 p-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
-          Gestion de Solicitudes
+          Gestión de solicitudes
         </h1>
         <p className="mt-2 text-gray-600">
-          Vista administrativa de seguimiento. Los tecnicos aceptan trabajos desde su panel.
+          Supervisa solicitudes, técnicos asignados, comunas y estados generales
+          sin mezclar acciones del cliente o del técnico.
         </p>
       </div>
 
@@ -139,7 +142,7 @@ function RequestManagement() {
           className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
         >
           <RefreshCw size={16} />
-          Actualizar
+          Actualizar solicitudes
         </button>
       </div>
 
@@ -155,9 +158,11 @@ function RequestManagement() {
           Cargando solicitudes...
         </div>
       ) : solicitudes.length === 0 ? (
-        <div className="rounded-2xl bg-white p-8 text-center text-gray-600 shadow-sm">
-          No hay solicitudes registradas.
-        </div>
+        <EmptyState
+          title="No hay solicitudes registradas en la plataforma"
+          description="Cuando los clientes creen solicitudes de servicio, aparecerán aquí para seguimiento administrativo."
+          icon={ClipboardList}
+        />
       ) : (
         <div className="space-y-4">
           {solicitudes.map((solicitud) => (
@@ -216,7 +221,7 @@ function RequestManagement() {
                       solicitud.estado_trabajo
                     )}`}
                   >
-                    {solicitud.estado_trabajo}
+                    {getSolicitudStatusLabel(solicitud.estado_trabajo)}
                   </span>
 
                   <button
@@ -225,7 +230,7 @@ function RequestManagement() {
                     className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
                   >
                     <Eye className="h-4 w-4" />
-                    Ver detalle
+                    Ver detalle de solicitud
                   </button>
                 </div>
               </div>
@@ -252,7 +257,7 @@ function RequestManagement() {
                   selectedSolicitud.estado_trabajo
                 )}`}
               >
-                {selectedSolicitud.estado_trabajo}
+                {getSolicitudStatusLabel(selectedSolicitud.estado_trabajo)}
               </span>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
                 Urgencia: {selectedSolicitud.urgencia}

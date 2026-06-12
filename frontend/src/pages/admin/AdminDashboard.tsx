@@ -60,7 +60,7 @@ function AdminDashboard() {
             onClick={cargarDashboard}
             className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
           >
-            Reintentar
+            Reintentar carga del panel
           </button>
         </div>
       </div>
@@ -110,7 +110,7 @@ function AdminDashboard() {
             className="fixya-btn-primary px-4 py-3 text-sm"
           >
             <RefreshCw size={16} />
-            Actualizar
+            Actualizar panel
           </button>
         }
       />
@@ -168,7 +168,7 @@ function AdminDashboard() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Acciones rapidas" description="Atajos administrativos">
+        <SectionCard title="Acciones rápidas" description="Atajos administrativos">
           <div className="space-y-3">
             {quickActions.map((action) => (
               <Link

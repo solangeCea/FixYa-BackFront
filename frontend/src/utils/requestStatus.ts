@@ -1,0 +1,60 @@
+export type SolicitudStatus =
+  | "INICIADO"
+  | "ASIGNADO"
+  | "EN_PROCESO"
+  | "FINALIZADO"
+  | "CANCELADO";
+
+export const SOLICITUD_PROGRESS_STEPS: Array<{
+  status: SolicitudStatus;
+  label: string;
+  description: string;
+}> = [
+  {
+    status: "INICIADO",
+    label: "Solicitud enviada",
+    description: "Tu solicitud fue registrada y queda disponible para revisión.",
+  },
+  {
+    status: "ASIGNADO",
+    label: "Técnico asignado",
+    description: "Un técnico tomó el trabajo o fue asociado a la solicitud.",
+  },
+  {
+    status: "EN_PROCESO",
+    label: "En proceso",
+    description: "El trabajo está en ejecución o coordinado para resolverlo.",
+  },
+  {
+    status: "FINALIZADO",
+    label: "Finalizada",
+    description: "El servicio quedó cerrado y puedes revisar el resultado.",
+  },
+];
+
+const statusLabels: Record<string, string> = {
+  INICIADO: "Solicitud enviada",
+  ASIGNADO: "Técnico asignado",
+  EN_PROCESO: "En proceso",
+  FINALIZADO: "Finalizada",
+  CANCELADO: "Cancelada",
+};
+
+const statusDescriptions: Record<string, string> = {
+  INICIADO: "Estamos esperando que un técnico disponible tome tu solicitud.",
+  ASIGNADO: "Ya hay un técnico asociado. Revisa cotizaciones o próximos pasos.",
+  EN_PROCESO: "El servicio está avanzando. Mantente atento a las actualizaciones.",
+  FINALIZADO: "El trabajo fue cerrado. Puedes dejar una reseña si corresponde.",
+  CANCELADO: "La solicitud fue cancelada y no seguirá avanzando.",
+};
+
+export function getSolicitudStatusLabel(status: string) {
+  return statusLabels[status] ?? status.replaceAll("_", " ");
+}
+
+export function getSolicitudStatusDescription(status: string) {
+  return (
+    statusDescriptions[status] ??
+    "Revisa el detalle para conocer el estado actual de la solicitud."
+  );
+}

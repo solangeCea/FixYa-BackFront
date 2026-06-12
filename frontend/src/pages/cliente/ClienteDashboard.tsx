@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
   CheckCircle2,
@@ -34,7 +35,10 @@ import {
 } from "../../services/cotizacionService";
 import type { Cotizacion } from "../../services/cotizacionService";
 import API_URL from "../../services/api";
+import EmptyState from "../../components/ui/EmptyState";
+import RequestProgress from "../../components/ui/RequestProgress";
 import StatusBadge from "../../components/ui/StatusBadge";
+import { getSolicitudStatusLabel } from "../../utils/requestStatus";
 
 
 const initialForm = {
@@ -70,6 +74,9 @@ function fieldClass(error?: string) {
 
 function ClienteDashboard() {
   const { usuario } = useAuth();
+  const [searchParams] = useSearchParams();
+  const requestedServicioId = Number(searchParams.get("servicio") || 0);
+  const requestedComunaId = Number(searchParams.get("comuna") || 0);
 
   const [form, setForm] = useState(initialForm);
   const [servicios, setServicios] = useState<Servicio[]>([]);
@@ -122,7 +129,7 @@ function ClienteDashboard() {
     }
   }
 
-  async function cargarSolicitudes() {
+  const cargarSolicitudes = useCallback(async () => {
     if (!usuario?.rut) {
       setLoadingSolicitudes(false);
       return;
@@ -154,15 +161,41 @@ function ClienteDashboard() {
     } finally {
       setLoadingSolicitudes(false);
     }
-  }
+  }, [usuario]);
 
   useEffect(() => {
     cargarSolicitudes();
-  }, [usuario?.rut]);
+  }, [cargarSolicitudes]);
 
   useEffect(() => {
     cargarCatalogos();
   }, []);
+
+  useEffect(() => {
+    if (loadingCatalogos || (!requestedServicioId && !requestedComunaId)) {
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      servicio_id_servicio: servicios.some(
+        (servicio) => servicio.id_servicio === requestedServicioId
+      )
+        ? requestedServicioId
+        : prev.servicio_id_servicio,
+      comuna_id_comuna: comunas.some(
+        (comuna) => comuna.id_comuna === requestedComunaId
+      )
+        ? requestedComunaId
+        : prev.comuna_id_comuna,
+    }));
+  }, [
+    loadingCatalogos,
+    requestedServicioId,
+    requestedComunaId,
+    servicios,
+    comunas,
+  ]);
 
   function handleChange(
     event:
@@ -229,7 +262,9 @@ function ClienteDashboard() {
 
       await createSolicitud(payload);
 
-      setSuccess("Solicitud creada correctamente.");
+      setSuccess(
+        "Solicitud enviada correctamente. Podrás seguir su avance desde Mis solicitudes."
+      );
       setForm((prev) => ({
         ...initialForm,
         servicio_id_servicio: prev.servicio_id_servicio,
@@ -238,7 +273,7 @@ function ClienteDashboard() {
 
       await cargarSolicitudes();
     } catch {
-      setError("No se pudo crear la solicitud.");
+      setError("No se pudo enviar la solicitud. Revisa los datos e inténtalo nuevamente.");
     } finally {
       setCreandoSolicitud(false);
     }
@@ -292,15 +327,15 @@ function ClienteDashboard() {
 
       if (action === "accept") {
         await acceptCotizacion(idCotizacion);
-        setSuccess("Cotizacion aceptada correctamente.");
+        setSuccess("Cotización aceptada. El técnico podrá continuar con el servicio.");
       } else {
         await rejectCotizacion(idCotizacion);
-        setSuccess("Cotizacion rechazada correctamente.");
+        setSuccess("Cotización rechazada. Puedes revisar otras alternativas si existen.");
       }
 
       await cargarSolicitudes();
     } catch {
-      setError("No se pudo actualizar la cotizacion.");
+      setError("No se pudo actualizar la cotización.");
     }
   }
 
@@ -374,49 +409,58 @@ function ClienteDashboard() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-              <select
-                name="servicio_id_servicio"
-                value={form.servicio_id_servicio}
-                onChange={handleChange}
-                disabled={loadingCatalogos || servicios.length === 0}
-                className={fieldClass(fieldErrors.servicio_id_servicio)}
-              >
-                {servicios.length === 0 && (
-                  <option value={0}>Sin servicios disponibles</option>
-                )}
-                {servicios.map((servicio) => (
-                  <option
-                    key={servicio.id_servicio}
-                    value={servicio.id_servicio}
-                  >
-                    {servicio.nombre_servicio}
-                  </option>
-                ))}
-              </select>
-              <FieldError message={fieldErrors.servicio_id_servicio} />
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Servicio que necesitas
+                </label>
+                <select
+                  name="servicio_id_servicio"
+                  value={form.servicio_id_servicio}
+                  onChange={handleChange}
+                  disabled={loadingCatalogos || servicios.length === 0}
+                  className={fieldClass(fieldErrors.servicio_id_servicio)}
+                >
+                  {servicios.length === 0 && (
+                    <option value={0}>Sin servicios disponibles</option>
+                  )}
+                  {servicios.map((servicio) => (
+                    <option
+                      key={servicio.id_servicio}
+                      value={servicio.id_servicio}
+                    >
+                      {servicio.nombre_servicio}
+                    </option>
+                  ))}
+                </select>
+                <FieldError message={fieldErrors.servicio_id_servicio} />
               </div>
 
               <div>
-              <select
-                name="comuna_id_comuna"
-                value={form.comuna_id_comuna}
-                onChange={handleChange}
-                disabled={loadingCatalogos || comunas.length === 0}
-                className={fieldClass(fieldErrors.comuna_id_comuna)}
-              >
-                {comunas.length === 0 && (
-                  <option value={0}>Sin comunas disponibles</option>
-                )}
-                {comunas.map((comuna) => (
-                  <option key={comuna.id_comuna} value={comuna.id_comuna}>
-                    {comuna.nombre_comuna}
-                  </option>
-                ))}
-              </select>
-              <FieldError message={fieldErrors.comuna_id_comuna} />
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Comuna del servicio
+                </label>
+                <select
+                  name="comuna_id_comuna"
+                  value={form.comuna_id_comuna}
+                  onChange={handleChange}
+                  disabled={loadingCatalogos || comunas.length === 0}
+                  className={fieldClass(fieldErrors.comuna_id_comuna)}
+                >
+                  {comunas.length === 0 && (
+                    <option value={0}>Sin comunas disponibles</option>
+                  )}
+                  {comunas.map((comuna) => (
+                    <option key={comuna.id_comuna} value={comuna.id_comuna}>
+                      {comuna.nombre_comuna}
+                    </option>
+                  ))}
+                </select>
+                <FieldError message={fieldErrors.comuna_id_comuna} />
               </div>
 
               <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Título breve
+                </label>
               <input
                 name="titulo_solicitud"
                 value={form.titulo_solicitud}
@@ -428,6 +472,9 @@ function ClienteDashboard() {
               </div>
 
               <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Describe qué ocurre
+                </label>
               <textarea
                 name="descripcion_problema"
                 value={form.descripcion_problema}
@@ -439,18 +486,26 @@ function ClienteDashboard() {
               <FieldError message={fieldErrors.descripcion_problema} />
               </div>
 
-              <select
-                name="urgencia"
-                value={form.urgencia}
-                onChange={handleChange}
-                className={fieldClass()}
-              >
-                <option value="BAJA">Baja</option>
-                <option value="MEDIA">Media</option>
-                <option value="ALTA">Alta</option>
-              </select>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Urgencia
+                </label>
+                <select
+                  name="urgencia"
+                  value={form.urgencia}
+                  onChange={handleChange}
+                  className={fieldClass()}
+                >
+                  <option value="BAJA">Baja: puede esperar</option>
+                  <option value="MEDIA">Media: necesito coordinación pronta</option>
+                  <option value="ALTA">Alta: requiere atención urgente</option>
+                </select>
+              </div>
 
               <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Dirección
+                </label>
               <input
                 name="direccion"
                 value={form.direccion}
@@ -462,6 +517,9 @@ function ClienteDashboard() {
               </div>
 
               <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Tipo de problema
+                </label>
               <input
                 name="tipo_problema"
                 value={form.tipo_problema}
@@ -472,15 +530,26 @@ function ClienteDashboard() {
               <FieldError message={fieldErrors.tipo_problema} />
               </div>
 
-              <input
-                name="foto_problema"
-                value={form.foto_problema}
-                onChange={handleChange}
-                placeholder="URL de imagen opcional"
-                className={fieldClass()}
-              />
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Foto del problema
+                </label>
+                <input
+                  name="foto_problema"
+                  value={form.foto_problema}
+                  onChange={handleChange}
+                  placeholder="URL de imagen opcional"
+                  className={fieldClass()}
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  Opcional. Ayuda al técnico a entender el problema antes de responder.
+                </p>
+              </div>
 
               <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Referencia de ubicación
+                </label>
               <input
                 name="ubicacion_problema_referencia"
                 value={form.ubicacion_problema_referencia}
@@ -501,7 +570,7 @@ function ClienteDashboard() {
                 }
                 className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
               >
-                {creandoSolicitud ? "Creando solicitud..." : "Crear solicitud"}
+                {creandoSolicitud ? "Enviando solicitud..." : "Solicitar servicio"}
               </button>
             </form>
           </section>
@@ -527,8 +596,19 @@ function ClienteDashboard() {
                 Cargando solicitudes...
               </div>
             ) : solicitudes.length === 0 ? (
-              <div className="rounded-xl bg-gray-50 p-6 text-center text-gray-600">
-                Aún no tienes solicitudes registradas.
+              <div className="space-y-4">
+                <EmptyState
+                  title="Aún no tienes solicitudes registradas"
+                  description="Cuando necesites ayuda en tu hogar, crea una solicitud y podrás seguirla desde aquí."
+                  icon={ClipboardList}
+                />
+                <Link
+                  to="/servicios"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-teal-800"
+                >
+                  <Wrench className="h-4 w-4" />
+                  Explorar servicios disponibles
+                </Link>
               </div>
             ) : (
               <div className="space-y-4">
@@ -548,9 +628,10 @@ function ClienteDashboard() {
                         </p>
                       </div>
 
-                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                        {solicitud.estado_trabajo}
-                      </span>
+                      <StatusBadge
+                        status={solicitud.estado_trabajo}
+                        label={getSolicitudStatusLabel(solicitud.estado_trabajo)}
+                      />
                     </div>
 
                     <div className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-2">
@@ -577,6 +658,10 @@ function ClienteDashboard() {
                         <strong>Referencia:</strong>{" "}
                         {solicitud.ubicacion_problema_referencia}
                       </p>
+                    </div>
+
+                    <div className="mt-5">
+                      <RequestProgress status={solicitud.estado_trabajo} />
                     </div>
 
                     {(cotizaciones[solicitud.id_solicitud]?.length || 0) > 0 && (
@@ -622,7 +707,7 @@ function ClienteDashboard() {
                                       className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200"
                                     >
                                       <Download className="h-4 w-4" />
-                                      PDF
+                                      Descargar cotización PDF
                                     </a>
                                   )}
 
@@ -639,7 +724,7 @@ function ClienteDashboard() {
                                       }
                                       className="rounded-xl bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
                                     >
-                                      Aceptar
+                                      Aceptar cotización
                                     </button>
                                     <button
                                       type="button"
@@ -651,7 +736,7 @@ function ClienteDashboard() {
                                       }
                                       className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                                     >
-                                      Rechazar
+                                      Rechazar cotización
                                     </button>
                                     </>
                                   )}
@@ -688,8 +773,8 @@ function ClienteDashboard() {
                             className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-600"
                           >
                             {reviewingId === solicitud.id_solicitud
-                              ? "Cerrar"
-                              : "⭐ Dejar reseña"}
+                              ? "Cerrar formulario de reseña"
+                              : "Escribir reseña del servicio"}
                           </button>
                         </div>
 

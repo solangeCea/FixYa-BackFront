@@ -7,6 +7,7 @@ import {
   hideReview,
 } from "../../services/reviewService";
 import type { Review } from "../../services/reviewService";
+import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 
 type ReviewFilter = "all" | "active" | "pending" | "hidden";
@@ -141,7 +142,7 @@ export default function ReviewManagement() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion de Resenas</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de reseñas</h1>
           <p className="mt-1 text-sm text-gray-500">
             Modera reportes sin eliminar registros del sistema.
           </p>
@@ -152,7 +153,7 @@ export default function ReviewManagement() {
           className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
         >
           <RefreshCw size={16} />
-          Actualizar
+          Actualizar reseñas
         </button>
       </div>
 
@@ -188,12 +189,16 @@ export default function ReviewManagement() {
 
       <div className="rounded-2xl bg-white shadow-sm">
         <div className="border-b border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900">Resenas del Sistema</h2>
+          <h2 className="text-xl font-bold text-gray-900">Reseñas del sistema</h2>
         </div>
 
         {filteredReviews.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            No hay resenas para este filtro.
+          <div className="p-6">
+            <EmptyState
+              title="No hay reseñas para este filtro"
+              description="Cuando existan reseñas activas, reportadas u ocultadas según el filtro seleccionado, aparecerán aquí."
+              icon={Star}
+            />
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
@@ -274,7 +279,7 @@ export default function ReviewManagement() {
                       className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
                     >
                       <Eye size={16} />
-                      Ver detalle
+                      Ver detalle de reseña
                     </button>
 
                     {pending && (

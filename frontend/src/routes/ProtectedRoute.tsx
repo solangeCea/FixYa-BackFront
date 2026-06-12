@@ -8,6 +8,13 @@ interface ProtectedRouteProps {
   allowedRoles?: string[];
 }
 
+function getHomeByRole(role: string) {
+  if (role === "ADMIN") return "/admin/panel";
+  if (role === "TECNICO") return "/tecnico/dashboard";
+  if (role === "CLIENTE") return "/cliente/dashboard";
+  return "/";
+}
+
 function ProtectedRoute({
   children,
   allowedRoles,
@@ -32,7 +39,7 @@ function ProtectedRoute({
     allowedRoles &&
     !allowedRoles.includes(usuario.tipo_usuario)
   ) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={getHomeByRole(usuario.tipo_usuario)} replace />;
   }
 
   return <>{children}</>;

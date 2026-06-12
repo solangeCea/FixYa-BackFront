@@ -6,6 +6,7 @@ import { getUsers } from "../../services/userService";
 import type { UsuarioAdmin } from "../../services/userService";
 import { getComunas } from "../../services/catalogService";
 import type { Comuna } from "../../services/catalogService";
+import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 
 type FilterType = "all" | "CLIENTE" | "TECNICO" | "ADMIN";
@@ -106,10 +107,10 @@ export default function UserManagement() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
-          Gestión de Usuarios
+          Gestión de usuarios
         </h1>
         <p className="mt-2 text-gray-600">
-          Administración de usuarios registrados en FixYa.
+          Revisa clientes, técnicos y administradores registrados en FixYa.
         </p>
       </div>
 
@@ -330,7 +331,7 @@ export default function UserManagement() {
                         className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
                       >
                         <Eye className="h-4 w-4" />
-                        Ver detalles
+                        Ver detalle de usuario
                       </button>
                     </td>
                   </motion.tr>
@@ -340,8 +341,12 @@ export default function UserManagement() {
           </div>
 
           {filteredUsers.length === 0 && (
-            <div className="p-8 text-center text-gray-500">
-              No se encontraron usuarios.
+            <div className="p-6">
+              <EmptyState
+                title="No encontramos usuarios para este filtro"
+                description="Ajusta la búsqueda o cambia el filtro de rol para revisar otros usuarios registrados."
+                icon={UserCheck}
+              />
             </div>
           )}
         </div>

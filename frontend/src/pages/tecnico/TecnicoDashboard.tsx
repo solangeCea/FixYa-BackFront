@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Briefcase,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import Navbar from "../../components/Navbar";
+import EmptyState from "../../components/ui/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import {
   asignarTecnico,
@@ -29,6 +30,7 @@ import {
   getTechnicianDashboard,
   type TecnicoDashboardMetrics,
 } from "../../services/technicianService";
+import { getSolicitudStatusLabel } from "../../utils/requestStatus";
 
 function getEstadoStyle(estado: string) {
   if (estado === "INICIADO") {
@@ -74,7 +76,7 @@ function TecnicoDashboard() {
     Record<number, { monto: string; detalle: string; vigencia: string }>
   >({});
 
-  async function cargarDatos() {
+  const cargarDatos = useCallback(async () => {
     if (!usuario?.rut) {
       setLoading(false);
       return;
@@ -106,11 +108,11 @@ function TecnicoDashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [usuario]);
 
   useEffect(() => {
     cargarDatos();
-  }, [usuario?.rut]);
+  }, [cargarDatos]);
 
   const solicitudesActivas = useMemo(() => {
     return misSolicitudes.filter(
@@ -143,7 +145,7 @@ function TecnicoDashboard() {
 
       await iniciarSolicitud(idSolicitud);
 
-      setSuccess("Solicitud iniciada correctamente.");
+      setSuccess("Trabajo iniciado. El cliente verá la solicitud en proceso.");
       await cargarDatos();
     } catch {
       setError("No se pudo iniciar la solicitud.");
@@ -165,7 +167,7 @@ function TecnicoDashboard() {
 
       await asignarTecnico(idSolicitud, usuario.rut);
 
-      setSuccess("Trabajo aceptado correctamente.");
+      setSuccess("Trabajo aceptado. Ahora puedes coordinar y enviar cotización.");
       await cargarDatos();
     } catch {
       setError("No se pudo aceptar el trabajo.");
@@ -189,7 +191,7 @@ function TecnicoDashboard() {
 
       await finalizarSolicitud(idSolicitud, costo);
 
-      setSuccess("Solicitud finalizada correctamente.");
+      setSuccess("Trabajo finalizado. El cliente podrá revisar y calificar el servicio.");
       setCostosFinales((prev) => ({
         ...prev,
         [idSolicitud]: "",
@@ -229,7 +231,7 @@ function TecnicoDashboard() {
         fecha_vigencia: new Date(`${cotizacion.vigencia}T23:59:00`).toISOString(),
       });
 
-      setSuccess("Cotizacion creada y PDF generado correctamente.");
+      setSuccess("Cotización enviada y PDF generado correctamente.");
       setCotizaciones((prev) => ({
         ...prev,
         [idSolicitud]: { monto: "", detalle: "", vigencia: "" },
@@ -250,10 +252,11 @@ function TecnicoDashboard() {
       <main className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900">
-            Panel del Técnico
+            Panel de trabajos técnicos
           </h1>
           <p className="mt-2 text-gray-600">
-            Revisa solicitudes disponibles y administra tus trabajos asignados.
+            Recibe solicitudes disponibles, envía cotizaciones y gestiona tus
+            trabajos asignados hasta finalizar el servicio.
           </p>
         </div>
 
@@ -337,8 +340,8 @@ function TecnicoDashboard() {
               Solicitudes y trabajos
             </h2>
             <p className="text-sm text-gray-500">
-              Las solicitudes disponibles requieren asignación desde admin antes
-              de iniciar.
+              Toma solicitudes disponibles, envía una cotización cuando
+              corresponda e informa el avance del trabajo.
             </p>
           </div>
 
@@ -347,7 +350,7 @@ function TecnicoDashboard() {
             className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
           >
             <RefreshCw className="h-4 w-4" />
-            Actualizar
+            Actualizar trabajos
           </button>
         </div>
 
@@ -376,9 +379,11 @@ function TecnicoDashboard() {
               </h3>
 
               {solicitudesDisponibles.length === 0 ? (
-                <div className="rounded-xl bg-gray-50 p-6 text-center text-gray-600">
-                  No hay solicitudes disponibles por ahora.
-                </div>
+                <EmptyState
+                  title="No hay solicitudes disponibles para tomar"
+                  description="Cuando un cliente cree una solicitud relacionada con tus servicios, aparecerá aquí para que puedas aceptarla."
+                  icon={ClipboardList}
+                />
               ) : (
                 <div className="space-y-4">
                   {solicitudesDisponibles.map((solicitud) => (
@@ -401,7 +406,7 @@ function TecnicoDashboard() {
                             solicitud.estado_trabajo
                           )}`}
                         >
-                          {solicitud.estado_trabajo}
+                          {getSolicitudStatusLabel(solicitud.estado_trabajo)}
                         </span>
                       </div>
 
@@ -428,7 +433,7 @@ function TecnicoDashboard() {
                       </div>
 
                       <div className="mt-4 rounded-xl bg-yellow-50 p-3 text-sm text-yellow-700">
-                        Esta solicitud esta disponible para ser aceptada.
+                        Esta solicitud está disponible para ser aceptada.
                       </div>
 
                       <button
@@ -455,9 +460,11 @@ function TecnicoDashboard() {
               </h3>
 
               {misSolicitudes.length === 0 ? (
-                <div className="rounded-xl bg-gray-50 p-6 text-center text-gray-600">
-                  Aún no tienes trabajos asignados.
-                </div>
+                <EmptyState
+                  title="Aún no tienes trabajos asignados"
+                  description="Cuando aceptes una solicitud o se te asigne un servicio relacionado con tus especialidades, aparecerá aquí."
+                  icon={Briefcase}
+                />
               ) : (
                 <div className="space-y-4">
                   {misSolicitudes.map((solicitud) => (
@@ -480,7 +487,7 @@ function TecnicoDashboard() {
                             solicitud.estado_trabajo
                           )}`}
                         >
-                          {solicitud.estado_trabajo}
+                          {getSolicitudStatusLabel(solicitud.estado_trabajo)}
                         </span>
                       </div>
 
@@ -511,7 +518,7 @@ function TecnicoDashboard() {
                         solicitud.estado_trabajo === "EN_PROCESO") && (
                         <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
                           <h5 className="mb-3 font-semibold text-gray-900">
-                            Generar cotizacion
+                            Preparar cotización
                           </h5>
 
                           <div className="grid gap-3">
@@ -536,7 +543,7 @@ function TecnicoDashboard() {
                                   },
                                 }))
                               }
-                              placeholder="Monto estimado"
+                              placeholder="Monto estimado de la cotización"
                               className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
                             />
 
@@ -560,7 +567,7 @@ function TecnicoDashboard() {
                                 }))
                               }
                               rows={3}
-                              placeholder="Detalle o condiciones"
+                              placeholder="Detalle, alcance o condiciones de la cotización"
                               className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
                             />
 
@@ -600,8 +607,8 @@ function TecnicoDashboard() {
                             >
                               <Send className="h-5 w-5" />
                               {accionLoading === solicitud.id_solicitud
-                                ? "Generando..."
-                                : "Generar cotizacion"}
+                                ? "Enviando cotización..."
+                                : "Enviar cotización al cliente"}
                             </button>
                           </div>
                         </div>
@@ -652,8 +659,8 @@ function TecnicoDashboard() {
                           >
                             <CheckCircle className="h-5 w-5" />
                             {accionLoading === solicitud.id_solicitud
-                              ? "Finalizando..."
-                              : "Finalizar trabajo"}
+                              ? "Registrando cierre..."
+                              : "Finalizar trabajo y registrar costo"}
                           </button>
                         </div>
                       )}

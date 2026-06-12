@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Bell, Wrench } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
+import { Bell, Briefcase, ClipboardList, LayoutDashboard, Wrench } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 import {
@@ -10,12 +10,38 @@ import {
 } from "../services/notificationService";
 import type { Notificacion } from "../services/notificationService";
 
+const roleLinks = {
+  CLIENTE: [
+    { to: "/servicios", label: "Solicitar servicio", icon: Wrench },
+    { to: "/cliente/dashboard", label: "Mis solicitudes", icon: ClipboardList },
+  ],
+  TECNICO: [
+    { to: "/tecnico/dashboard", label: "Trabajos técnicos", icon: Briefcase },
+  ],
+  ADMIN: [
+    { to: "/admin/panel", label: "Administrar plataforma", icon: LayoutDashboard },
+  ],
+};
+
+const publicLinks = [
+  { to: "/", label: "Inicio", icon: LayoutDashboard },
+  { to: "/servicios", label: "Servicios", icon: Wrench },
+  { to: "/tecnicos", label: "Técnicos", icon: Briefcase },
+];
+
+function getRoleLabel(role?: string) {
+  if (role === "CLIENTE") return "Cliente";
+  if (role === "TECNICO") return "Técnico";
+  if (role === "ADMIN") return "Administrador";
+  return "";
+}
+
 function Navbar() {
   const { usuario, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notificacion[]>([]);
 
-  async function cargarNotificaciones() {
+  const cargarNotificaciones = useCallback(async () => {
     if (!usuario) {
       setNotifications([]);
       return;
@@ -27,11 +53,11 @@ function Navbar() {
     } catch {
       setNotifications([]);
     }
-  }
+  }, [usuario]);
 
   useEffect(() => {
     cargarNotificaciones();
-  }, [usuario?.rut]);
+  }, [cargarNotificaciones]);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.leida).length,
@@ -48,36 +74,41 @@ function Navbar() {
     await cargarNotificaciones();
   }
 
+  const links = usuario
+    ? roleLinks[usuario.tipo_usuario as keyof typeof roleLinks] ?? []
+    : publicLinks;
+
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+      isActive
+        ? "bg-teal-50 text-teal-800"
+        : "text-slate-700 hover:bg-slate-100 hover:text-teal-800"
+    }`;
+
   return (
-    <nav className="flex items-center justify-between border-b border-slate-200 bg-white/95 px-6 py-4 shadow-sm backdrop-blur">
+    <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-6 py-4 shadow-sm backdrop-blur">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <Link to="/" className="flex items-center gap-2">
         <div className="rounded-lg bg-teal-700 p-2 text-white shadow-lg shadow-teal-700/20">
           <Wrench className="h-5 w-5" />
         </div>
-        <h1 className="text-2xl font-bold text-teal-700">FixYa</h1>
+        <div>
+          <h1 className="text-2xl font-bold leading-none text-teal-700">FixYa</h1>
+          {usuario && (
+            <p className="mt-1 text-xs font-semibold text-slate-500">
+              Flujo {getRoleLabel(usuario.tipo_usuario)}
+            </p>
+          )}
+        </div>
       </Link>
 
-      <div className="flex items-center gap-6">
-        <Link
-          to="/"
-          className="font-medium text-slate-700 hover:text-teal-700"
-        >
-          Inicio
-        </Link>
-
-        <Link
-          to="/servicios"
-          className="font-medium text-slate-700 hover:text-teal-700"
-        >
-          Servicios
-        </Link>
-
-        <Link
-          to="/tecnicos"
-          className="font-medium text-slate-700 hover:text-teal-700"
-        >
-          Tecnicos
-        </Link>
+      <div className="flex flex-wrap items-center gap-3">
+        {links.map((item) => (
+          <NavLink key={item.to} to={item.to} className={navLinkClass}>
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </NavLink>
+        ))}
 
         {usuario && (
           <div className="relative">
@@ -104,13 +135,13 @@ function Navbar() {
                     onClick={handleMarkAll}
                     className="text-xs font-semibold text-teal-700 hover:text-teal-800"
                   >
-                    Marcar todas
+                    Marcar todas como leídas
                   </button>
                 </div>
 
                 {notifications.length === 0 ? (
                   <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
-                    No tienes notificaciones.
+                    No tienes notificaciones nuevas. Cuando haya avances en tus solicitudes o trabajos, aparecerán aquí.
                   </p>
                 ) : (
                   <div className="max-h-80 space-y-2 overflow-auto">
@@ -142,7 +173,7 @@ function Navbar() {
             onClick={logout}
             className="rounded-lg bg-slate-100 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-200"
           >
-            Salir
+            Cerrar sesión
           </button>
         ) : (
           <>
@@ -150,17 +181,18 @@ function Navbar() {
               to="/login"
               className="font-medium text-slate-700 hover:text-teal-700"
             >
-              Login
+              Iniciar sesión
             </Link>
 
             <Link
               to="/register"
               className="rounded-lg bg-teal-700 px-4 py-2 text-white transition hover:bg-teal-800"
             >
-              Registro
+              Crear cuenta
             </Link>
           </>
         )}
+      </div>
       </div>
     </nav>
   );

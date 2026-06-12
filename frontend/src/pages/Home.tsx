@@ -58,7 +58,7 @@ function Home() {
                   to="/register"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-6 py-4 font-bold text-white shadow-2xl shadow-blue-500/30 transition hover:-translate-y-0.5 hover:bg-blue-600"
                 >
-                  Solicitar servicio
+                  Crear cuenta para solicitar servicio
                   <ArrowRight className="h-5 w-5" />
                 </Link>
 
@@ -66,7 +66,7 @@ function Home() {
                   to="/tecnicos"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-6 py-4 font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/15"
                 >
-                  Ver tecnicos
+                  Ver técnicos verificados
                 </Link>
               </div>
 
@@ -183,7 +183,7 @@ function Home() {
               to="/register"
               className="rounded-2xl bg-white px-6 py-4 font-black text-slate-950 transition hover:-translate-y-0.5 hover:bg-cyan-50"
             >
-              Crear cuenta
+              Crear cuenta en FixYa
             </Link>
           </div>
         </section>

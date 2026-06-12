@@ -18,6 +18,7 @@ import type { Tecnico } from "../../services/technicianService";
 
 import { getUsers } from "../../services/userService";
 import type { UsuarioAdmin } from "../../services/userService";
+import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 
 type FilterType = "all" | "verified" | "pending";
@@ -124,10 +125,10 @@ export default function TechnicianManagement() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
-          Gestión de Técnicos
+          Gestión de técnicos
         </h1>
         <p className="mt-2 text-gray-600">
-          Administración de técnicos registrados en FixYa.
+          Revisa perfiles técnicos, estados de verificación y datos de contacto.
         </p>
       </div>
 
@@ -329,7 +330,7 @@ export default function TechnicianManagement() {
                           onClick={() => setSelectedTechnician(tech)}
                           className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
                         >
-                          Ver perfil
+                          Ver perfil técnico
                         </button>
 
                         {!tech.tecnico_verificado && (
@@ -352,8 +353,12 @@ export default function TechnicianManagement() {
           </div>
 
           {filteredTechnicians.length === 0 && (
-            <div className="p-8 text-center text-gray-500">
-              No se encontraron técnicos.
+            <div className="p-6">
+              <EmptyState
+                title="No encontramos técnicos para este filtro"
+                description="Ajusta la búsqueda o cambia el estado de verificación para revisar otros perfiles técnicos."
+                icon={UserCog}
+              />
             </div>
           )}
         </div>

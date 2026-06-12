@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Wrench, User, Shield, Briefcase, AlertCircle, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -7,9 +7,22 @@ import { login, obtenerUsuarioActual } from "../../services/authService";
 import { saveToken } from "../../services/token";
 import { useAuth } from "../../context/AuthContext";
 
+function getDashboardPath(role: string) {
+  if (role === "CLIENTE") return "/cliente/dashboard";
+  if (role === "TECNICO") return "/tecnico/dashboard";
+  if (role === "ADMIN") return "/admin/panel";
+  return "/";
+}
+
+function isSafeClienteNext(next: string | null) {
+  return Boolean(next && next.startsWith("/cliente/") && !next.startsWith("//"));
+}
+
 function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setUsuario } = useAuth();
+  const nextPath = searchParams.get("next");
 
   const [selectedRole, setSelectedRole] = useState<
     "cliente" | "tecnico" | "admin" | null
@@ -72,9 +85,12 @@ function Login() {
       const usuario = await obtenerUsuarioActual(response.access_token);
       setUsuario(usuario);
 
-      if (usuario.tipo_usuario === "CLIENTE") navigate("/cliente/dashboard");
-      if (usuario.tipo_usuario === "TECNICO") navigate("/tecnico/dashboard");
-      if (usuario.tipo_usuario === "ADMIN") navigate("/admin/panel");
+      if (usuario.tipo_usuario === "CLIENTE" && isSafeClienteNext(nextPath)) {
+        navigate(nextPath as string);
+        return;
+      }
+
+      navigate(getDashboardPath(usuario.tipo_usuario));
     } catch (error) {
       setError("No pudimos iniciar sesion con esas credenciales.");
       console.error(error);
