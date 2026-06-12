@@ -3,8 +3,20 @@ from app.models.solicitud import Solicitud
 from app.schemas.solicitud_schema import SolicitudCreate, SolicitudUpdate
 from app.models.historial_solicitud import HistorialSolicitud
 from datetime import datetime
+from fastapi import HTTPException
+from app.models.servicio import Servicio
 
 def crear_solicitud(db: Session, data: SolicitudCreate):
+
+    servicio_existente = db.query(Servicio).filter(
+        Servicio.id_servicio == data.servicio_id_servicio
+    ).first()
+
+    if not servicio_existente:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Servicio no encontrado con id {data.servicio_id_servicio}"
+        )
     nueva = Solicitud(
         usuario_rut=data.usuario_rut,
         servicio_id_servicio=data.servicio_id_servicio,
