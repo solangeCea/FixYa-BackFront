@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Literal
 from datetime import datetime
 from decimal import Decimal
@@ -16,13 +16,13 @@ class SolicitudCreate(BaseModel):
     usuario_rut: str
     servicio_id_servicio: int
     comuna_id_comuna: int
-    titulo_solicitud: str
-    descripcion_problema: str
+    titulo_solicitud: str = Field(min_length=10, max_length=100)
+    descripcion_problema: str = Field(min_length=20, max_length=1000)
     urgencia: Literal["BAJA", "MEDIA", "ALTA"]  
-    direccion: str
-    tipo_problema: str
+    direccion: str = Field(min_length=10, max_length=200)
+    tipo_problema: str = Field(min_length=3, max_length=50)
     foto_problema: Optional[str] = None
-    ubicacion_problema_referencia: str
+    ubicacion_problema_referencia: str = Field(min_length=3, max_length=200) 
 
 
 class SolicitudUpdate(BaseModel):
