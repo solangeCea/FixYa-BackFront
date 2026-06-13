@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 from decimal import Decimal
 
@@ -18,7 +18,7 @@ class SolicitudCreate(BaseModel):
     comuna_id_comuna: int
     titulo_solicitud: str
     descripcion_problema: str
-    urgencia: str
+    urgencia: Literal["BAJA", "MEDIA", "ALTA"]  
     direccion: str
     tipo_problema: str
     foto_problema: Optional[str] = None
