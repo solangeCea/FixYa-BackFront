@@ -59,16 +59,18 @@ export default function TechnicianManagement() {
           return {
             ...tecnico,
             nombre_completo:
-              usuario?.nombre_completo || "Tecnico sin usuario",
-            correo: usuario?.correo || "Sin correo",
-            telefono: usuario?.telefono || "Sin telefono",
+              usuario?.nombre_completo || "Técnico sin usuario asociado",
+            correo: usuario?.correo || "Correo no registrado",
+            telefono: usuario?.telefono || "Teléfono no registrado",
           };
         }
       );
 
       setTechnicians(tecnicosCompletos);
     } catch {
-      setError("No se pudieron cargar los tecnicos del sistema.");
+      setError(
+        "No pudimos cargar los técnicos registrados. Intenta actualizar el listado."
+      );
     } finally {
       setLoading(false);
     }
@@ -85,10 +87,10 @@ export default function TechnicianManagement() {
       setSuccess("");
 
       await approveTechnician(rut);
-      setSuccess("Tecnico aprobado correctamente.");
+      setSuccess("Técnico aprobado. Ya puede aparecer como verificado.");
       await cargarTecnicos();
     } catch {
-      setError("No se pudo aprobar el tecnico.");
+      setError("No pudimos aprobar este técnico. Intenta nuevamente.");
     } finally {
       setActionLoading(null);
     }
@@ -213,7 +215,7 @@ export default function TechnicianManagement() {
       {loading && (
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
           <p className="font-medium text-gray-600">
-            Cargando técnicos...
+            Cargando perfiles técnicos...
           </p>
         </div>
       )}
@@ -319,7 +321,7 @@ export default function TechnicianManagement() {
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
                           <XCircle className="h-4 w-4" />
-                          Pendiente
+                          Pendiente de verificación
                         </span>
                       )}
                     </td>
@@ -340,8 +342,8 @@ export default function TechnicianManagement() {
                             className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:bg-green-300"
                           >
                             {actionLoading === tech.usuario_rut
-                              ? "Aprobando..."
-                              : "Aprobar tecnico"}
+                              ? "Aprobando técnico..."
+                              : "Aprobar técnico pendiente"}
                           </button>
                         )}
                       </div>
@@ -426,7 +428,7 @@ export default function TechnicianManagement() {
                   <ShieldCheck className="h-5 w-5 text-green-600" />
                   {selectedTechnician.tecnico_verificado
                     ? "Verificado"
-                    : "Pendiente"}
+                    : "Pendiente de verificación"}
                 </p>
               </div>
             </div>

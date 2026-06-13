@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
@@ -53,6 +53,76 @@ const initialForm = {
   ubicacion_problema_referencia: "",
 };
 
+const problemOptionsByService = {
+  electricidad: [
+    "Enchufe",
+    "Cables",
+    "Cortocircuito",
+    "Iluminación",
+    "Electrodoméstico",
+    "Tablero eléctrico",
+    "Otro problema eléctrico",
+  ],
+  gasfiteria: [
+    "Fuga de agua",
+    "Llave o grifería",
+    "Tubería tapada",
+    "Baño o WC",
+    "Calefón",
+    "Lavaplatos",
+    "Otro problema de gasfitería",
+  ],
+  carpinteria: [
+    "Puerta",
+    "Mueble",
+    "Repisa",
+    "Piso de madera",
+    "Ventana",
+    "Reparación general",
+    "Otro trabajo de carpintería",
+  ],
+  cerrajeria: [
+    "Cambio de chapa",
+    "Llave perdida",
+    "Cerradura trabada",
+    "Apertura de puerta",
+    "Instalación de cerradura",
+    "Copia de llave",
+    "Otro problema de cerrajería",
+  ],
+};
+
+function normalizeServiceName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function getProblemOptions(servicio?: Servicio) {
+  if (!servicio) return [];
+
+  const normalizedName = normalizeServiceName(servicio.nombre_servicio);
+
+  if (normalizedName.includes("electric")) {
+    return problemOptionsByService.electricidad;
+  }
+
+  if (normalizedName.includes("gasfiter")) {
+    return problemOptionsByService.gasfiteria;
+  }
+
+  if (normalizedName.includes("carpinter")) {
+    return problemOptionsByService.carpinteria;
+  }
+
+  if (normalizedName.includes("cerrajer")) {
+    return problemOptionsByService.cerrajeria;
+  }
+
+  return [];
+}
+
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
 
@@ -99,6 +169,19 @@ function ClienteDashboard() {
   const [reviewComment, setReviewComment] = useState("");
   const [sendingReview, setSendingReview] = useState(false);
 
+  const selectedServicio = useMemo(
+    () =>
+      servicios.find(
+        (servicio) => servicio.id_servicio === form.servicio_id_servicio
+      ),
+    [servicios, form.servicio_id_servicio]
+  );
+
+  const tipoProblemaOptions = useMemo(
+    () => getProblemOptions(selectedServicio),
+    [selectedServicio]
+  );
+
   async function cargarCatalogos() {
     try {
       setLoadingCatalogos(true);
@@ -123,7 +206,9 @@ function ClienteDashboard() {
           prev.comuna_id_comuna || comunasData[0]?.id_comuna || 0,
       }));
     } catch {
-      setError("No se pudieron cargar servicios y comunas.");
+      setError(
+        "No pudimos cargar servicios y comunas. Intenta actualizar la página antes de crear tu solicitud."
+      );
     } finally {
       setLoadingCatalogos(false);
     }
@@ -157,7 +242,9 @@ function ClienteDashboard() {
 
       setCotizaciones(Object.fromEntries(cotizacionesData));
     } catch {
-      setError("No se pudieron cargar tus solicitudes.");
+      setError(
+        "No pudimos cargar tus solicitudes. Intenta nuevamente en unos momentos."
+      );
     } finally {
       setLoadingSolicitudes(false);
     }
@@ -176,19 +263,27 @@ function ClienteDashboard() {
       return;
     }
 
-    setForm((prev) => ({
-      ...prev,
-      servicio_id_servicio: servicios.some(
+    setForm((prev) => {
+      const nextServicioId = servicios.some(
         (servicio) => servicio.id_servicio === requestedServicioId
       )
         ? requestedServicioId
-        : prev.servicio_id_servicio,
-      comuna_id_comuna: comunas.some(
-        (comuna) => comuna.id_comuna === requestedComunaId
-      )
-        ? requestedComunaId
-        : prev.comuna_id_comuna,
-    }));
+        : prev.servicio_id_servicio;
+
+      return {
+        ...prev,
+        servicio_id_servicio: nextServicioId,
+        comuna_id_comuna: comunas.some(
+          (comuna) => comuna.id_comuna === requestedComunaId
+        )
+          ? requestedComunaId
+          : prev.comuna_id_comuna,
+        tipo_problema:
+          nextServicioId !== prev.servicio_id_servicio
+            ? ""
+            : prev.tipo_problema,
+      };
+    });
   }, [
     loadingCatalogos,
     requestedServicioId,
@@ -211,27 +306,34 @@ function ClienteDashboard() {
         name === "servicio_id_servicio" || name === "comuna_id_comuna"
           ? Number(value)
           : value,
+      ...(name === "servicio_id_servicio" ? { tipo_problema: "" } : {}),
     }));
-    setFieldErrors((prev) => ({ ...prev, [name]: "" }));
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: "",
+      ...(name === "servicio_id_servicio" ? { tipo_problema: "" } : {}),
+    }));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!usuario?.rut) {
-      setError("No se pudo identificar al cliente autenticado.");
+      setError(
+        "Necesitamos reconocer tu sesión para crear la solicitud. Inicia sesión nuevamente."
+      );
       return;
     }
 
     const nextErrors: Record<string, string> = {};
     if (!form.servicio_id_servicio) nextErrors.servicio_id_servicio = "Selecciona un servicio.";
     if (!form.comuna_id_comuna) nextErrors.comuna_id_comuna = "Selecciona una comuna.";
-    if (!form.titulo_solicitud.trim()) nextErrors.titulo_solicitud = "Escribe un titulo breve.";
-    if (!form.descripcion_problema.trim()) nextErrors.descripcion_problema = "Describe el problema.";
-    if (!form.direccion.trim()) nextErrors.direccion = "Ingresa la direccion.";
-    if (!form.tipo_problema.trim()) nextErrors.tipo_problema = "Indica el tipo de problema.";
+    if (!form.titulo_solicitud.trim()) nextErrors.titulo_solicitud = "Escribe un título breve para tu solicitud.";
+    if (!form.descripcion_problema.trim()) nextErrors.descripcion_problema = "Describe qué ocurre para orientar al técnico.";
+    if (!form.direccion.trim()) nextErrors.direccion = "Ingresa la dirección donde necesitas el servicio.";
+    if (!form.tipo_problema.trim()) nextErrors.tipo_problema = "Selecciona el tipo de problema según el servicio.";
     if (!form.ubicacion_problema_referencia.trim()) {
-      nextErrors.ubicacion_problema_referencia = "Agrega una referencia de ubicacion.";
+      nextErrors.ubicacion_problema_referencia = "Agrega una referencia para ubicar mejor el problema.";
     }
 
     setFieldErrors(nextErrors);
@@ -273,7 +375,7 @@ function ClienteDashboard() {
 
       await cargarSolicitudes();
     } catch {
-      setError("No se pudo enviar la solicitud. Revisa los datos e inténtalo nuevamente.");
+      setError("No pudimos enviar la solicitud. Revisa los datos e inténtalo nuevamente.");
     } finally {
       setCreandoSolicitud(false);
     }
@@ -299,7 +401,7 @@ function ClienteDashboard() {
         comentario: reviewComment,
       });
 
-      setSuccess("Reseña creada correctamente.");
+      setSuccess("Tu reseña fue publicada correctamente.");
       setReviewErrors((prev) => ({ ...prev, [idSolicitud]: "" }));
       setReviewComment("");
       setReviewRating(5);
@@ -310,7 +412,7 @@ function ClienteDashboard() {
       setError(
         err instanceof Error
           ? err.message
-          : "No se pudo crear la reseña."
+          : "No pudimos publicar tu reseña. Intenta nuevamente."
       );
     } finally {
       setSendingReview(false);
@@ -335,7 +437,7 @@ function ClienteDashboard() {
 
       await cargarSolicitudes();
     } catch {
-      setError("No se pudo actualizar la cotización.");
+      setError("No pudimos actualizar la cotización. Intenta nuevamente.");
     }
   }
 
@@ -385,11 +487,11 @@ function ClienteDashboard() {
 
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  Solicitar Servicio
+                  Solicitar servicio
                 </h2>
 
                 <p className="text-sm text-gray-500">
-                  Registra un problema para buscar ayuda técnica.
+                  Cuéntanos qué ocurre para buscar ayuda técnica.
                 </p>
               </div>
             </div>
@@ -420,7 +522,7 @@ function ClienteDashboard() {
                   className={fieldClass(fieldErrors.servicio_id_servicio)}
                 >
                   {servicios.length === 0 && (
-                    <option value={0}>Sin servicios disponibles</option>
+                    <option value={0}>No hay servicios disponibles para solicitar</option>
                   )}
                   {servicios.map((servicio) => (
                     <option
@@ -446,7 +548,7 @@ function ClienteDashboard() {
                   className={fieldClass(fieldErrors.comuna_id_comuna)}
                 >
                   {comunas.length === 0 && (
-                    <option value={0}>Sin comunas disponibles</option>
+                    <option value={0}>No hay comunas disponibles para seleccionar</option>
                   )}
                   {comunas.map((comuna) => (
                     <option key={comuna.id_comuna} value={comuna.id_comuna}>
@@ -465,7 +567,7 @@ function ClienteDashboard() {
                 name="titulo_solicitud"
                 value={form.titulo_solicitud}
                 onChange={handleChange}
-                placeholder="Título de la solicitud"
+                placeholder="Ej: Filtración bajo el lavaplatos"
                 className={fieldClass(fieldErrors.titulo_solicitud)}
               />
               <FieldError message={fieldErrors.titulo_solicitud} />
@@ -479,7 +581,7 @@ function ClienteDashboard() {
                 name="descripcion_problema"
                 value={form.descripcion_problema}
                 onChange={handleChange}
-                placeholder="Describe el problema"
+                placeholder="Describe el problema con el mayor detalle posible"
                 rows={4}
                 className={`${fieldClass(fieldErrors.descripcion_problema)} resize-none`}
               />
@@ -510,7 +612,7 @@ function ClienteDashboard() {
                 name="direccion"
                 value={form.direccion}
                 onChange={handleChange}
-                placeholder="Dirección"
+                placeholder="Calle, número y comuna"
                 className={fieldClass(fieldErrors.direccion)}
               />
               <FieldError message={fieldErrors.direccion} />
@@ -520,14 +622,37 @@ function ClienteDashboard() {
                 <label className="mb-2 block text-sm font-bold text-slate-700">
                   Tipo de problema
                 </label>
-              <input
-                name="tipo_problema"
-                value={form.tipo_problema}
-                onChange={handleChange}
-                placeholder="Tipo de problema"
-                className={fieldClass(fieldErrors.tipo_problema)}
-              />
-              <FieldError message={fieldErrors.tipo_problema} />
+                <select
+                  name="tipo_problema"
+                  value={form.tipo_problema}
+                  onChange={handleChange}
+                  disabled={
+                    !form.servicio_id_servicio ||
+                    tipoProblemaOptions.length === 0
+                  }
+                  className={fieldClass(fieldErrors.tipo_problema)}
+                >
+                  {!form.servicio_id_servicio ? (
+                    <option value="">Primero selecciona un servicio</option>
+                  ) : tipoProblemaOptions.length === 0 ? (
+                    <option value="">
+                      Este servicio aún no tiene tipos de problema configurados
+                    </option>
+                  ) : (
+                    <>
+                      <option value="">Selecciona el tipo de problema</option>
+                      {tipoProblemaOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <p className="mt-2 text-xs text-slate-500">
+                  Esto ayuda a que el técnico entienda más rápido qué necesitas.
+                </p>
+                <FieldError message={fieldErrors.tipo_problema} />
               </div>
 
               <div>
@@ -593,7 +718,7 @@ function ClienteDashboard() {
 
             {loadingSolicitudes ? (
               <div className="rounded-xl bg-gray-50 p-6 text-center text-gray-600">
-                Cargando solicitudes...
+                Cargando tus solicitudes...
               </div>
             ) : solicitudes.length === 0 ? (
               <div className="space-y-4">
@@ -690,7 +815,7 @@ function ClienteDashboard() {
                                       {cotizacion.mensaje_cotizacion}
                                     </p>
                                     <p className="mt-1 text-xs text-gray-500">
-                                      Tecnico:{" "}
+                                      Técnico:{" "}
                                       {cotizacion.tecnico_usuario_rut}
                                     </p>
                                   </div>

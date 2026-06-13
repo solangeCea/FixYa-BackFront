@@ -158,7 +158,7 @@ function Servicios() {
       setComunas([]);
       setTecnicos([]);
       setSelectedServicioId(null);
-      setError("No se pudo cargar el marketplace de servicios.");
+      setError("No pudimos cargar los servicios disponibles. Intenta actualizar los resultados.");
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ function Servicios() {
       })
       .catch(() => {
         if (!active) return;
-        setError("No se pudo cargar el marketplace de servicios.");
+        setError("No pudimos cargar los servicios disponibles. Intenta actualizar los resultados.");
       })
       .finally(() => {
         if (!active) return;
@@ -234,7 +234,7 @@ function Servicios() {
           <div>
             <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase text-blue-700">
               <Home className="h-3.5 w-3.5" />
-              Marketplace FixYa
+              Servicios FixYa
             </p>
             <h1 className="text-4xl font-black text-slate-950">
               Servicios para el hogar
@@ -261,7 +261,7 @@ function Servicios() {
 
         {loading && (
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-            Cargando marketplace...
+            Buscando servicios y técnicos disponibles...
           </div>
         )}
 
@@ -322,7 +322,7 @@ function Servicios() {
 
             {servicios.length === 0 && (
               <EmptyState
-                title="No hay servicios activos para solicitar"
+                title="Aún no hay servicios activos para solicitar"
                 description="Cuando administración habilite servicios, aparecerán aquí para que puedas filtrarlos por comuna."
                 icon={Wrench}
               />

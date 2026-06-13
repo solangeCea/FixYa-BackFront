@@ -91,7 +91,7 @@ function Home() {
                 <div className="grid h-[31rem] grid-cols-[1.2fr_0.8fr] gap-3">
                   <img
                     src={heroImages[0]}
-                    alt="Tecnico trabajando en el hogar"
+                    alt="Técnico trabajando en el hogar"
                     className="h-full w-full rounded-[1.5rem] object-cover"
                   />
                   <div className="grid gap-3">
@@ -99,7 +99,7 @@ function Home() {
                       <img
                         key={image}
                         src={image}
-                        alt="Servicio tecnico profesional"
+                        alt="Servicio técnico profesional"
                         className="h-full w-full rounded-[1.5rem] object-cover"
                       />
                     ))}
