@@ -31,7 +31,7 @@ function DetailItem({
         {label}
       </p>
       <p className="mt-1 break-words text-sm font-semibold text-slate-950">
-        {value || "No informado"}
+        {value || "Información no registrada"}
       </p>
     </div>
   );
@@ -60,7 +60,9 @@ export default function UserManagement() {
         setUsers(usuariosData);
         setComunas(comunasData);
       } catch {
-        setError("No se pudieron cargar los usuarios del sistema.");
+        setError(
+          "No pudimos cargar los usuarios registrados. Intenta actualizar el listado."
+        );
       } finally {
         setLoading(false);
       }
@@ -217,7 +219,7 @@ export default function UserManagement() {
       {loading && (
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
           <p className="font-medium text-gray-600">
-            Cargando usuarios...
+            Cargando usuarios registrados...
           </p>
         </div>
       )}
@@ -291,7 +293,7 @@ export default function UserManagement() {
 
                         <p className="flex items-center gap-2 text-sm text-gray-700">
                           <Phone className="h-4 w-4 text-gray-400" />
-                          {user.telefono || "Sin teléfono"}
+                          {user.telefono || "Teléfono no registrado"}
                         </p>
                       </div>
                     </td>
@@ -302,7 +304,7 @@ export default function UserManagement() {
                         {user.comuna_id_comuna
                           ? comunasPorId.get(user.comuna_id_comuna) ||
                             `ID comuna ${user.comuna_id_comuna}`
-                          : "Sin comuna"}
+                          : "Comuna no registrada"}
                       </p>
                     </td>
 
@@ -386,16 +388,16 @@ export default function UserManagement() {
                   selectedUser.comuna_id_comuna
                     ? comunasPorId.get(selectedUser.comuna_id_comuna) ||
                       `ID comuna ${selectedUser.comuna_id_comuna}`
-                    : "Sin comuna"
+                    : "Comuna no registrada"
                 }
               />
               <DetailItem label="Rol" value={getRolLabel(selectedUser.tipo_usuario)} />
             </div>
 
             <div className="rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900">
-              Desde esta vista puedes revisar el perfil base del usuario. Las acciones de
-              edición o suspensión no están habilitadas porque no existe un endpoint activo
-              para modificarlas desde este panel.
+              Desde esta vista puedes revisar la información base del usuario.
+              Los cambios de estado se gestionan desde los flujos
+              administrativos habilitados.
             </div>
           </div>
         )}

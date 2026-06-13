@@ -186,7 +186,9 @@ function Register() {
             0,
         }));
       } catch {
-        setError("No se pudieron cargar las comunas.");
+        setError(
+          "No pudimos cargar regiones, comunas y servicios. Intenta actualizar la página antes de registrarte."
+        );
       } finally {
         setLoadingComunas(false);
       }
@@ -522,7 +524,7 @@ function Register() {
       setError(
         err instanceof Error
           ? err.message
-          : "No se pudo registrar el usuario."
+          : "No pudimos crear tu cuenta. Revisa los datos e inténtalo nuevamente."
       );
     } finally {
       setLoading(false);
@@ -554,7 +556,7 @@ function Register() {
         >
           <div className="mb-8 text-center">
             <h1 className="mb-2 text-3xl font-bold text-gray-900">
-              Crear Cuenta
+              Crear cuenta en FixYa
             </h1>
 
             <p className="text-gray-600">
@@ -756,7 +758,7 @@ function Register() {
                   className={fieldClass(fieldErrors.region_id_region)}
                 >
                   {regiones.length === 0 && (
-                    <option value={0}>Sin regiones disponibles</option>
+                    <option value={0}>No hay regiones disponibles para seleccionar</option>
                   )}
                   {regiones.map((region) => (
                     <option key={region.id_region} value={region.id_region}>
@@ -782,7 +784,7 @@ function Register() {
                   className={fieldClass(fieldErrors.comuna_id_comuna)}
                 >
                   {comunasFiltradas.length === 0 && (
-                    <option value={0}>Sin comunas para la región</option>
+                    <option value={0}>No hay comunas disponibles para esta región</option>
                   )}
                   {comunasFiltradas.map((comuna) => (
                     <option key={comuna.id_comuna} value={comuna.id_comuna}>
@@ -810,7 +812,7 @@ function Register() {
                       className={fieldClass(fieldErrors.servicio_id_servicio)}
                     >
                       {servicios.length === 0 && (
-                        <option value={0}>Sin servicios disponibles</option>
+                        <option value={0}>No hay servicios disponibles para técnicos</option>
                       )}
                       {servicios.map((servicio) => (
                         <option

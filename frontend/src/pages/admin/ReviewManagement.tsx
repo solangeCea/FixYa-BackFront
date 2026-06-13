@@ -34,7 +34,7 @@ function DetailItem({
         {label}
       </p>
       <p className="mt-1 break-words text-sm font-semibold text-slate-950">
-        {value || "No informado"}
+        {value || "Información no registrada"}
       </p>
     </div>
   );
@@ -58,7 +58,7 @@ export default function ReviewManagement() {
       setReviews(data);
     } catch (error) {
       console.error("Error cargando resenas:", error);
-      setError("No se pudieron cargar las resenas reales.");
+      setError("No pudimos cargar las reseñas. Intenta actualizar el listado.");
     } finally {
       setLoading(false);
     }
@@ -76,10 +76,10 @@ export default function ReviewManagement() {
 
       await approveReview(idResena);
 
-      setSuccess("Resena aprobada correctamente.");
+      setSuccess("Reseña aprobada. Seguirá visible para los usuarios.");
       await cargarResenas();
     } catch {
-      setError("No se pudo aprobar la resena.");
+      setError("No pudimos aprobar la reseña. Intenta nuevamente.");
     } finally {
       setActionLoading(null);
     }
@@ -93,10 +93,10 @@ export default function ReviewManagement() {
 
       await hideReview(idResena);
 
-      setSuccess("Resena ocultada correctamente.");
+      setSuccess("Reseña ocultada. Ya no estará visible para los usuarios.");
       await cargarResenas();
     } catch {
-      setError("No se pudo ocultar la resena.");
+      setError("No pudimos ocultar la reseña. Intenta nuevamente.");
     } finally {
       setActionLoading(null);
     }
@@ -132,7 +132,7 @@ export default function ReviewManagement() {
       <div className="p-6">
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
           <RefreshCw className="mx-auto mb-3 animate-spin text-teal-600" />
-          <p className="font-medium text-gray-700">Cargando resenas reales...</p>
+          <p className="font-medium text-gray-700">Cargando reseñas de la plataforma...</p>
         </div>
       </div>
     );
@@ -144,7 +144,7 @@ export default function ReviewManagement() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestión de reseñas</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Modera reportes sin eliminar registros del sistema.
+            Revisa reseñas reportadas y decide si deben seguir visibles.
           </p>
         </div>
 
@@ -195,7 +195,7 @@ export default function ReviewManagement() {
         {filteredReviews.length === 0 ? (
           <div className="p-6">
             <EmptyState
-              title="No hay reseñas para este filtro"
+              title="No encontramos reseñas para este filtro"
               description="Cuando existan reseñas activas, reportadas u ocultadas según el filtro seleccionado, aparecerán aquí."
               icon={Star}
             />
@@ -215,7 +215,7 @@ export default function ReviewManagement() {
                     <div>
                       <div className="mb-2 flex flex-wrap items-center gap-3">
                         <h3 className="font-bold text-gray-900">
-                          Resena #{review.id_resena}
+                          Reseña #{review.id_resena}
                         </h3>
 
                         {pending && (
@@ -291,8 +291,8 @@ export default function ReviewManagement() {
                       >
                         <CheckCircle size={16} />
                         {actionLoading === review.id_resena
-                          ? "Procesando..."
-                          : "Aprobar resena"}
+                          ? "Aprobando reseña..."
+                          : "Aprobar reseña reportada"}
                       </button>
 
                       <button
@@ -302,8 +302,8 @@ export default function ReviewManagement() {
                       >
                         <EyeOff size={16} />
                         {actionLoading === review.id_resena
-                          ? "Procesando..."
-                          : "Ocultar resena"}
+                          ? "Ocultando reseña..."
+                          : "Ocultar reseña reportada"}
                       </button>
                       </>
                     )}
@@ -322,7 +322,7 @@ export default function ReviewManagement() {
             ? `Reseña #${selectedReview.id_resena}`
             : "Detalle de reseña"
         }
-        description="Información completa de moderación y trazabilidad."
+        description="Información completa para revisar esta reseña."
         onClose={() => setSelectedReview(null)}
       >
         {selectedReview && (

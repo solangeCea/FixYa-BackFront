@@ -32,7 +32,7 @@ function DetailItem({
         {label}
       </p>
       <p className="mt-1 break-words text-sm font-semibold text-slate-950">
-        {value || "No informado"}
+        {value || "Información no registrada"}
       </p>
     </div>
   );
@@ -62,7 +62,9 @@ function RequestManagement() {
       setComunas(comunasData);
     } catch (error) {
       console.error(error);
-      setError("No se pudieron cargar las solicitudes.");
+      setError(
+        "No pudimos cargar las solicitudes del sistema. Intenta actualizar el listado."
+      );
     } finally {
       setLoading(false);
     }
@@ -125,7 +127,7 @@ function RequestManagement() {
         </div>
 
         <div className="rounded-2xl bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Sin tecnico</p>
+          <p className="text-sm text-gray-500">Sin técnico asignado</p>
           <p className="mt-2 text-3xl font-bold text-yellow-700">
             {solicitudesSinTecnico.length}
           </p>
@@ -155,11 +157,11 @@ function RequestManagement() {
 
       {loading ? (
         <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-          Cargando solicitudes...
+          Cargando solicitudes del sistema...
         </div>
       ) : solicitudes.length === 0 ? (
         <EmptyState
-          title="No hay solicitudes registradas en la plataforma"
+          title="Aún no hay solicitudes registradas en la plataforma"
           description="Cuando los clientes creen solicitudes de servicio, aparecerán aquí para seguimiento administrativo."
           icon={ClipboardList}
         />
@@ -193,7 +195,7 @@ function RequestManagement() {
 
                   <div className="grid gap-2 text-sm text-gray-600 md:grid-cols-2">
                     <p>
-                      <strong>Direccion:</strong> {solicitud.direccion}
+                      <strong>Dirección:</strong> {solicitud.direccion}
                     </p>
                     <p>
                       <strong>Urgencia:</strong> {solicitud.urgencia}
@@ -209,8 +211,8 @@ function RequestManagement() {
                         `ID ${solicitud.comuna_id_comuna}`}
                     </p>
                     <p>
-                      <strong>Tecnico:</strong>{" "}
-                      {solicitud.tecnico_usuario_rut || "Pendiente de aceptacion"}
+                      <strong>Técnico:</strong>{" "}
+                      {solicitud.tecnico_usuario_rut || "Pendiente de aceptación"}
                     </p>
                   </div>
                 </div>

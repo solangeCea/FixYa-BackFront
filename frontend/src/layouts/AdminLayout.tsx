@@ -27,9 +27,9 @@ function AdminLayout() {
   const menuItems = [
     { path: "/admin/panel", icon: LayoutDashboard, label: "Resumen" },
     { path: "/admin/solicitudes", icon: ClipboardList, label: "Solicitudes" },
-    { path: "/admin/tecnicos", icon: UserCheck, label: "Tecnicos" },
+    { path: "/admin/tecnicos", icon: UserCheck, label: "Técnicos" },
     { path: "/admin/usuarios", icon: Users, label: "Usuarios" },
-    { path: "/admin/resenas", icon: Star, label: "Resenas" },
+    { path: "/admin/resenas", icon: Star, label: "Reseñas" },
   ];
 
   const activeItem = menuItems.find((item) => location.pathname === item.path);
@@ -43,7 +43,9 @@ function AdminLayout() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-950">FixYa</h1>
-            <p className="text-xs font-medium text-slate-500">Admin Center</p>
+            <p className="text-xs font-medium text-slate-500">
+              Panel administrativo
+            </p>
           </div>
         </Link>
       </div>
@@ -76,7 +78,7 @@ function AdminLayout() {
           className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-50"
         >
           <LogOut size={19} />
-          <span>Cerrar sesion</span>
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </>
@@ -125,7 +127,7 @@ function AdminLayout() {
                 Administración
                 </p>
                 <h2 className="text-xl font-bold text-slate-950 md:text-2xl">
-                  {activeItem?.label || "Panel Admin"}
+                  {activeItem?.label || "Panel administrador"}
                 </h2>
               </div>
             </div>

@@ -22,7 +22,7 @@ function Tecnicos() {
       const data = await getPublicTechnicianProfiles();
       setTecnicos(data);
     } catch {
-      setError("No se pudieron cargar los perfiles de tecnicos.");
+      setError("No pudimos cargar los técnicos verificados. Intenta actualizar la búsqueda.");
     } finally {
       setLoading(false);
     }
@@ -51,10 +51,10 @@ function Tecnicos() {
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="text-4xl font-bold text-gray-900">
-              Tecnicos verificados
+              Técnicos verificados
             </h1>
             <p className="mt-2 text-gray-600">
-              Revisa perfiles tecnicos aprobados por FixYa.
+              Revisa perfiles técnicos aprobados por FixYa antes de solicitar ayuda.
             </p>
           </div>
 
@@ -81,7 +81,7 @@ function Tecnicos() {
 
         {loading && (
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-            Cargando tecnicos...
+            Buscando técnicos verificados...
           </div>
         )}
 
@@ -109,7 +109,7 @@ function Tecnicos() {
                         {tecnico.nombre_completo}
                       </h2>
                       <p className="text-sm text-gray-500">
-                        {tecnico.nivel_tecnico} · {tecnico.experiencia_anios} anos
+                        {tecnico.nivel_tecnico} · {tecnico.experiencia_anios} años
                       </p>
                     </div>
                   </div>
@@ -187,7 +187,7 @@ function Tecnicos() {
                 onClick={() => setSelectedTecnico(null)}
                 className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
               >
-                Cerrar
+                Cerrar perfil técnico
               </button>
             </div>
 
@@ -207,7 +207,7 @@ function Tecnicos() {
               <div className="rounded-xl bg-gray-50 p-4">
                 <p className="text-sm text-gray-500">Experiencia</p>
                 <p className="font-semibold text-gray-900">
-                  {selectedTecnico.experiencia_anios} anos
+                  {selectedTecnico.experiencia_anios} años
                 </p>
               </div>
               <div className="rounded-xl bg-gray-50 p-4">
@@ -226,7 +226,7 @@ function Tecnicos() {
                 <p className="mt-1 font-semibold text-gray-900">
                   {selectedTecnico.servicios.length > 0
                     ? selectedTecnico.servicios.join(", ")
-                    : "Sin servicios asociados"}
+                    : "Este técnico aún no tiene servicios publicados"}
                 </p>
               </div>
               <div className="rounded-xl bg-gray-50 p-4 md:col-span-2">
@@ -234,11 +234,11 @@ function Tecnicos() {
                 <p className="mt-1 font-semibold text-gray-900">
                   {selectedTecnico.comunas.length > 0
                     ? selectedTecnico.comunas.join(", ")
-                    : "Sin comunas asociadas"}
+                    : "Este técnico aún no tiene comunas asociadas"}
                 </p>
               </div>
               <div className="rounded-xl bg-gray-50 p-4 md:col-span-2">
-                <p className="text-sm text-gray-500">Reputacion</p>
+                <p className="text-sm text-gray-500">Reputación</p>
                 <p className="mt-1 font-semibold text-gray-900">
                   {selectedTecnico.promedio_calificacion} estrellas ·{" "}
                   {selectedTecnico.total_resenas} reseñas

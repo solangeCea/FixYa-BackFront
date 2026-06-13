@@ -13,8 +13,25 @@ import {
 import { motion } from "framer-motion";
 
 import { login, obtenerUsuarioActual } from "../../services/authService";
-import { saveToken } from "../../services/token";
+import { removeToken, saveToken } from "../../services/token";
 import { useAuth } from "../../context/AuthContext";
+
+type AuthRole = "CLIENTE" | "TECNICO" | "ADMIN";
+
+function normalizeRole(role: string | null | undefined): AuthRole | null {
+  const normalizedRole = role
+    ?.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+
+  if (normalizedRole === "CLIENTE") return "CLIENTE";
+  if (normalizedRole === "TECNICO") return "TECNICO";
+  if (normalizedRole === "ADMIN" || normalizedRole === "ADMINISTRADOR") {
+    return "ADMIN";
+  }
+
+  return null;
+}
 
 function getDashboardPath(role: string) {
   if (role === "CLIENTE") return "/cliente/dashboard";
@@ -90,9 +107,22 @@ function Login() {
     try {
       setLoading(true);
       const response = await login(correo, contrasena);
-      saveToken(response.access_token);
-
       const usuario = await obtenerUsuarioActual(response.access_token);
+
+      const selectedAuthRole = normalizeRole(selectedRole);
+      const userAuthRole = normalizeRole(usuario.tipo_usuario);
+
+      if (selectedAuthRole !== userAuthRole) {
+        removeToken();
+        sessionStorage.clear();
+        setUsuario(null);
+        setError(
+          "El rol seleccionado no corresponde a este usuario. Revisa tu selección e inténtalo nuevamente."
+        );
+        return;
+      }
+
+      saveToken(response.access_token);
       setUsuario(usuario);
 
       if (usuario.tipo_usuario === "CLIENTE" && isSafeClienteNext(nextPath)) {
@@ -272,7 +302,7 @@ function Login() {
 
             <button
               type="submit"
-              disabled={!selectedRole || loading}
+              disabled={loading}
               className="fixya-btn-primary w-full px-5 py-4"
             >
               <LogIn size={18} />

@@ -33,7 +33,7 @@ function AdminDashboard() {
       setDashboard(data);
     } catch (error) {
       console.error("Error cargando dashboard:", error);
-      setError("No se pudieron cargar las metricas del dashboard.");
+      setError("No pudimos cargar el resumen administrativo. Intenta nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -46,7 +46,7 @@ function AdminDashboard() {
   if (loading) {
     return (
       <div className="fixya-page">
-        <LoadingState label="Cargando metricas reales..." />
+        <LoadingState label="Cargando resumen administrativo..." />
       </div>
     );
   }
@@ -69,29 +69,29 @@ function AdminDashboard() {
 
   const quickActions = [
     {
-      title: "Aprobar tecnicos",
-      description: "Revisa perfiles pendientes de validacion.",
+      title: "Revisar técnicos pendientes",
+      description: "Valida perfiles antes de que puedan recibir trabajos.",
       link: "/admin/tecnicos",
       count: dashboard.tecnicos_pendientes,
       icon: UserCheck,
     },
     {
-      title: "Moderar resenas",
-      description: "Gestiona reportes pendientes.",
+      title: "Revisar reseñas reportadas",
+      description: "Evalúa reseñas marcadas por usuarios.",
       link: "/admin/resenas",
       count: dashboard.resenas_reportadas,
       icon: Star,
     },
     {
       title: "Solicitudes",
-      description: "Monitorea trabajos por estado.",
+      description: "Revisa solicitudes y estados de atención.",
       link: "/admin/solicitudes",
       count: dashboard.total_solicitudes,
       icon: ClipboardList,
     },
     {
       title: "Usuarios",
-      description: "Consulta usuarios de la plataforma.",
+      description: "Consulta clientes, técnicos y administradores.",
       link: "/admin/usuarios",
       count: dashboard.total_usuarios,
       icon: Users,
@@ -103,7 +103,7 @@ function AdminDashboard() {
       <PageHeader
         eyebrow="Panel administrativo"
         title="Resumen operativo"
-        description="Metricas reales del ecosistema FixYa: usuarios, tecnicos, solicitudes, resenas y cotizaciones."
+        description="Resumen de usuarios, técnicos, solicitudes, reseñas y cotizaciones de FixYa."
         actions={
           <button
             onClick={cargarDashboard}
@@ -124,23 +124,23 @@ function AdminDashboard() {
           tone="blue"
         />
         <StatCard
-          label="Tecnicos verificados"
+          label="Técnicos verificados"
           value={dashboard.tecnicos_verificados}
-          description={`${dashboard.total_tecnicos} tecnicos registrados`}
+          description={`${dashboard.total_tecnicos} técnicos registrados`}
           icon={UserCheck}
           tone="green"
         />
         <StatCard
-          label="Tecnicos pendientes"
+          label="Técnicos pendientes"
           value={dashboard.tecnicos_pendientes}
-          description="Requieren revision admin"
+          description="Requieren revisión administrativa"
           icon={Clock}
           tone="yellow"
         />
         <StatCard
           label="Reportes pendientes"
           value={dashboard.resenas_reportadas}
-          description="Resenas por moderar"
+          description="Reseñas por moderar"
           icon={AlertCircle}
           tone="red"
         />
@@ -149,7 +149,7 @@ function AdminDashboard() {
       <div className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <SectionCard
           title="Estado del sistema"
-          description="Distribucion actual de solicitudes y contenido."
+          description="Distribución actual de solicitudes y contenido."
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
@@ -199,16 +199,16 @@ function AdminDashboard() {
 
       <div className="mt-8 grid gap-6 md:grid-cols-3">
         <StatCard
-          label="Resenas activas"
+          label="Reseñas activas"
           value={dashboard.resenas_activas}
-          description={`${dashboard.total_resenas} resenas totales`}
+          description={`${dashboard.total_resenas} reseñas totales`}
           icon={Star}
           tone="green"
         />
         <StatCard
           label="Promedio general"
           value={dashboard.promedio_general_calificaciones}
-          description="Calificacion promedio"
+          description="Calificación promedio"
           icon={Star}
           tone="yellow"
         />

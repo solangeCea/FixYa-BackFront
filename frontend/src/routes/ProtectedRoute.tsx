@@ -25,7 +25,7 @@ function ProtectedRoute({
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <p className="text-sm font-medium text-slate-600">
-          Cargando sesión...
+          Preparando tu sesión...
         </p>
       </div>
     );

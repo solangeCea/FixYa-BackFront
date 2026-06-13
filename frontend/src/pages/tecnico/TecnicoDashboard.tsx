@@ -104,7 +104,7 @@ function TecnicoDashboard() {
       setServicios(serviciosData);
       setMetrics(metricasData);
     } catch {
-      setError("No se pudieron cargar las solicitudes del técnico.");
+      setError("No pudimos cargar tus trabajos y solicitudes disponibles. Intenta actualizar el panel.");
     } finally {
       setLoading(false);
     }
@@ -148,7 +148,7 @@ function TecnicoDashboard() {
       setSuccess("Trabajo iniciado. El cliente verá la solicitud en proceso.");
       await cargarDatos();
     } catch {
-      setError("No se pudo iniciar la solicitud.");
+      setError("No pudimos iniciar este trabajo. Intenta nuevamente.");
     } finally {
       setAccionLoading(null);
     }
@@ -156,7 +156,7 @@ function TecnicoDashboard() {
 
   async function handleAceptarTrabajo(idSolicitud: number) {
     if (!usuario?.rut) {
-      setError("No se pudo identificar al tecnico autenticado.");
+      setError("Necesitamos reconocer tu sesión de técnico. Inicia sesión nuevamente.");
       return;
     }
 
@@ -170,7 +170,7 @@ function TecnicoDashboard() {
       setSuccess("Trabajo aceptado. Ahora puedes coordinar y enviar cotización.");
       await cargarDatos();
     } catch {
-      setError("No se pudo aceptar el trabajo.");
+      setError("No pudimos aceptar este trabajo. Puede que ya no esté disponible.");
     } finally {
       setAccionLoading(null);
     }
@@ -198,7 +198,7 @@ function TecnicoDashboard() {
       }));
       await cargarDatos();
     } catch {
-      setError("No se pudo finalizar la solicitud.");
+      setError("No pudimos finalizar el trabajo. Revisa el costo e intenta nuevamente.");
     } finally {
       setAccionLoading(null);
     }
@@ -206,7 +206,7 @@ function TecnicoDashboard() {
 
   async function handleCrearCotizacion(idSolicitud: number) {
     if (!usuario?.rut) {
-      setError("No se pudo identificar al tecnico autenticado.");
+      setError("Necesitamos reconocer tu sesión de técnico. Inicia sesión nuevamente.");
       return;
     }
 
@@ -214,7 +214,7 @@ function TecnicoDashboard() {
     const monto = Number(cotizacion?.monto);
 
     if (!monto || monto <= 0 || !cotizacion?.detalle?.trim() || !cotizacion.vigencia) {
-      setError("Completa monto, detalle y vigencia de la cotizacion.");
+      setError("Completa el monto, el detalle y la vigencia antes de enviar la cotización.");
       return;
     }
 
@@ -238,7 +238,7 @@ function TecnicoDashboard() {
       }));
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "No se pudo crear la cotizacion."
+        err instanceof Error ? err.message : "No pudimos enviar la cotización al cliente."
       );
     } finally {
       setAccionLoading(null);
@@ -369,7 +369,7 @@ function TecnicoDashboard() {
 
         {loading ? (
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-            Cargando solicitudes...
+            Cargando trabajos y solicitudes...
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-2">
@@ -380,7 +380,7 @@ function TecnicoDashboard() {
 
               {solicitudesDisponibles.length === 0 ? (
                 <EmptyState
-                  title="No hay solicitudes disponibles para tomar"
+                  title="Aún no hay solicitudes disponibles para tomar"
                   description="Cuando un cliente cree una solicitud relacionada con tus servicios, aparecerá aquí para que puedas aceptarla."
                   icon={ClipboardList}
                 />
@@ -445,8 +445,8 @@ function TecnicoDashboard() {
                       >
                         <CheckCircle className="h-5 w-5" />
                         {accionLoading === solicitud.id_solicitud
-                          ? "Aceptando..."
-                          : "Aceptar trabajo"}
+                          ? "Aceptando trabajo..."
+                          : "Aceptar este trabajo"}
                       </button>
                     </div>
                   ))}
@@ -624,8 +624,8 @@ function TecnicoDashboard() {
                         >
                           <PlayCircle className="h-5 w-5" />
                           {accionLoading === solicitud.id_solicitud
-                            ? "Iniciando..."
-                            : "Iniciar trabajo"}
+                            ? "Iniciando trabajo..."
+                            : "Iniciar trabajo asignado"}
                         </button>
                       )}
 
