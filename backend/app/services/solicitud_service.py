@@ -6,9 +6,10 @@ from datetime import datetime
 from fastapi import HTTPException
 from app.models.servicio import Servicio
 from app.models.comuna import Comuna
+from app.models.usuario import Usuario
 
 def crear_solicitud(db: Session, data: SolicitudCreate):
-
+    ###validar servicio existente
     servicio_existente = db.query(Servicio).filter(
         Servicio.id_servicio == data.servicio_id_servicio
     ).first()
@@ -18,7 +19,7 @@ def crear_solicitud(db: Session, data: SolicitudCreate):
             status_code=404,
             detail=f"Servicio no encontrado con id {data.servicio_id_servicio}"
         )
-    
+    ###Validar comuna existente
     comuna_existente = db.query(Comuna).filter(
         Comuna.id_comuna == data.comuna_id_comuna
     ).first()
@@ -28,6 +29,17 @@ def crear_solicitud(db: Session, data: SolicitudCreate):
         raise HTTPException(
             status_code=404,
             detail=f"Comuna no encontrada con id {data.comuna_id_comuna}"
+        )
+    
+    ###Validar usuario existente
+    usuario_existente = db.query(Usuario).filter(
+        Usuario.rut == data.usuario_rut
+    ).first()
+
+    if not usuario_existente:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Usuario no encontrado con rut {data.usuario_rut}"
         )
 
     nueva = Solicitud(
