@@ -70,21 +70,21 @@ function Login() {
       title: "Cliente",
       description: "Revisa tus solicitudes y cotizaciones.",
       icon: User,
-      color: "bg-cyan-50 text-cyan-700",
+      color: "bg-[#F8F5EF] text-[#123F66]",
     },
     {
       type: "tecnico" as const,
       title: "Técnico",
       description: "Gestiona trabajos y respuestas a clientes.",
       icon: Briefcase,
-      color: "bg-emerald-50 text-emerald-700",
+      color: "bg-[#DDEADF] text-[#2F5F46]",
     },
     {
       type: "admin" as const,
       title: "Administrador",
       description: "Administra usuarios, técnicos y solicitudes.",
       icon: Shield,
-      color: "bg-teal-50 text-teal-700",
+      color: "bg-[#FFF4D8] text-[#8C5F1D]",
     },
   ];
 
@@ -146,30 +146,30 @@ function Login() {
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-950/10 lg:grid-cols-[0.88fr_1.12fr]"
+        className="grid w-full max-w-6xl overflow-hidden rounded-2xl border border-[#E6E0D6] bg-white shadow-2xl shadow-[#0E1B2A]/10 lg:grid-cols-[0.88fr_1.12fr]"
       >
-        <section className="hidden bg-gradient-to-br from-slate-950 via-teal-800 to-cyan-700 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+        <section className="hidden bg-[#0E1B2A] p-10 text-white lg:flex lg:flex-col lg:justify-between">
           <div>
             <div className="mb-8 flex items-center gap-3">
-              <div className="rounded-xl bg-white/15 p-3 backdrop-blur">
+              <div className="rounded-xl bg-white/10 p-3 backdrop-blur">
                 <Wrench className="h-7 w-7" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold">FixYa</h1>
-                <p className="text-sm text-cyan-100">Servicios para el hogar</p>
+                <p className="text-sm text-white/75">Servicios para el hogar</p>
               </div>
             </div>
             <h2 className="text-4xl font-bold leading-tight">
               Todo lo que necesitas para seguir tus servicios en un solo lugar.
             </h2>
-            <p className="mt-5 max-w-md text-sm leading-6 text-cyan-50">
+            <p className="mt-5 max-w-md text-sm leading-6 text-white/80">
               Entra a FixYa para revisar solicitudes, responder trabajos o
               administrar la plataforma según tu rol.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/15 bg-white/12 p-5 backdrop-blur">
-            <p className="text-sm leading-6 text-cyan-50">
+          <div className="rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur">
+            <p className="text-sm leading-6 text-white/80">
               Una experiencia simple para clientes, técnicos y administradores:
               cada persona ve solo lo que necesita hacer.
             </p>
@@ -178,13 +178,13 @@ function Login() {
 
         <section className="p-8 md:p-12">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-lg shadow-teal-700/25 lg:hidden">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#123F66] text-white shadow-lg shadow-[#123F66]/25 lg:hidden">
               <Wrench size={28} />
             </div>
-            <h1 className="text-3xl font-bold text-slate-950 md:text-4xl">
+            <h1 className="text-3xl font-black text-[#0E1B2A] md:text-4xl">
               Bienvenido de nuevo a FixYa
             </h1>
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 md:text-base">
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#5F6B7A] md:text-base">
               Ingresa a tu cuenta para revisar tus solicitudes, trabajos o
               administrar la plataforma.
             </p>
@@ -203,17 +203,17 @@ function Login() {
                     }}
                   className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${
                       selectedRole === role.type
-                        ? "border-blue-500 bg-blue-50 shadow-sm"
+                        ? "border-[#C8872D] bg-[#FFF8EA] shadow-sm"
                         : fieldErrors.role
                           ? "border-red-200 bg-white hover:border-red-300"
-                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                          : "border-[#E6E0D6] bg-white hover:border-[#C8872D]/60 hover:bg-[#FBFAF7]"
                     }`}
                   >
                     <div className={`mb-3 inline-flex rounded-xl p-2 ${role.color}`}>
                       <role.icon size={22} />
                     </div>
-                    <h3 className="font-bold text-slate-950">{role.title}</h3>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                    <h3 className="font-bold text-[#102033]">{role.title}</h3>
+                    <p className="mt-1 text-xs leading-5 text-[#5F6B7A]">
                       {role.description}
                     </p>
                   </button>
@@ -229,7 +229,7 @@ function Login() {
 
             <div className="grid gap-4">
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-[#102033]">
                   Correo electrónico
                 </label>
                 <input
@@ -251,7 +251,7 @@ function Login() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label className="mb-2 block text-sm font-bold text-[#102033]">
                   Contraseña
                 </label>
                 <div className="relative">
@@ -275,7 +275,7 @@ function Login() {
                       showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
                     }
                     aria-pressed={showPassword}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#5F6B7A] transition hover:bg-[#F8F5EF] hover:text-[#102033]"
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -309,11 +309,11 @@ function Login() {
               {loading ? "Entrando a tu cuenta..." : "Iniciar sesión"}
             </button>
 
-            <p className="text-center text-sm text-slate-600">
+            <p className="text-center text-sm text-[#5F6B7A]">
               ¿No tienes cuenta?{" "}
               <Link
                 to="/register"
-                className="font-bold text-teal-700 hover:text-teal-800"
+                className="font-bold text-[#123F66] hover:text-[#C8872D]"
               >
                 Crea tu cuenta en FixYa
               </Link>

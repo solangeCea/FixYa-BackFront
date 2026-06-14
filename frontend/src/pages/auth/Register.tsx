@@ -76,7 +76,7 @@ function fieldClass(error?: string) {
   return `w-full rounded-xl border px-4 py-3 transition focus:outline-none focus:ring-2 ${
     error
       ? "border-red-300 bg-red-50/40 focus:border-red-500 focus:ring-red-100"
-      : "border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-100"
+      : "border-[#E6E0D6] bg-white focus:border-[#123F66] focus:ring-[#123F66]/10"
   }`;
 }
 
@@ -97,7 +97,7 @@ function PasswordVisibilityButton({
       onClick={onToggle}
       aria-label={label}
       aria-pressed={visible}
-      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[#5F6B7A] transition hover:bg-[#F8F5EF] hover:text-[#102033]"
     >
       <Icon className="h-5 w-5" />
     </button>
@@ -532,14 +532,14 @@ function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="border-b border-gray-200 bg-white py-6">
+    <div className="fixya-shell min-h-screen">
+      <div className="border-b border-[#E6E0D6] bg-[#F8F5EF]/95 py-6">
         <div className="mx-auto max-w-4xl px-6">
           <Link
             to="/"
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+            className="flex items-center gap-2 text-[#123F66] hover:text-[#C8872D]"
           >
-            <div className="rounded-lg bg-blue-600 p-2">
+            <div className="rounded-lg bg-[#123F66] p-2">
               <Wrench className="text-white" size={20} />
             </div>
 
@@ -552,14 +552,14 @@ function Register() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl bg-white p-8 shadow-sm"
+          className="fixya-card rounded-2xl p-8"
         >
           <div className="mb-8 text-center">
-            <h1 className="mb-2 text-3xl font-bold text-gray-900">
+            <h1 className="mb-2 text-3xl font-black text-[#0E1B2A]">
               Crear cuenta en FixYa
             </h1>
 
-            <p className="text-gray-600">
+            <p className="text-[#5F6B7A]">
               Únete a la comunidad FixYa
             </p>
           </div>
@@ -570,25 +570,25 @@ function Register() {
               onClick={() => handleUserTypeChange("cliente")}
               className={`rounded-xl border-2 p-4 transition-all ${
                 userType === "cliente"
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "border-[#C8872D] bg-[#FFF8EA]"
+                  : "border-[#E6E0D6] hover:border-[#C8872D]/60"
               }`}
             >
               <div
                 className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg ${
                   userType === "cliente"
-                    ? "bg-blue-100 text-blue-600"
-                    : "bg-gray-100 text-gray-600"
+                    ? "bg-[#123F66] text-white"
+                    : "bg-[#F8F5EF] text-[#5F6B7A]"
                 }`}
               >
                 <User size={24} />
               </div>
 
-              <h3 className="font-bold text-gray-900">
+              <h3 className="font-bold text-[#102033]">
                 Soy Cliente
               </h3>
 
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-sm text-[#5F6B7A]">
                 Busco contratar técnicos
               </p>
             </button>
@@ -598,25 +598,25 @@ function Register() {
               onClick={() => handleUserTypeChange("tecnico")}
               className={`rounded-xl border-2 p-4 transition-all ${
                 userType === "tecnico"
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300"
+                  ? "border-[#C8872D] bg-[#FFF8EA]"
+                  : "border-[#E6E0D6] hover:border-[#C8872D]/60"
               }`}
             >
               <div
                 className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg ${
                   userType === "tecnico"
-                    ? "bg-green-100 text-green-600"
-                    : "bg-gray-100 text-gray-600"
+                    ? "bg-[#DDEADF] text-[#2F5F46]"
+                    : "bg-[#F8F5EF] text-[#5F6B7A]"
                 }`}
               >
                 <Briefcase size={24} />
               </div>
 
-              <h3 className="font-bold text-gray-900">
+              <h3 className="font-bold text-[#102033]">
                 Soy Técnico
               </h3>
 
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-sm text-[#5F6B7A]">
                 Ofrezco mis servicios
               </p>
             </button>
@@ -634,7 +634,7 @@ function Register() {
               <div>
                 <label
                   htmlFor="nombre_completo"
-                  className="mb-2 block font-medium text-gray-700"
+                  className="mb-2 block font-medium text-[#102033]"
                 >
                   Nombre completo
                 </label>
@@ -656,7 +656,7 @@ function Register() {
               <div>
                 <label
                   htmlFor="rut"
-                  className="mb-2 block font-medium text-gray-700"
+                  className="mb-2 block font-medium text-[#102033]"
                 >
                   RUT
                 </label>
@@ -680,7 +680,7 @@ function Register() {
               <div>
                 <label
                   htmlFor="fecha_nacimiento"
-                  className="mb-2 block font-medium text-gray-700"
+                  className="mb-2 block font-medium text-[#102033]"
                 >
                   Fecha de nacimiento
                 </label>
@@ -701,7 +701,7 @@ function Register() {
               <div>
                 <label
                   htmlFor="genero"
-                  className="mb-2 block font-medium text-gray-700"
+                  className="mb-2 block font-medium text-[#102033]"
                 >
                   Género
                 </label>
@@ -713,7 +713,7 @@ function Register() {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   required
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="fixya-input"
                 >
                   <option value="Femenino">Femenino</option>
                   <option value="Masculino">Masculino</option>
@@ -725,7 +725,7 @@ function Register() {
             <div>
               <label
                 htmlFor="correo"
-                className="mb-2 block font-medium text-gray-700"
+                className="mb-2 block font-medium text-[#102033]"
               >
                 Correo electrónico
               </label>
@@ -747,7 +747,7 @@ function Register() {
             <div>
               <label
                 htmlFor="telefono"
-                className="mb-2 block font-medium text-gray-700"
+                className="mb-2 block font-medium text-[#102033]"
               >
                 Teléfono
               </label>
@@ -770,7 +770,7 @@ function Register() {
               <div>
                 <label
                   htmlFor="region_id_region"
-                  className="mb-2 block font-medium text-gray-700"
+                  className="mb-2 block font-medium text-[#102033]"
                 >
                   Región
                 </label>
@@ -800,7 +800,7 @@ function Register() {
               <div>
                 <label
                   htmlFor="comuna_id_comuna"
-                  className="mb-2 block font-medium text-gray-700"
+                  className="mb-2 block font-medium text-[#102033]"
                 >
                   Comuna
                 </label>
@@ -829,12 +829,12 @@ function Register() {
             </div>
 
             {userType === "tecnico" && (
-              <div className="space-y-4 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+              <div className="space-y-4 rounded-xl border border-[#E6E0D6] bg-[#FFF8EA] p-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label
                       htmlFor="servicio_id_servicio"
-                      className="mb-2 block font-medium text-gray-700"
+                      className="mb-2 block font-medium text-[#102033]"
                     >
                       Servicio principal
                     </label>
@@ -865,7 +865,7 @@ function Register() {
                   <div>
                     <label
                       htmlFor="nivel_tecnico"
-                      className="mb-2 block font-medium text-gray-700"
+                      className="mb-2 block font-medium text-[#102033]"
                     >
                       Nivel técnico
                     </label>
@@ -875,7 +875,7 @@ function Register() {
                       value={form.nivel_tecnico}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="fixya-input"
                     >
                       <option value="Inicial">Inicial</option>
                       <option value="Intermedio">Intermedio</option>
@@ -887,7 +887,7 @@ function Register() {
                 <div>
                   <label
                     htmlFor="experiencia_anios"
-                    className="mb-2 block font-medium text-gray-700"
+                    className="mb-2 block font-medium text-[#102033]"
                   >
                     Experiencia en anos
                   </label>
@@ -907,7 +907,7 @@ function Register() {
                 <div>
                   <label
                     htmlFor="descripcion_perfil"
-                    className="mb-2 block font-medium text-gray-700"
+                    className="mb-2 block font-medium text-[#102033]"
                   >
                     Descripcion del perfil
                   </label>
@@ -927,7 +927,7 @@ function Register() {
                 <div>
                   <label
                     htmlFor="documento"
-                    className="mb-2 block font-medium text-gray-700"
+                    className="mb-2 block font-medium text-[#102033]"
                   >
                     Documento técnico
                   </label>
@@ -941,7 +941,7 @@ function Register() {
                     className={fieldClass(fieldErrors.documento)}
                   />
                   <FieldError message={fieldErrors.documento} />
-                  <p className="mt-2 text-xs text-yellow-800">
+                  <p className="mt-2 text-xs text-[#8C5F1D]">
                     Formatos permitidos: PDF, JPG o PNG.
                   </p>
                 </div>
@@ -952,7 +952,7 @@ function Register() {
               <div>
                 <label
                   htmlFor="contrasena"
-                  className="mb-2 block font-medium text-gray-700"
+                  className="mb-2 block font-medium text-[#102033]"
                 >
                   Contraseña
                 </label>
@@ -985,7 +985,7 @@ function Register() {
               <div>
                 <label
                   htmlFor="confirmarContrasena"
-                  className="mb-2 block font-medium text-gray-700"
+                  className="mb-2 block font-medium text-[#102033]"
                 >
                   Confirmar contraseña
                 </label>
@@ -1019,7 +1019,7 @@ function Register() {
             <button
               type="submit"
               disabled={loading || loadingComunas || comunasFiltradas.length === 0}
-              className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              className="fixya-btn-primary w-full py-4 disabled:cursor-not-allowed"
             >
               {loading
                 ? "Creando cuenta..."
@@ -1028,11 +1028,11 @@ function Register() {
                 : "Crear cuenta cliente"}
             </button>
 
-            <p className="text-center text-sm text-gray-600">
+            <p className="text-center text-sm text-[#5F6B7A]">
               ¿Ya tienes cuenta?{" "}
               <Link
                 to="/login"
-                className="font-semibold text-blue-600 hover:text-blue-700"
+                className="font-semibold text-[#123F66] hover:text-[#C8872D]"
               >
                 Inicia sesión
               </Link>

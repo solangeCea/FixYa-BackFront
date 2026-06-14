@@ -1,189 +1,273 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Clock, ShieldCheck, Sparkles, Star, Wrench } from "lucide-react";
+import {
+  ArrowRight,
+  Briefcase,
+  CheckCircle2,
+  ClipboardList,
+  MapPin,
+  Search,
+  ShieldCheck,
+  Star,
+  Wrench,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 import Navbar from "../components/Navbar";
 
-const heroImages = [
-  "https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1400&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1400&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=1400&auto=format&fit=crop",
-];
+const heroImage =
+  "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1800&auto=format&fit=crop";
 
 const services = [
-  { title: "Electricidad", detail: "Fallas, enchufes, luminarias y revisiones del hogar", icon: "E" },
-  { title: "Gasfitería", detail: "Filtraciones, grifería, cañerías y emergencias", icon: "G" },
-  { title: "Carpintería", detail: "Puertas, muebles, marcos y reparaciones de madera", icon: "C" },
-  { title: "Cerrajería", detail: "Aperturas, cambios de chapa y seguridad de acceso", icon: "C" },
+  {
+    title: "Electricidad",
+    detail: "Instalaciones, enchufes, luminarias y revisiones del hogar.",
+    icon: Wrench,
+  },
+  {
+    title: "Gasfitería",
+    detail: "Filtraciones, grifería, cañerías y emergencias domésticas.",
+    icon: MapPin,
+  },
+  {
+    title: "Carpintería",
+    detail: "Puertas, muebles, terminaciones y reparaciones de madera.",
+    icon: Briefcase,
+  },
+  {
+    title: "Cerrajería",
+    detail: "Aperturas, cambios de chapa y seguridad de acceso.",
+    icon: ShieldCheck,
+  },
 ];
 
-const metrics = [
-  { label: "Solicita ayuda cuando la necesites", value: "24/7" },
-  { label: "Técnicos verificados por FixYa", value: "Confianza" },
-  { label: "Seguimiento simple de cada solicitud", value: "Claridad" },
+const steps = [
+  {
+    title: "Elige lo que necesitas",
+    text: "Selecciona un servicio y la comuna donde quieres recibir ayuda.",
+    icon: Search,
+  },
+  {
+    title: "Compara técnicos",
+    text: "Revisa perfiles verificados, experiencia, cobertura y calificación.",
+    icon: Star,
+  },
+  {
+    title: "Sigue tu solicitud",
+    text: "Gestiona cotizaciones, avances y cierre del trabajo desde tu panel.",
+    icon: ClipboardList,
+  },
 ];
 
 function Home() {
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-[#F8F5EF] text-[#102033]">
       <Navbar />
 
       <main>
         <section className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.24),transparent_32rem),radial-gradient(circle_at_bottom_right,rgba(139,92,246,0.2),transparent_28rem)]" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950 to-transparent" />
+          <img
+            src={heroImage}
+            alt="Técnico profesional trabajando en una instalación del hogar"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#0E1B2A]/72" />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#F8F5EF] to-transparent" />
 
-          <div className="relative mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:py-28">
+          <div className="relative mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:py-24">
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
+              className="max-w-3xl"
             >
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-cyan-100 backdrop-blur">
-                <Sparkles className="h-4 w-4 text-cyan-300" />
-                Ayuda confiable para problemas del hogar
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur">
+                <ShieldCheck className="h-4 w-4 text-[#F0C16C]" />
+                Técnicos verificados para tu hogar
               </div>
 
-              <h1 className="max-w-4xl text-5xl font-black leading-[1.02] tracking-tight text-white md:text-7xl">
-                Encuentra técnicos confiables para solucionar problemas en tu hogar.
+              <h1 className="text-4xl font-black leading-tight tracking-tight text-white md:text-6xl">
+                FixYa conecta tu problema con el técnico correcto.
               </h1>
 
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-                Solicita un servicio, revisa el estado de tu solicitud y recibe
-                ayuda de forma simple según el servicio y la comuna donde la necesitas.
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-white/85">
+                Encuentra servicios disponibles por comuna, revisa técnicos
+                verificados y crea solicitudes con seguimiento claro de principio
+                a fin.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-6 py-4 font-bold text-white shadow-2xl shadow-blue-500/30 transition hover:-translate-y-0.5 hover:bg-blue-600"
-                >
-                  Crear cuenta para solicitar servicio
+                <Link to="/register" className="fixya-btn-accent px-6 py-4">
+                  Solicitar servicio
                   <ArrowRight className="h-5 w-5" />
                 </Link>
 
                 <Link
-                  to="/tecnicos"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-6 py-4 font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/15"
+                  to="/servicios"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white px-6 py-4 font-extrabold text-[#123F66] transition hover:-translate-y-0.5 hover:bg-[#F8F5EF]"
                 >
-                  Ver técnicos verificados
+                  Ver servicios
                 </Link>
               </div>
 
-              <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
-                {metrics.map((metric) => (
-                  <div key={metric.label} className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
-                    <p className="text-2xl font-black text-white">{metric.value}</p>
-                    <p className="mt-1 text-xs font-medium leading-5 text-slate-300">{metric.label}</p>
+              <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
+                {[
+                  ["Servicios por zona", "Filtra por comuna"],
+                  ["Perfiles verificados", "Más confianza"],
+                  ["Panel simple", "Todo ordenado"],
+                ].map(([title, text]) => (
+                  <div
+                    key={title}
+                    className="rounded-lg border border-white/20 bg-white/10 p-4 text-white backdrop-blur"
+                  >
+                    <p className="font-black">{title}</p>
+                    <p className="mt-1 text-sm text-white/75">{text}</p>
                   </div>
                 ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.55, delay: 0.08 }}
-              className="relative"
-            >
-              <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-blue-500/30 via-cyan-400/20 to-violet-500/30 blur-2xl" />
-              <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/10 p-3 shadow-2xl backdrop-blur">
-                <div className="grid h-[31rem] grid-cols-[1.2fr_0.8fr] gap-3">
-                  <img
-                    src={heroImages[0]}
-                    alt="Técnico trabajando en el hogar"
-                    className="h-full w-full rounded-[1.5rem] object-cover"
-                  />
-                  <div className="grid gap-3">
-                    {heroImages.slice(1).map((image) => (
-                      <img
-                        key={image}
-                        src={image}
-                        alt="Servicio técnico profesional"
-                        className="h-full w-full rounded-[1.5rem] object-cover"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="absolute bottom-7 left-7 right-7 rounded-2xl border border-white/15 bg-slate-950/78 p-5 shadow-2xl backdrop-blur">
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-cyan-200">Solicitud activa</p>
-                      <p className="mt-1 text-lg font-black">Reparación eléctrica domiciliaria</p>
-                    </div>
-                    <div className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-bold text-emerald-200">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Asignada
-                    </div>
-                  </div>
-                </div>
               </div>
             </motion.div>
           </div>
         </section>
 
-        <section id="servicios" className="bg-slate-50 py-20 text-slate-950">
-          <div className="mx-auto max-w-7xl px-6">
-            <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-wide text-blue-600">Servicios</p>
-                <h2 className="mt-2 text-4xl font-black tracking-tight">Servicios para necesidades reales</h2>
-              </div>
-              <p className="max-w-xl text-sm leading-6 text-slate-600">
-                Elige el tipo de ayuda que necesitas, indica tu comuna y sigue
-                el avance de la solicitud sin tener que adivinar qué está pasando.
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-4">
-              {services.map((service) => (
-                <motion.div
-                  key={service.title}
-                  whileHover={{ y: -4 }}
-                  className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-xl hover:shadow-slate-200/80"
+        <section className="-mt-8 bg-[#F8F5EF] pb-16">
+          <div className="relative mx-auto max-w-7xl px-6">
+            <div className="grid gap-4 md:grid-cols-3">
+              {steps.map((step, index) => (
+                <motion.article
+                  key={step.title}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.35 }}
+                  transition={{ duration: 0.35, delay: index * 0.06 }}
+                  className="fixya-card rounded-lg p-6"
                 >
-                  <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-lg font-black text-white">
-                    {service.icon}
+                  <div className="mb-5 flex items-center justify-between">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#123F66] text-white">
+                      <step.icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-sm font-black text-[#C8872D]">
+                      Paso {index + 1}
+                    </span>
                   </div>
-                  <h3 className="text-lg font-black">{service.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{service.detail}</p>
-                </motion.div>
+                  <h2 className="text-xl font-black text-[#0E1B2A]">
+                    {step.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-[#5F6B7A]">
+                    {step.text}
+                  </p>
+                </motion.article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="bg-white py-20 text-slate-950">
-          <div className="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-3">
-            {[
-              { icon: ShieldCheck, title: "Técnicos verificados", text: "Revisa perfiles confiables antes de solicitar ayuda para tu hogar." },
-              { icon: Clock, title: "Avance claro", text: "Sabe si tu solicitud fue enviada, asignada, está en proceso o finalizada." },
-              { icon: Star, title: "Experiencias reales", text: "Lee opiniones de otros clientes para tomar una mejor decisión." },
-            ].map((item) => (
-              <div key={item.title} className="rounded-3xl border border-slate-200 bg-slate-50 p-7">
-                <item.icon className="h-8 w-8 text-blue-600" />
-                <h3 className="mt-5 text-xl font-black">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{item.text}</p>
+        <section className="bg-white py-16">
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="mb-9 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+              <div>
+                <p className="text-sm font-black uppercase text-[#C8872D]">
+                  Servicios
+                </p>
+                <h2 className="mt-2 text-3xl font-black tracking-tight text-[#0E1B2A] md:text-4xl">
+                  Un catálogo simple para resolver problemas reales
+                </h2>
               </div>
-            ))}
+              <p className="max-w-xl text-sm leading-6 text-[#5F6B7A]">
+                FixYa ordena la búsqueda por servicio y ubicación para que
+                encuentres profesionales disponibles sin revisar listas
+                genéricas.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {services.map((service) => (
+                <motion.article
+                  key={service.title}
+                  whileHover={{ y: -3 }}
+                  className="rounded-lg border border-[#E6E0D6] bg-[#FBFAF7] p-6 transition hover:border-[#C8872D]/60 hover:shadow-lg"
+                >
+                  <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-[#123F66] text-white">
+                    <service.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-lg font-black text-[#102033]">
+                    {service.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[#5F6B7A]">
+                    {service.detail}
+                  </p>
+                </motion.article>
+              ))}
+            </div>
           </div>
         </section>
 
-        <section className="bg-slate-950 px-6 py-16">
-          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/10 p-8 backdrop-blur md:flex-row md:items-center">
+        <section className="bg-[#F8F5EF] py-16">
+          <div className="mx-auto grid max-w-7xl gap-6 px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             <div>
-              <div className="mb-3 flex items-center gap-2 text-cyan-200">
-                <Wrench className="h-5 w-5" />
-                <span className="text-sm font-bold uppercase tracking-wide">FixYa para el hogar</span>
-              </div>
-              <h2 className="text-3xl font-black text-white">Pide ayuda para tu hogar de manera simple y ordenada.</h2>
+              <p className="text-sm font-black uppercase text-[#C8872D]">
+                Confianza y claridad
+              </p>
+              <h2 className="mt-2 text-3xl font-black text-[#0E1B2A] md:text-4xl">
+                Menos incertidumbre antes, durante y después del servicio.
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-[#5F6B7A]">
+                Cada solicitud queda ordenada por estado, cotizaciones y
+                reseñas. Tú ves qué está pasando y el técnico sabe qué necesita
+                responder.
+              </p>
             </div>
-            <Link
-              to="/register"
-              className="rounded-2xl bg-white px-6 py-4 font-black text-slate-950 transition hover:-translate-y-0.5 hover:bg-cyan-50"
-            >
-              Crear cuenta en FixYa
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                {
+                  icon: ShieldCheck,
+                  title: "Verificados",
+                  text: "Perfiles revisados antes de aparecer en el catálogo.",
+                },
+                {
+                  icon: CheckCircle2,
+                  title: "Seguimiento",
+                  text: "Estados claros para cada solicitud creada.",
+                },
+                {
+                  icon: Star,
+                  title: "Reseñas",
+                  text: "Opiniones para decidir con más contexto.",
+                },
+              ].map((item) => (
+                <article
+                  key={item.title}
+                  className="fixya-card rounded-lg p-5"
+                >
+                  <item.icon className="h-7 w-7 text-[#C8872D]" />
+                  <h3 className="mt-5 font-black text-[#102033]">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[#5F6B7A]">
+                    {item.text}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#0E1B2A] px-6 py-14">
+          <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-[#F0C16C]">
+                <Wrench className="h-5 w-5" />
+                <span className="text-sm font-black uppercase">
+                  FixYa para el hogar
+                </span>
+              </div>
+              <h2 className="max-w-3xl text-3xl font-black text-white">
+                Elige un servicio, encuentra técnicos disponibles y crea tu
+                solicitud en pocos pasos.
+              </h2>
+            </div>
+            <Link to="/servicios" className="fixya-btn-accent px-6 py-4">
+              Ver servicios
+              <ArrowRight className="h-5 w-5" />
             </Link>
           </div>
         </section>

@@ -134,7 +134,7 @@ function fieldClass(error?: string) {
   return `w-full rounded-xl border px-4 py-3 transition focus:outline-none focus:ring-2 ${
     error
       ? "border-red-300 bg-red-50/40 focus:border-red-500 focus:ring-red-100"
-      : "border-slate-300 bg-white focus:border-blue-500 focus:ring-blue-100"
+      : "border-[#E6E0D6] bg-white focus:border-[#123F66] focus:ring-[#123F66]/10"
   }`;
 }
 
@@ -438,55 +438,56 @@ function ClienteDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F8F5EF]">
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-8">
-          <h1 className="text-4xl font-black tracking-tight text-slate-950">
-            Hola, {usuario?.nombre_completo?.split(" ")[0] || "cliente"}
+          <h1 className="text-4xl font-black tracking-tight text-[#0E1B2A]">
+            Tu espacio de servicios, {usuario?.nombre_completo?.split(" ")[0] || "cliente"}
           </h1>
 
-          <p className="mt-2 text-gray-600">
-            Gestiona solicitudes, revisa cotizaciones y califica trabajos finalizados.
+          <p className="mt-2 max-w-3xl text-[#5F6B7A]">
+            Crea nuevas solicitudes, compara cotizaciones y sigue cada trabajo
+            sin perder contexto.
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <ClipboardList className="h-6 w-6 text-blue-600" />
-              <p className="mt-4 text-3xl font-black text-slate-950">{solicitudes.length}</p>
-              <p className="text-sm text-slate-500">Solicitudes creadas</p>
+            <div className="fixya-card rounded-lg p-5">
+              <ClipboardList className="h-6 w-6 text-[#123F66]" />
+              <p className="mt-4 text-3xl font-black text-[#0E1B2A]">{solicitudes.length}</p>
+              <p className="text-sm text-[#5F6B7A]">Solicitudes creadas</p>
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <TrendingUp className="h-6 w-6 text-violet-600" />
-              <p className="mt-4 text-3xl font-black text-slate-950">
+            <div className="fixya-card rounded-lg p-5">
+              <TrendingUp className="h-6 w-6 text-[#C8872D]" />
+              <p className="mt-4 text-3xl font-black text-[#0E1B2A]">
                 {solicitudes.filter((item) => item.estado_trabajo !== "FINALIZADO").length}
               </p>
-              <p className="text-sm text-slate-500">En seguimiento</p>
+              <p className="text-sm text-[#5F6B7A]">En seguimiento</p>
             </div>
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
-              <p className="mt-4 text-3xl font-black text-slate-950">
+            <div className="fixya-card rounded-lg p-5">
+              <CheckCircle2 className="h-6 w-6 text-[#2F5F46]" />
+              <p className="mt-4 text-3xl font-black text-[#0E1B2A]">
                 {solicitudes.filter((item) => item.estado_trabajo === "FINALIZADO").length}
               </p>
-              <p className="text-sm text-slate-500">Finalizadas</p>
+              <p className="text-sm text-[#5F6B7A]">Finalizadas</p>
             </div>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <section className="fixya-card rounded-lg p-6">
             <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <PlusCircle className="h-6 w-6 text-blue-700" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F8F5EF]">
+                <PlusCircle className="h-6 w-6 text-[#123F66]" />
               </div>
 
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-black text-[#0E1B2A]">
                   Solicitar servicio
                 </h2>
 
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-[#5F6B7A]">
                   Cuéntanos qué ocurre para buscar ayuda técnica.
                 </p>
               </div>
@@ -500,7 +501,7 @@ function ClienteDashboard() {
             )}
 
             {success && (
-              <div className="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+              <div className="mb-4 rounded-xl border border-[#DDEADF] bg-[#DDEADF] p-3 text-sm text-[#2F5F46]">
                 {success}
               </div>
             )}
@@ -725,25 +726,25 @@ function ClienteDashboard() {
                   servicios.length === 0 ||
                   comunas.length === 0
                 }
-                className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
+                className="fixya-btn-primary w-full px-4 py-3"
               >
                 {creandoSolicitud ? "Enviando solicitud..." : "Solicitar servicio"}
               </button>
             </form>
           </section>
 
-          <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <section className="fixya-card rounded-lg p-6">
             <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
-                <ClipboardList className="h-6 w-6 text-green-700" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#DDEADF]">
+                <ClipboardList className="h-6 w-6 text-[#2F5F46]" />
               </div>
 
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Mis Solicitudes
+                <h2 className="text-2xl font-black text-[#0E1B2A]">
+                  Tus solicitudes recientes
                 </h2>
-                <p className="text-sm text-gray-500">
-                  Historial de solicitudes creadas por tu cuenta.
+                <p className="text-sm text-[#5F6B7A]">
+                  Historial, cotizaciones y avances de tus servicios.
                 </p>
               </div>
             </div>
@@ -761,7 +762,7 @@ function ClienteDashboard() {
                 />
                 <Link
                   to="/servicios"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-teal-800"
+                  className="fixya-btn-accent w-full px-4 py-3 text-sm"
                 >
                   <Wrench className="h-4 w-4" />
                   Explorar servicios disponibles
@@ -822,9 +823,9 @@ function ClienteDashboard() {
                     </div>
 
                     {(cotizaciones[solicitud.id_solicitud]?.length || 0) > 0 && (
-                      <div className="mt-5 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-slate-50 p-4">
+                      <div className="mt-5 rounded-2xl border border-[#E6E0D6] bg-[#F8F5EF] p-4">
                         <h4 className="mb-3 flex items-center gap-2 font-bold text-gray-900">
-                          <ClipboardList className="h-5 w-5 text-blue-700" />
+                          <ClipboardList className="h-5 w-5 text-[#123F66]" />
                           Cotizaciones recibidas
                         </h4>
 
@@ -879,7 +880,7 @@ function ClienteDashboard() {
                                           "accept"
                                         )
                                       }
-                                      className="rounded-xl bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
+                                      className="rounded-xl bg-[#2F5F46] px-4 py-2 text-sm font-bold text-white hover:bg-[#244B38]"
                                     >
                                       Aceptar cotización
                                     </button>
@@ -976,7 +977,7 @@ function ClienteDashboard() {
                                 handleCreateReview(solicitud.id_solicitud)
                               }
                               disabled={sendingReview}
-                              className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700 disabled:bg-green-300"
+                              className="flex items-center gap-2 rounded-xl bg-[#2F5F46] px-5 py-3 font-semibold text-white hover:bg-[#244B38] disabled:bg-[#2F5F46]/50"
                             >
                               <Send className="h-4 w-4" />
 

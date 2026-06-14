@@ -4,13 +4,17 @@
   color-scheme: light;
   font-synthesis: none;
   text-rendering: geometricPrecision;
-  --fixya-primary: #0f766e;
-  --fixya-primary-dark: #115e59;
-  --fixya-ink: #0f172a;
-  --fixya-muted: #64748b;
-  --fixya-border: #e2e8f0;
-  --fixya-surface: #ffffff;
-  --fixya-bg: #f8fafc;
+  --fixya-bg: #f8f5ef;
+  --fixya-card: #ffffff;
+  --fixya-primary: #123f66;
+  --fixya-primary-dark: #0e1b2a;
+  --fixya-accent: #c8872d;
+  --fixya-text: #102033;
+  --fixya-muted: #5f6b7a;
+  --fixya-border: #e6e0d6;
+  --fixya-success-bg: #ddeadf;
+  --fixya-success-text: #2f5f46;
+  --fixya-shadow: 0 18px 44px rgba(14, 27, 42, 0.08);
 }
 
 * {
@@ -20,11 +24,8 @@
 body {
   margin: 0;
   min-width: 320px;
-  color: var(--fixya-ink);
-  background:
-    radial-gradient(circle at top left, rgba(15, 118, 110, 0.1), transparent 28rem),
-    radial-gradient(circle at bottom right, rgba(8, 145, 178, 0.08), transparent 24rem),
-    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  color: var(--fixya-text);
+  background: var(--fixya-bg);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -48,7 +49,7 @@ select:focus,
 textarea:focus,
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid rgba(15, 118, 110, 0.24);
+  outline: 3px solid rgba(200, 135, 45, 0.28);
   outline-offset: 2px;
 }
 
@@ -62,7 +63,7 @@ th {
 }
 
 ::selection {
-  background: rgba(15, 118, 110, 0.18);
+  background: rgba(200, 135, 45, 0.24);
 }
 
 ::-webkit-scrollbar {
@@ -71,7 +72,7 @@ th {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #d4c8b8;
   border-radius: 999px;
 }
 
@@ -81,15 +82,14 @@ th {
 
 .fixya-shell {
   background:
-    radial-gradient(circle at top right, rgba(8, 145, 178, 0.1), transparent 26rem),
-    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.08), transparent 24rem),
-    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0%, rgba(248, 245, 239, 0) 32rem),
+    var(--fixya-bg);
 }
 
 .fixya-card {
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--fixya-border);
+  background: var(--fixya-card);
+  box-shadow: var(--fixya-shadow);
 }
 
 .fixya-card-hover {
@@ -100,26 +100,26 @@ th {
 }
 
 .fixya-card-hover:hover {
-  border-color: rgba(15, 118, 110, 0.28);
-  box-shadow: 0 22px 55px rgba(15, 23, 42, 0.1);
+  border-color: rgba(200, 135, 45, 0.42);
+  box-shadow: 0 22px 52px rgba(14, 27, 42, 0.12);
   transform: translateY(-2px);
 }
 
 .fixya-input {
   width: 100%;
   border-radius: 0.875rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--fixya-border);
   background: #ffffff;
   padding: 0.8rem 1rem;
-  color: #0f172a;
+  color: var(--fixya-text);
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease;
 }
 
 .fixya-input:focus {
-  border-color: #0f766e;
-  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.13);
+  border-color: var(--fixya-primary);
+  box-shadow: 0 0 0 4px rgba(18, 63, 102, 0.12);
   outline: none;
 }
 
@@ -129,10 +129,10 @@ th {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 0.875rem;
-  background: linear-gradient(135deg, #0f766e, #0891b2);
+  background: var(--fixya-primary);
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 14px 30px rgba(15, 118, 110, 0.24);
+  box-shadow: 0 14px 30px rgba(18, 63, 102, 0.2);
   transition:
     transform 150ms ease,
     box-shadow 150ms ease,
@@ -140,8 +140,8 @@ th {
 }
 
 .fixya-btn-primary:hover {
-  filter: brightness(1.03);
-  box-shadow: 0 18px 34px rgba(15, 118, 110, 0.28);
+  background: var(--fixya-primary-dark);
+  box-shadow: 0 18px 34px rgba(18, 63, 102, 0.26);
   transform: translateY(-1px);
 }
 
@@ -156,4 +156,48 @@ th {
   margin-inline: auto;
   max-width: 80rem;
   padding: 2rem 1.5rem 3rem;
+}
+
+.fixya-btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  background: var(--fixya-accent);
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgba(200, 135, 45, 0.22);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+}
+
+.fixya-btn-accent:hover {
+  background: #ad711f;
+  box-shadow: 0 16px 32px rgba(200, 135, 45, 0.28);
+  transform: translateY(-1px);
+}
+
+.fixya-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--fixya-border);
+  background: #ffffff;
+  color: var(--fixya-primary);
+  font-weight: 800;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.fixya-btn-secondary:hover {
+  border-color: rgba(18, 63, 102, 0.28);
+  background: #fbfaf7;
+  transform: translateY(-1px);
 }

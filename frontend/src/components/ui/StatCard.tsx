@@ -9,12 +9,12 @@ interface StatCardProps {
 }
 
 const tones = {
-  blue: "bg-cyan-50 text-cyan-700",
-  green: "bg-emerald-50 text-emerald-700",
-  yellow: "bg-amber-50 text-amber-700",
+  blue: "bg-[#EAF0F5] text-[#123F66]",
+  green: "bg-[#DDEADF] text-[#2F5F46]",
+  yellow: "bg-[#FFF4D8] text-[#8C5F1D]",
   red: "bg-rose-50 text-rose-700",
-  purple: "bg-teal-50 text-teal-700",
-  slate: "bg-slate-100 text-slate-700",
+  purple: "bg-[#F8F5EF] text-[#123F66]",
+  slate: "bg-[#F8F5EF] text-[#5F6B7A]",
 };
 
 function StatCard({
@@ -31,9 +31,9 @@ function StatCard({
           <Icon size={22} />
         </div>
       </div>
-      <p className="text-3xl font-bold text-slate-950">{value}</p>
-      <p className="mt-1 font-semibold text-slate-700">{label}</p>
-      {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+      <p className="text-3xl font-black text-[#0E1B2A]">{value}</p>
+      <p className="mt-1 font-semibold text-[#102033]">{label}</p>
+      {description && <p className="mt-1 text-sm text-[#5F6B7A]">{description}</p>}
     </div>
   );
 }

@@ -101,9 +101,9 @@ function AdminDashboard() {
   return (
     <div className="fixya-page">
       <PageHeader
-        eyebrow="Panel administrativo"
-        title="Resumen operativo"
-        description="Resumen de usuarios, técnicos, solicitudes, reseñas y cotizaciones de FixYa."
+        eyebrow="Administración"
+        title="Centro de control FixYa"
+        description="Una vista rápida de usuarios, técnicos, solicitudes, reseñas y cotizaciones para mantener la operación al día."
         actions={
           <button
             onClick={cargarDashboard}
@@ -155,13 +155,13 @@ function AdminDashboard() {
             {[
               ["Iniciadas", dashboard.solicitudes_iniciadas, "text-cyan-700"],
               ["Asignadas", dashboard.solicitudes_asignadas, "text-amber-700"],
-              ["En proceso", dashboard.solicitudes_en_proceso, "text-teal-700"],
-              ["Finalizadas", dashboard.solicitudes_finalizadas, "text-emerald-700"],
+              ["En proceso", dashboard.solicitudes_en_proceso, "text-[#123F66]"],
+              ["Finalizadas", dashboard.solicitudes_finalizadas, "text-[#2F5F46]"],
               ["Canceladas", dashboard.solicitudes_canceladas, "text-rose-700"],
-              ["Cotizaciones", dashboard.total_cotizaciones, "text-slate-700"],
+              ["Cotizaciones", dashboard.total_cotizaciones, "text-[#102033]"],
             ].map(([label, value, color]) => (
-              <div key={label} className="rounded-2xl bg-slate-50 p-5">
-                <p className="text-sm font-semibold text-slate-500">{label}</p>
+              <div key={label} className="rounded-lg bg-[#F8F5EF] p-5">
+                <p className="text-sm font-semibold text-[#5F6B7A]">{label}</p>
                 <p className={`mt-2 text-3xl font-bold ${color}`}>{value}</p>
               </div>
             ))}
@@ -174,22 +174,22 @@ function AdminDashboard() {
               <Link
                 key={action.title}
                 to={action.link}
-                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-teal-200 hover:bg-teal-50"
+                className="flex items-center justify-between rounded-lg border border-[#E6E0D6] bg-white p-4 transition hover:border-[#C8872D]/60 hover:bg-[#FBFAF7]"
               >
                 <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-teal-100 p-3 text-teal-700">
+                  <div className="rounded-xl bg-[#F8F5EF] p-3 text-[#123F66]">
                     <action.icon size={20} />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-950">{action.title}</p>
-                    <p className="text-sm text-slate-500">{action.description}</p>
+                    <p className="font-bold text-[#102033]">{action.title}</p>
+                    <p className="text-sm text-[#5F6B7A]">{action.description}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-900 ring-1 ring-slate-200">
+                  <span className="rounded-full bg-[#F8F5EF] px-3 py-1 text-sm font-bold text-[#102033] ring-1 ring-[#E6E0D6]">
                     {action.count}
                   </span>
-                  <ArrowRight className="h-5 w-5 text-slate-400" />
+                  <ArrowRight className="h-5 w-5 text-[#C8872D]" />
                 </div>
               </Link>
             ))}

@@ -6,11 +6,8 @@ import TecnicoDashboard from "../../pages/tecnico/TecnicoDashboard"
 import { getServicios } from "../../services/catalogService"
 import { createCotizacion } from "../../services/cotizacionService"
 import {
-  asignarTecnico,
-  finalizarSolicitud,
   getSolicitudes,
   getSolicitudesTecnico,
-  iniciarSolicitud,
 } from "../../services/solicitudService"
 import type { Solicitud } from "../../services/solicitudService"
 import { getTechnicianDashboard } from "../../services/technicianService"
@@ -120,7 +117,7 @@ function getCotizacionDateInput() {
 async function waitForPanelReady() {
   expect(
     await screen.findByRole("heading", {
-      name: /panel de trabajos t.cnicos/i,
+      name: /tus trabajos y nuevas oportunidades/i,
     })
   ).toBeInTheDocument()
 }
@@ -176,7 +173,9 @@ describe("TecnicoDashboard", () => {
 
     expect(screen.getByText(/solicitudes y trabajos/i)).toBeInTheDocument()
     expect(screen.getAllByText(/solicitudes disponibles/i).length).toBeGreaterThan(0)
-    expect(screen.getByText(/mis trabajos/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: /trabajos asignados/i })
+    ).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: /actualizar trabajos/i })
     ).toBeInTheDocument()

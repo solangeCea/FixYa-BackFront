@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { Bell, Briefcase, ClipboardList, LayoutDashboard, Wrench } from "lucide-react";
+import {
+  Bell,
+  Briefcase,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Wrench,
+  X,
+} from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 import {
@@ -10,35 +19,41 @@ import {
 } from "../services/notificationService";
 import type { Notificacion } from "../services/notificationService";
 
-const roleLinks = {
-  CLIENTE: [
-    { to: "/servicios", label: "Solicitar servicio", icon: Wrench },
-    { to: "/cliente/dashboard", label: "Mis solicitudes", icon: ClipboardList },
-  ],
-  TECNICO: [
-    { to: "/tecnico/dashboard", label: "Trabajos técnicos", icon: Briefcase },
-  ],
-  ADMIN: [
-    { to: "/admin/panel", label: "Administrar plataforma", icon: LayoutDashboard },
-  ],
-};
-
 const publicLinks = [
-  { to: "/", label: "Inicio", icon: LayoutDashboard },
-  { to: "/servicios", label: "Servicios", icon: Wrench },
-  { to: "/tecnicos", label: "Técnicos", icon: Briefcase },
+  { to: "/", label: "Inicio" },
+  { to: "/servicios", label: "Servicios" },
+  { to: "/tecnicos", label: "Marketplace" },
 ];
+
+const roleLinks = {
+  CLIENTE: {
+    to: "/cliente/dashboard",
+    label: "Mis solicitudes",
+    icon: ClipboardList,
+  },
+  TECNICO: {
+    to: "/tecnico/dashboard",
+    label: "Mis trabajos",
+    icon: Briefcase,
+  },
+  ADMIN: {
+    to: "/admin/panel",
+    label: "Administración",
+    icon: LayoutDashboard,
+  },
+};
 
 function getRoleLabel(role?: string) {
   if (role === "CLIENTE") return "Cliente";
   if (role === "TECNICO") return "Técnico";
   if (role === "ADMIN") return "Administrador";
-  return "";
+  return "Cuenta";
 }
 
 function Navbar() {
   const { usuario, logout } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notificacion[]>([]);
 
   const cargarNotificaciones = useCallback(async () => {
@@ -64,6 +79,10 @@ function Navbar() {
     [notifications]
   );
 
+  const roleLink = usuario
+    ? roleLinks[usuario.tipo_usuario as keyof typeof roleLinks]
+    : undefined;
+
   async function handleMarkRead(id: number) {
     await markNotificationRead(id);
     await cargarNotificaciones();
@@ -74,126 +93,227 @@ function Navbar() {
     await cargarNotificaciones();
   }
 
-  const links = usuario
-    ? roleLinks[usuario.tipo_usuario as keyof typeof roleLinks] ?? []
-    : publicLinks;
+  function handleLogout() {
+    setMobileOpen(false);
+    setNotificationsOpen(false);
+    logout();
+  }
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+    `rounded-xl px-3 py-2 text-sm font-extrabold transition ${
       isActive
-        ? "bg-teal-50 text-teal-800"
-        : "text-slate-700 hover:bg-slate-100 hover:text-teal-800"
+        ? "bg-[#123F66] text-white shadow-sm"
+        : "text-[#102033] hover:bg-white hover:text-[#123F66]"
     }`;
 
-  return (
-    <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-6 py-4 shadow-sm backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <Link to="/" className="flex items-center gap-2">
-        <div className="rounded-lg bg-teal-700 p-2 text-white shadow-lg shadow-teal-700/20">
-          <Wrench className="h-5 w-5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold leading-none text-teal-700">FixYa</h1>
-          {usuario && (
-            <p className="mt-1 text-xs font-semibold text-slate-500">
-              Flujo {getRoleLabel(usuario.tipo_usuario)}
-            </p>
-          )}
-        </div>
-      </Link>
+  const mobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `rounded-xl px-4 py-3 text-sm font-extrabold transition ${
+      isActive
+        ? "bg-[#123F66] text-white"
+        : "text-[#102033] hover:bg-white"
+    }`;
 
-      <div className="flex flex-wrap items-center gap-3">
-        {links.map((item) => (
-          <NavLink key={item.to} to={item.to} className={navLinkClass}>
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </NavLink>
-        ))}
+  const notificationsButton = usuario && (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setNotificationsOpen((prev) => !prev)}
+        className="relative rounded-xl border border-[#E6E0D6] bg-white p-2.5 text-[#123F66] transition hover:border-[#C8872D] hover:bg-[#FBFAF7]"
+        aria-label="Notificaciones"
+      >
+        <Bell className="h-5 w-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -right-1 -top-1 rounded-full bg-[#C8872D] px-1.5 text-xs font-black text-white">
+            {unreadCount}
+          </span>
+        )}
+      </button>
 
-        {usuario && (
-          <div className="relative">
+      {notificationsOpen && (
+        <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-[#E6E0D6] bg-white p-4 shadow-2xl shadow-[#0E1B2A]/10">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="font-black text-[#102033]">Notificaciones</h3>
             <button
               type="button"
-              onClick={() => setOpen((prev) => !prev)}
-              className="relative rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200"
-              aria-label="Notificaciones"
+              onClick={handleMarkAll}
+              className="text-xs font-extrabold text-[#123F66] hover:text-[#C8872D]"
             >
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1.5 text-xs font-bold text-white">
-                  {unreadCount}
-                </span>
-              )}
+              Marcar leídas
             </button>
+          </div>
 
-            {open && (
-              <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-gray-200 bg-white p-4 shadow-xl">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900">Notificaciones</h3>
-                  <button
-                    type="button"
-                    onClick={handleMarkAll}
-                    className="text-xs font-semibold text-teal-700 hover:text-teal-800"
-                  >
-                    Marcar todas como leídas
-                  </button>
+          {notifications.length === 0 ? (
+            <p className="rounded-xl bg-[#F8F5EF] p-4 text-sm leading-6 text-[#5F6B7A]">
+              No tienes notificaciones nuevas. Los avances de tus solicitudes
+              aparecerán aquí.
+            </p>
+          ) : (
+            <div className="max-h-80 space-y-2 overflow-auto">
+              {notifications.map((item) => (
+                <button
+                  key={item.id_notificacion}
+                  type="button"
+                  onClick={() => handleMarkRead(item.id_notificacion)}
+                  className={`w-full rounded-xl p-3 text-left text-sm transition hover:bg-[#F8F5EF] ${
+                    item.leida
+                      ? "bg-white text-[#5F6B7A]"
+                      : "bg-[#DDEADF] text-[#102033]"
+                  }`}
+                >
+                  <p className="font-extrabold">{item.titulo}</p>
+                  <p className="mt-1 text-xs leading-5">{item.mensaje}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <nav className="sticky top-0 z-40 border-b border-[#E6E0D6] bg-[#F8F5EF]/95 px-4 py-3 backdrop-blur">
+      <div className="mx-auto grid max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3">
+        <Link
+          to="/"
+          onClick={() => setMobileOpen(false)}
+          className="flex min-w-0 items-center gap-3"
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#123F66] text-white shadow-lg shadow-[#123F66]/20">
+            <Wrench className="h-5 w-5" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-2xl font-black tracking-tight text-[#123F66]">
+              FixYa
+            </p>
+            <p className="hidden text-xs font-bold text-[#5F6B7A] sm:block">
+              Servicios técnicos
+            </p>
+          </div>
+        </Link>
+
+        <div className="hidden justify-center lg:flex">
+          <div className="flex items-center gap-1 rounded-2xl border border-[#E6E0D6] bg-[#FBFAF7] p-1">
+            {publicLinks.map((item) => (
+              <NavLink key={item.to} to={item.to} className={navLinkClass}>
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+        </div>
+
+        <div className="hidden items-center justify-end gap-2 lg:flex">
+          {usuario ? (
+            <>
+              {notificationsButton}
+              {roleLink && (
+                <Link
+                  to={roleLink.to}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#E6E0D6] bg-white px-4 py-2.5 text-sm font-extrabold text-[#123F66] transition hover:border-[#C8872D] hover:bg-[#FBFAF7]"
+                >
+                  <roleLink.icon className="h-4 w-4" />
+                  {roleLink.label}
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-extrabold text-[#5F6B7A] transition hover:bg-white hover:text-[#0E1B2A]"
+              >
+                <LogOut className="h-4 w-4" />
+                Salir
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="rounded-xl px-4 py-2.5 text-sm font-extrabold text-[#123F66] transition hover:bg-white"
+              >
+                Ingresar
+              </Link>
+              <Link to="/register" className="fixya-btn-accent px-4 py-2.5 text-sm">
+                Registrarme
+              </Link>
+            </>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setMobileOpen((prev) => !prev)}
+          className="inline-flex items-center justify-center rounded-xl border border-[#E6E0D6] bg-white p-2.5 text-[#123F66] lg:hidden"
+          aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={mobileOpen}
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {mobileOpen && (
+        <div className="mx-auto mt-3 max-w-7xl rounded-2xl border border-[#E6E0D6] bg-[#FBFAF7] p-3 shadow-xl shadow-[#0E1B2A]/10 lg:hidden">
+          <div className="grid gap-1">
+            {publicLinks.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setMobileOpen(false)}
+                className={mobileNavLinkClass}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+
+          <div className="mt-3 border-t border-[#E6E0D6] pt-3">
+            {usuario ? (
+              <div className="grid gap-2">
+                <div className="rounded-xl bg-white px-4 py-3 text-sm text-[#5F6B7A]">
+                  Sesión iniciada como{" "}
+                  <span className="font-extrabold text-[#102033]">
+                    {getRoleLabel(usuario.tipo_usuario)}
+                  </span>
                 </div>
-
-                {notifications.length === 0 ? (
-                  <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
-                    No tienes notificaciones nuevas. Cuando haya avances en tus solicitudes o trabajos, aparecerán aquí.
-                  </p>
-                ) : (
-                  <div className="max-h-80 space-y-2 overflow-auto">
-                    {notifications.map((item) => (
-                      <button
-                        key={item.id_notificacion}
-                        type="button"
-                        onClick={() => handleMarkRead(item.id_notificacion)}
-                        className={`w-full rounded-xl p-3 text-left text-sm ${
-                          item.leida
-                            ? "bg-gray-50 text-gray-600"
-                            : "bg-teal-50 text-slate-900"
-                        }`}
-                      >
-                        <p className="font-semibold">{item.titulo}</p>
-                        <p className="mt-1 text-xs">{item.mensaje}</p>
-                      </button>
-                    ))}
-                  </div>
+                {roleLink && (
+                  <Link
+                    to={roleLink.to}
+                    onClick={() => setMobileOpen(false)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#123F66] px-4 py-3 text-sm font-extrabold text-white"
+                  >
+                    <roleLink.icon className="h-4 w-4" />
+                    {roleLink.label}
+                  </Link>
                 )}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#E6E0D6] bg-white px-4 py-3 text-sm font-extrabold text-[#5F6B7A]"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Cerrar sesión
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="fixya-btn-secondary px-4 py-3 text-sm"
+                >
+                  Ingresar
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="fixya-btn-accent px-4 py-3 text-sm"
+                >
+                  Registrarme
+                </Link>
               </div>
             )}
           </div>
-        )}
-
-        {usuario ? (
-          <button
-            type="button"
-            onClick={logout}
-            className="rounded-lg bg-slate-100 px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-200"
-          >
-            Cerrar sesión
-          </button>
-        ) : (
-          <>
-            <Link
-              to="/login"
-              className="font-medium text-slate-700 hover:text-teal-700"
-            >
-              Iniciar sesión
-            </Link>
-
-            <Link
-              to="/register"
-              className="rounded-lg bg-teal-700 px-4 py-2 text-white transition hover:bg-teal-800"
-            >
-              Crear cuenta
-            </Link>
-          </>
-        )}
-      </div>
-      </div>
+        </div>
+      )}
     </nav>
   );
 }

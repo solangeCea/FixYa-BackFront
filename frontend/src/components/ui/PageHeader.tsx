@@ -12,15 +12,15 @@ function PageHeader({ title, description, eyebrow, actions }: PageHeaderProps) {
     <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
         {eyebrow && (
-          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-teal-700">
+          <p className="mb-2 text-sm font-black uppercase tracking-wide text-[#C8872D]">
             {eyebrow}
           </p>
         )}
-        <h1 className="text-3xl font-bold text-slate-950 md:text-4xl">
+        <h1 className="text-3xl font-black text-[#0E1B2A] md:text-4xl">
           {title}
         </h1>
         {description && (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5F6B7A] md:text-base">
             {description}
           </p>
         )}
