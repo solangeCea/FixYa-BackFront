@@ -82,6 +82,37 @@ npm.cmd run test:run
 | CP-SERV-TECH-003 | `technicianService.getTechnicianProfile` | Validar obtención de perfil técnico por RUT. | Llama a `/tecnicos/{rut}/perfil`, envía Authorization y retorna perfil. | Se llamó el endpoint con RUT `22.222.222-2`, token técnico y retornó perfil. | Aprobado | `npm.cmd run test:run` |
 | CP-SERV-TECH-004 | `technicianService.getTechnicians` | Validar error HTTP del backend. | Ante error `500` o respuesta fallida, lanza error controlado. | Con respuesta `ok: false`, lanzó un error de obtención de técnicos. | Aprobado | `npm.cmd run test:run` |
 
+## Suite de pruebas ADMIN
+
+| Caso | Resultado esperado | Resultado obtenido | Estado | Comando usado |
+| --- | --- | --- | --- | --- |
+| CP-ADMIN-001 Renderizado dashboard | El dashboard administrativo se renderiza correctamente y muestra secciones principales. | Se mostró `Resumen operativo`, `Panel administrativo`, `Estado del sistema`, `Acciones rápidas` y el botón `Actualizar panel`. | Aprobado | `npm.cmd run test:run` |
+| CP-ADMIN-002 Carga de métricas | Al mockear `dashboardService`, se muestran métricas como usuarios, técnicos, reportes, solicitudes y cotizaciones. | Se llamó `getAdminDashboard` y se visualizaron métricas mockeadas de usuarios, técnicos verificados, reportes pendientes y cotizaciones. | Aprobado | `npm.cmd run test:run` |
+| CP-ADMIN-003 Error al cargar métricas | Si el servicio falla, la pantalla no se rompe y muestra un error controlado. | Al rechazar `getAdminDashboard`, se mostró `No pudimos cargar el resumen administrativo` y el botón `Reintentar carga del panel`. | Aprobado | `npm.cmd run test:run` |
+| CP-ADMIN-004 Renderizado gestión usuarios | La pantalla de gestión de usuarios se renderiza correctamente. | Se mostró `Gestión de usuarios`, texto descriptivo, buscador por nombre/correo/RUT y filtro `Todos`. | Aprobado | `npm.cmd run test:run` |
+| CP-ADMIN-005 Listado de usuarios | Al mockear `userService`, se muestran usuarios con rol ADMIN, CLIENTE y TECNICO. | Se mostraron usuarios mockeados Cliente, Técnico y Admin con correo, comuna, rol y estado. | Aprobado | `npm.cmd run test:run` |
+| CP-ADMIN-006 Error al listar usuarios | Si `userService` falla, se muestra mensaje controlado y la pantalla no se rompe. | Al rechazar `getUsers`, se mostró `No pudimos cargar los usuarios registrados` y no se renderizó la tabla con usuarios mockeados. | Aprobado | `npm.cmd run test:run` |
+
+## Suite de pruebas TECNICO-DASHBOARD
+
+| Caso | Resultado esperado | Resultado obtenido | Estado | Comando usado |
+| --- | --- | --- | --- | --- |
+| CP-TEC-001 Renderizado panel técnico | El panel técnico se renderiza correctamente y muestra la sección principal. | Se mostró `Panel de trabajos técnicos`, `Solicitudes y trabajos`, `Solicitudes Disponibles`, `Mis Trabajos` y el botón `Actualizar trabajos`. | Aprobado | `npm.cmd run test:run` |
+| CP-TEC-002 Carga de solicitudes | Al mockear solicitudes desde los servicios, se muestran solicitudes disponibles y asignadas. | Se llamaron `getSolicitudes` y `getSolicitudesTecnico`, mostrando `Filtracion urgente en cocina` e `Instalacion de enchufes` con sus descripciones. | Aprobado | `npm.cmd run test:run` |
+| CP-TEC-003 Estado sin solicitudes | Si los servicios retornan listas vacías, se muestra un mensaje controlado. | Se mostraron los mensajes `Aún no hay solicitudes disponibles para tomar` y `Aún no tienes trabajos asignados`. | Aprobado | `npm.cmd run test:run` |
+| CP-TEC-004 Error al cargar solicitudes | Si falla la carga, la pantalla no se rompe y muestra un error entendible. | Al rechazar `getSolicitudes`, se mostró `No pudimos cargar tus trabajos y solicitudes disponibles`. | Aprobado | `npm.cmd run test:run` |
+| CP-TEC-005 Visualización de información principal | Se muestran datos relevantes de una solicitud, como servicio, dirección, urgencia, referencia o estado. | Se visualizaron servicio `Gasfiteria`, direcciones, urgencia y referencias principales de solicitudes disponibles/asignadas. | Aprobado | `npm.cmd run test:run` |
+| CP-TEC-006 Crear cotización | Al completar monto, detalle y vigencia, se llama al servicio de cotización con el payload correcto. | Se llamó `createCotizacion` con solicitud, técnico, monto, mensaje y vigencia esperados; se mostró el mensaje de cotización enviada correctamente. | Aprobado | `npm.cmd run test:run` |
+
+## Suite de pruebas REVIEW-MANAGEMENT
+
+| Caso | Resultado esperado | Resultado obtenido | Estado | Comando usado |
+| --- | --- | --- | --- | --- |
+| CP-REV-001 Renderizado | El panel se renderiza correctamente y muestra la sección de gestión de reseñas. | Se mostró el encabezado `Gestión de reseñas`, la sección `Reseñas del sistema` y el botón `Actualizar reseñas`. | Aprobado | `npm.cmd run test:run` |
+| CP-REV-002 Listado de reseñas | Al mockear reseñas desde `reviewService`, se muestran comentario, solicitud, estado y datos principales. | Se mostró `Reseña #101`, el comentario mockeado, la solicitud asociada, el estado `Reportada pendiente` y el motivo del reporte. | Aprobado | `npm.cmd run test:run` |
+| CP-REV-003 Aprobar reseña | Al aprobar una reseña reportada pendiente, se llama al servicio correspondiente y se muestra confirmación o estado actualizado. | Se llamó `approveReview(101)`, se mostró el mensaje `Reseña aprobada` y el estado visual cambió a `Aprobada` sin mantener el botón de aprobación. | Aprobado | `npm.cmd run test:run` |
+| CP-REV-004 Ocultar reseña | Al ocultar una reseña reportada pendiente, se llama al servicio correspondiente y se muestra confirmación o estado actualizado. | Se llamó `hideReview(101)`, se mostró el mensaje `Reseña ocultada` y el estado visual cambió a `Ocultada` sin mantener el botón de ocultar. | Aprobado | `npm.cmd run test:run` |
+
 ## Suite de pruebas SOLICITUDES - Parte inicial
 
 | Caso | Resultado esperado | Resultado obtenido | Estado |
@@ -110,7 +141,7 @@ Se agregó `htmlFor` en los labels y `id` correspondiente en los controles de se
 CP-SOL-004: Creación exitosa de solicitud.
 
 **Resultado de pruebas:**  
-La suite completa quedó aprobada con 35 pruebas.
+La suite completa quedó aprobada con 51 pruebas.
 
 **Comando usado:**  
 ```powershell
@@ -132,7 +163,7 @@ El cliente recibe alternativas más claras y contextualizadas, reduce errores al
 CP-SOL-005: Tipo de problema cambia según servicio seleccionado.
 
 **Resultado de pruebas:**  
-La suite completa quedó aprobada con 35 pruebas.
+La suite completa quedó aprobada con 51 pruebas.
 
 **Comando usado:**  
 ```powershell
@@ -160,6 +191,22 @@ npm.cmd run test:run
 
 **Mejora aplicada:**  
 No fue necesario modificar la lógica del componente. El comportamiento de error ya estaba implementado mediante `catch` y `finally`; se agregó cobertura automatizada para dejar evidencia del caso negativo.
+
+## Mejora QA-TEST-001: Configuración estable de Vitest
+
+**Observación detectada:**  
+Durante la ejecución completa de la suite, Vitest podía agotar memoria al levantar varios workers en paralelo en el entorno local de Windows.
+
+**Mejora aplicada:**  
+Se configuró `fileParallelism: false` en `vite.config.ts` para ejecutar los archivos de prueba de forma secuencial y estabilizar el comando estándar `npm.cmd run test:run`.
+
+**Impacto:**  
+La suite completa puede ejecutarse de forma consistente con 11 archivos de prueba y 51 pruebas aprobadas.
+
+**Comando usado:**  
+```powershell
+npm.cmd run test:run
+```
 
 ## Mejora QA-REG-001: Asociación explícita de labels e inputs en Register
 
