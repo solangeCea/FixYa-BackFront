@@ -14,7 +14,7 @@ Las pruebas automatizadas se ejecutan sobre el frontend y utilizan mocks para si
 
 ## Objeto
 
-Validar que los flujos principales del frontend de FixYa funcionen correctamente desde la perspectiva del usuario y del control de acceso, incluyendo autenticación, registro, rutas protegidas, comunicación con servicios API y creación de solicitudes de servicio.
+Validar que los flujos principales del frontend de FixYa funcionen correctamente desde la perspectiva del usuario y del control de acceso, incluyendo autenticación, registro, rutas protegidas, comunicación con servicios API, creación de solicitudes de servicio, panel técnico, moderación de reseñas y gestión administrativa del sistema.
 
 ## Alcance
 
@@ -26,8 +26,13 @@ El alcance de esta etapa considera:
 - Control de acceso por rol mediante rutas protegidas.
 - Servicios API del frontend para autenticación, usuarios y técnicos.
 - Creación de solicitudes de servicio.
+- Visualización de solicitudes disponibles y trabajos asignados para técnicos.
+- Creación de cotizaciones desde el panel técnico.
 - Carga de catálogos de servicios y comunas.
 - Manejo de error del backend al crear solicitudes.
+- Gestión y moderación de reseñas reportadas desde el panel administrador.
+- Visualización de métricas del panel administrador.
+- Visualización y búsqueda inicial de usuarios del sistema.
 - Accesibilidad básica mediante asociación explícita de labels e inputs.
 - Mejora UX del campo tipo de problema según servicio.
 
@@ -57,6 +62,9 @@ La estrategia usada combina pruebas funcionales de componentes con pruebas unita
 - Las pruebas de servicios mockean `fetch` o funciones equivalentes para validar endpoints, payloads, headers y errores HTTP.
 - Las pruebas de autenticación mockean login, usuario actual, contexto y navegación.
 - Las pruebas de solicitudes mockean catálogos, usuario autenticado y creación de solicitud.
+- Las pruebas de técnico mockean solicitudes disponibles, trabajos asignados, métricas, servicios y creación de cotización.
+- Las pruebas de reseñas mockean listado y acciones de moderación desde `reviewService`.
+- Las pruebas administrativas mockean métricas del dashboard, listado de usuarios y comunas.
 - Las pruebas no dependen del backend real ni de datos reales en PostgreSQL.
 
 Comando estándar de ejecución:
@@ -82,8 +90,18 @@ Configuración relevante:
 | Servicios API - usuarios | `frontend/src/tests/services/userService.test.ts` | CP-SERV-USER-001 a CP-SERV-USER-003 | 3 | Aprobado |
 | Servicios API - técnicos | `frontend/src/tests/services/technicianService.test.ts` | CP-SERV-TECH-001 a CP-SERV-TECH-004 | 4 | Aprobado |
 | Solicitudes | `frontend/src/tests/solicitudes/SolicitudForm.test.tsx` | CP-SOL-001 a CP-SOL-006 | 6 | Aprobado |
+| Reseñas y moderación | `frontend/src/tests/reviews/ReviewManagement.test.tsx` | CP-REV-001 a CP-REV-004 | 4 | Aprobado |
+| Administración - dashboard | `frontend/src/tests/admin/AdminDashboard.test.tsx` | CP-ADMIN-001 a CP-ADMIN-003 | 3 | Aprobado |
+| Administración - usuarios | `frontend/src/tests/admin/UserManagement.test.tsx` | CP-ADMIN-004 a CP-ADMIN-006 | 3 | Aprobado |
+| Técnico - dashboard | `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx` | CP-TEC-001 a CP-TEC-006 | 6 | Aprobado |
 
-Total inventariado: 35 casos de prueba.
+Total inventariado: 51 casos de prueba.
+
+## Matriz de trazabilidad
+
+La trazabilidad entre requisitos funcionales y casos de prueba se mantiene en `docs/matriz-trazabilidad-pruebas.md`.
+
+La matriz cubre desde `RF-001` hasta `RF-015` y relaciona cada requisito con sus casos automatizados, archivo de evidencia y estado de aprobación.
 
 ## Resumen de resultados
 
@@ -95,8 +113,8 @@ npm.cmd run test:run
 
 Resultado actual:
 
-- 7 archivos de prueba aprobados.
-- 35 pruebas aprobadas.
+- 11 archivos de prueba aprobados.
+- 51 pruebas aprobadas.
 - 0 pruebas fallidas.
 - Las pruebas usan mocks y no dependen del backend real.
 
@@ -109,6 +127,9 @@ Distribución:
 | Rutas protegidas | 6 | Aprobado |
 | Servicios API | 11 | Aprobado |
 | Solicitudes | 6 | Aprobado |
+| Reseñas y moderación | 4 | Aprobado |
+| Administración | 6 | Aprobado |
+| Técnico | 6 | Aprobado |
 
 ## Hallazgos corregidos
 
@@ -122,12 +143,16 @@ Distribución:
 ## Mejoras aplicadas
 
 - Se configuró Vitest con entorno `jsdom` y setup de Testing Library.
+- Se estabilizó la ejecución de Vitest con `fileParallelism: false` para evitar fallos de memoria por workers paralelos en la suite completa.
 - Se organizó la estructura de pruebas en `frontend/src/tests/`.
 - Se agregó suite de Login con casos positivos, negativos y validación de rol.
 - Se agregó suite de Register con validaciones, accesibilidad y registro exitoso.
 - Se agregó suite de rutas protegidas para validar acceso por rol.
 - Se agregaron pruebas de servicios API para autenticación, usuarios y técnicos.
 - Se agregó suite de solicitudes con renderizado, validaciones, catálogos, creación exitosa, tipo de problema dinámico y error del backend.
+- Se agregó suite de técnico con renderizado del panel, carga de solicitudes, estados vacíos, error controlado, información principal y creación de cotización.
+- Se agregó suite de reseñas y moderación con renderizado, listado, aprobación y ocultamiento de reseñas reportadas.
+- Se agregó suite de administración con renderizado de dashboard, carga de métricas, error controlado y listado de usuarios.
 - Se mejoró la asociación explícita entre labels e inputs en Register y solicitud.
 - Se ajustó el campo tipo de problema para mostrar opciones según el servicio seleccionado.
 - Se agregó documentación de evidencia y matriz de trazabilidad.

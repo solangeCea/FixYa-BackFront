@@ -3,7 +3,7 @@
 Proyecto: FixYa  
 Frontend: React + TypeScript + Vite  
 Framework de pruebas: Vitest + Testing Library  
-Resultado vigente: 7 archivos de prueba aprobados, 35 pruebas aprobadas  
+Resultado vigente: 11 archivos de prueba aprobados, 51 pruebas aprobadas  
 Comando de ejecución: `npm.cmd run test:run`
 
 ## Matriz RF - Casos de prueba
@@ -20,6 +20,11 @@ Comando de ejecución: `npm.cmd run test:run`
 | RF-008 | Seguridad básica con token JWT. | CP-SERV-AUTH-003, CP-SERV-AUTH-004; CP-SERV-USER-003; CP-SERV-TECH-001, CP-SERV-TECH-002, CP-SERV-TECH-003; CP-ROUTE-006; CP-AUTH-004 | `frontend/src/tests/services/authService.test.ts`; `frontend/src/tests/services/userService.test.ts`; `frontend/src/tests/services/technicianService.test.ts`; `frontend/src/tests/routes/ProtectedRoute.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
 | RF-009 | Mejora de accesibilidad en formularios. | CP-REG-001, CP-REG-006; CP-SOL-001, CP-SOL-004, CP-SOL-006 | `frontend/src/tests/auth/Register.test.tsx`; `frontend/src/tests/solicitudes/SolicitudForm.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
 | RF-010 | Mejora UX de tipo de problema según servicio. | CP-SOL-005 | `frontend/src/tests/solicitudes/SolicitudForm.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
+| RF-011 | Gestión y moderación de reseñas. | CP-REV-001, CP-REV-002, CP-REV-003, CP-REV-004 | `frontend/src/tests/reviews/ReviewManagement.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
+| RF-012 | Gestión administrativa del sistema. | CP-ADMIN-001, CP-ADMIN-002, CP-ADMIN-003 | `frontend/src/tests/admin/AdminDashboard.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
+| RF-013 | Visualización de usuarios del sistema. | CP-ADMIN-004, CP-ADMIN-005, CP-ADMIN-006 | `frontend/src/tests/admin/UserManagement.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
+| RF-014 | Visualización de solicitudes por técnico. | CP-TEC-001, CP-TEC-002, CP-TEC-003, CP-TEC-004, CP-TEC-005 | `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
+| RF-015 | Gestión de cotizaciones por técnico. | CP-TEC-006 | `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
 
 ## Resumen de cobertura
 
@@ -32,5 +37,9 @@ Comando de ejecución: `npm.cmd run test:run`
 | Servicios API - usuarios | `frontend/src/tests/services/userService.test.ts` | 3 | Aprobado |
 | Servicios API - técnicos | `frontend/src/tests/services/technicianService.test.ts` | 4 | Aprobado |
 | Solicitudes | `frontend/src/tests/solicitudes/SolicitudForm.test.tsx` | 6 | Aprobado |
+| Reseñas y moderación | `frontend/src/tests/reviews/ReviewManagement.test.tsx` | 4 | Aprobado |
+| Administración - dashboard | `frontend/src/tests/admin/AdminDashboard.test.tsx` | 3 | Aprobado |
+| Administración - usuarios | `frontend/src/tests/admin/UserManagement.test.tsx` | 3 | Aprobado |
+| Técnico - dashboard | `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx` | 6 | Aprobado |
 
-Total documentado: 35 casos de prueba aprobados.
+Total documentado: 51 casos de prueba aprobados.
