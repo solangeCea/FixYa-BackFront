@@ -632,11 +632,15 @@ function Register() {
           <form onSubmit={handleSubmit} noValidate className="space-y-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
-                <label className="mb-2 block font-medium text-gray-700">
+                <label
+                  htmlFor="nombre_completo"
+                  className="mb-2 block font-medium text-gray-700"
+                >
                   Nombre completo
                 </label>
 
                 <input
+                  id="nombre_completo"
                   name="nombre_completo"
                   value={form.nombre_completo}
                   onChange={handleChange}
@@ -650,11 +654,15 @@ function Register() {
               </div>
 
               <div>
-                <label className="mb-2 block font-medium text-gray-700">
+                <label
+                  htmlFor="rut"
+                  className="mb-2 block font-medium text-gray-700"
+                >
                   RUT
                 </label>
 
                 <input
+                  id="rut"
                   name="rut"
                   value={form.rut}
                   onChange={handleChange}
@@ -670,11 +678,15 @@ function Register() {
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
-                <label className="mb-2 block font-medium text-gray-700">
+                <label
+                  htmlFor="fecha_nacimiento"
+                  className="mb-2 block font-medium text-gray-700"
+                >
                   Fecha de nacimiento
                 </label>
 
                 <input
+                  id="fecha_nacimiento"
                   name="fecha_nacimiento"
                   value={form.fecha_nacimiento}
                   onChange={handleChange}
@@ -687,11 +699,15 @@ function Register() {
               </div>
 
               <div>
-                <label className="mb-2 block font-medium text-gray-700">
+                <label
+                  htmlFor="genero"
+                  className="mb-2 block font-medium text-gray-700"
+                >
                   Género
                 </label>
 
                 <select
+                  id="genero"
                   name="genero"
                   value={form.genero}
                   onChange={handleChange}
@@ -707,11 +723,15 @@ function Register() {
             </div>
 
             <div>
-              <label className="mb-2 block font-medium text-gray-700">
+              <label
+                htmlFor="correo"
+                className="mb-2 block font-medium text-gray-700"
+              >
                 Correo electrónico
               </label>
 
               <input
+                id="correo"
                 name="correo"
                 value={form.correo}
                 onChange={handleChange}
@@ -725,11 +745,15 @@ function Register() {
             </div>
 
             <div>
-              <label className="mb-2 block font-medium text-gray-700">
+              <label
+                htmlFor="telefono"
+                className="mb-2 block font-medium text-gray-700"
+              >
                 Teléfono
               </label>
 
               <input
+                id="telefono"
                 name="telefono"
                 value={form.telefono}
                 onChange={handleChange}
@@ -744,11 +768,15 @@ function Register() {
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
-                <label className="mb-2 block font-medium text-gray-700">
+                <label
+                  htmlFor="region_id_region"
+                  className="mb-2 block font-medium text-gray-700"
+                >
                   Región
                 </label>
 
                 <select
+                  id="region_id_region"
                   name="region_id_region"
                   value={form.region_id_region}
                   onChange={handleChange}
@@ -770,11 +798,15 @@ function Register() {
               </div>
 
               <div>
-                <label className="mb-2 block font-medium text-gray-700">
+                <label
+                  htmlFor="comuna_id_comuna"
+                  className="mb-2 block font-medium text-gray-700"
+                >
                   Comuna
                 </label>
 
                 <select
+                  id="comuna_id_comuna"
                   name="comuna_id_comuna"
                   value={form.comuna_id_comuna}
                   onChange={handleChange}
@@ -800,10 +832,14 @@ function Register() {
               <div className="space-y-4 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-2 block font-medium text-gray-700">
+                    <label
+                      htmlFor="servicio_id_servicio"
+                      className="mb-2 block font-medium text-gray-700"
+                    >
                       Servicio principal
                     </label>
                     <select
+                      id="servicio_id_servicio"
                       name="servicio_id_servicio"
                       value={form.servicio_id_servicio}
                       onChange={handleChange}
@@ -827,10 +863,14 @@ function Register() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block font-medium text-gray-700">
+                    <label
+                      htmlFor="nivel_tecnico"
+                      className="mb-2 block font-medium text-gray-700"
+                    >
                       Nivel técnico
                     </label>
                     <select
+                      id="nivel_tecnico"
                       name="nivel_tecnico"
                       value={form.nivel_tecnico}
                       onChange={handleChange}
@@ -845,10 +885,14 @@ function Register() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block font-medium text-gray-700">
+                  <label
+                    htmlFor="experiencia_anios"
+                    className="mb-2 block font-medium text-gray-700"
+                  >
                     Experiencia en anos
                   </label>
                   <input
+                    id="experiencia_anios"
                     name="experiencia_anios"
                     value={form.experiencia_anios}
                     onChange={handleChange}
@@ -861,10 +905,14 @@ function Register() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block font-medium text-gray-700">
+                  <label
+                    htmlFor="descripcion_perfil"
+                    className="mb-2 block font-medium text-gray-700"
+                  >
                     Descripcion del perfil
                   </label>
                   <input
+                    id="descripcion_perfil"
                     name="descripcion_perfil"
                     value={form.descripcion_perfil}
                     onChange={handleChange}
@@ -877,10 +925,14 @@ function Register() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block font-medium text-gray-700">
+                  <label
+                    htmlFor="documento"
+                    className="mb-2 block font-medium text-gray-700"
+                  >
                     Documento técnico
                   </label>
                   <input
+                    id="documento"
                     name="documento"
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
@@ -898,12 +950,16 @@ function Register() {
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
-                <label className="mb-2 block font-medium text-gray-700">
+                <label
+                  htmlFor="contrasena"
+                  className="mb-2 block font-medium text-gray-700"
+                >
                   Contraseña
                 </label>
 
                 <div className="relative">
                   <input
+                    id="contrasena"
                     name="contrasena"
                     value={form.contrasena}
                     onChange={handleChange}
@@ -927,12 +983,16 @@ function Register() {
               </div>
 
               <div>
-                <label className="mb-2 block font-medium text-gray-700">
+                <label
+                  htmlFor="confirmarContrasena"
+                  className="mb-2 block font-medium text-gray-700"
+                >
                   Confirmar contraseña
                 </label>
 
                 <div className="relative">
                   <input
+                    id="confirmarContrasena"
                     name="confirmarContrasena"
                     value={form.confirmarContrasena}
                     onChange={handleChange}

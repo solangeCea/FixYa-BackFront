@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthProvider, useAuth } from "../../context/AuthContext"
 import { login, obtenerUsuarioActual } from "../../services/authService"
 import type { Usuario } from "../../types/auth"
-import Login from "./Login"
+import Login from "../../pages/auth/Login"
 
 const mockNavigate = vi.hoisted(() => vi.fn())
 
