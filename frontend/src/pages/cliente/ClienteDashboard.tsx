@@ -57,38 +57,34 @@ const problemOptionsByService = {
   electricidad: [
     "Enchufe",
     "Cables",
-    "Cortocircuito",
     "Iluminación",
-    "Electrodoméstico",
-    "Tablero eléctrico",
-    "Otro problema eléctrico",
+    "Electrodomésticos",
+    "Cortocircuito",
+    "Otro",
   ],
   gasfiteria: [
     "Fuga de agua",
-    "Llave o grifería",
-    "Tubería tapada",
-    "Baño o WC",
-    "Calefón",
+    "Cañería",
+    "Baño",
     "Lavaplatos",
-    "Otro problema de gasfitería",
+    "Calefont",
+    "Otro",
   ],
   carpinteria: [
     "Puerta",
     "Mueble",
     "Repisa",
-    "Piso de madera",
-    "Ventana",
-    "Reparación general",
-    "Otro trabajo de carpintería",
+    "Piso",
+    "Estructura de madera",
+    "Otro",
   ],
   cerrajeria: [
-    "Cambio de chapa",
-    "Llave perdida",
-    "Cerradura trabada",
+    "Cerradura",
+    "Llave",
+    "Chapa",
     "Apertura de puerta",
-    "Instalación de cerradura",
-    "Copia de llave",
-    "Otro problema de cerrajería",
+    "Cambio de cilindro",
+    "Otro",
   ],
 };
 
@@ -120,7 +116,7 @@ function getProblemOptions(servicio?: Servicio) {
     return problemOptionsByService.cerrajeria;
   }
 
-  return [];
+  return ["Otro"];
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -511,10 +507,14 @@ function ClienteDashboard() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="servicio_id_servicio"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Servicio que necesitas
                 </label>
                 <select
+                  id="servicio_id_servicio"
                   name="servicio_id_servicio"
                   value={form.servicio_id_servicio}
                   onChange={handleChange}
@@ -537,10 +537,14 @@ function ClienteDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="comuna_id_comuna"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Comuna del servicio
                 </label>
                 <select
+                  id="comuna_id_comuna"
                   name="comuna_id_comuna"
                   value={form.comuna_id_comuna}
                   onChange={handleChange}
@@ -560,10 +564,14 @@ function ClienteDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="titulo_solicitud"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Título breve
                 </label>
               <input
+                id="titulo_solicitud"
                 name="titulo_solicitud"
                 value={form.titulo_solicitud}
                 onChange={handleChange}
@@ -574,10 +582,14 @@ function ClienteDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="descripcion_problema"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Describe qué ocurre
                 </label>
               <textarea
+                id="descripcion_problema"
                 name="descripcion_problema"
                 value={form.descripcion_problema}
                 onChange={handleChange}
@@ -589,10 +601,14 @@ function ClienteDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="urgencia"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Urgencia
                 </label>
                 <select
+                  id="urgencia"
                   name="urgencia"
                   value={form.urgencia}
                   onChange={handleChange}
@@ -605,10 +621,14 @@ function ClienteDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="direccion"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Dirección
                 </label>
               <input
+                id="direccion"
                 name="direccion"
                 value={form.direccion}
                 onChange={handleChange}
@@ -619,10 +639,14 @@ function ClienteDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="tipo_problema"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Tipo de problema
                 </label>
                 <select
+                  id="tipo_problema"
                   name="tipo_problema"
                   value={form.tipo_problema}
                   onChange={handleChange}
@@ -656,10 +680,14 @@ function ClienteDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="foto_problema"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Foto del problema
                 </label>
                 <input
+                  id="foto_problema"
                   name="foto_problema"
                   value={form.foto_problema}
                   onChange={handleChange}
@@ -672,10 +700,14 @@ function ClienteDashboard() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-700">
+                <label
+                  htmlFor="ubicacion_problema_referencia"
+                  className="mb-2 block text-sm font-bold text-slate-700"
+                >
                   Referencia de ubicación
                 </label>
               <input
+                id="ubicacion_problema_referencia"
                 name="ubicacion_problema_referencia"
                 value={form.ubicacion_problema_referencia}
                 onChange={handleChange}

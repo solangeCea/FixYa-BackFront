@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   test: {
     environment: 'jsdom',
+    fileParallelism: false,
     globals: true,
     passWithNoTests: true,
     setupFiles: './src/test/setup.ts',
