@@ -184,8 +184,26 @@ describe("Register", () => {
       experiencia_anios: 1,
       nivel_tecnico: "Inicial",
       tecnico_verificado: false,
+      estado_verificacion: "DOCUMENTOS_PENDIENTES",
+      observacion_verificacion: "Sube una evidencia para iniciar la revisión.",
+      fecha_verificacion: null,
+      verificado_por_rut: null,
     })
-    mockUploadTechnicianDocument.mockResolvedValue({})
+    mockUploadTechnicianDocument.mockResolvedValue({
+      id_documento: 1,
+      tecnico_usuario_rut: "12345678-5",
+      tipo_documento: "EXPERIENCIA_OFICIO",
+      nombre_archivo: "evidencia.pdf",
+      archivo_url: "/uploads/documentos_tecnicos/evidencia.pdf",
+      fecha_subida: "2026-06-14T12:00:00Z",
+      documento_aprobado: false,
+      estado_revision: "PENDIENTE_REVISION",
+      observacion_revision: null,
+      fecha_aprobacion: null,
+      fecha_revision: null,
+      usuario_rut: null,
+      revisado_por_rut: null,
+    })
   })
 
   it("CP-REG-001 renderiza correctamente el formulario de registro", async () => {

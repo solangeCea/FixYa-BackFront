@@ -23,6 +23,7 @@ import {
   createTechnicianProfile,
   uploadTechnicianDocument,
 } from "../../services/technicianService";
+import type { TipoEvidenciaTecnica } from "../../services/technicianService";
 
 type UserType = "cliente" | "tecnico";
 type RegisterField = keyof RegisterForm | "documento";
@@ -42,6 +43,7 @@ interface RegisterForm {
   experiencia_anios: number;
   nivel_tecnico: string;
   servicio_id_servicio: number;
+  tipo_evidencia: TipoEvidenciaTecnica;
 }
 
 const initialForm: RegisterForm = {
@@ -59,7 +61,20 @@ const initialForm: RegisterForm = {
   experiencia_anios: 0,
   nivel_tecnico: "Inicial",
   servicio_id_servicio: 0,
+  tipo_evidencia: "EXPERIENCIA_OFICIO",
 };
+
+const evidenceOptions: Array<{ value: TipoEvidenciaTecnica; label: string }> = [
+  { value: "CERTIFICADO", label: "Certificado" },
+  { value: "TITULO", label: "Título" },
+  { value: "CURSO", label: "Curso" },
+  { value: "LICENCIA", label: "Licencia" },
+  { value: "FOTO_TRABAJO", label: "Fotos de trabajos anteriores" },
+  { value: "REFERENCIA_LABORAL", label: "Referencias laborales" },
+  { value: "PORTAFOLIO", label: "Portafolio" },
+  { value: "EXPERIENCIA_OFICIO", label: "Evidencia de experiencia en oficio" },
+  { value: "OTRO", label: "Otra evidencia relevante" },
+];
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -403,6 +418,10 @@ function Register() {
         return "Selecciona el servicio que ofreces principalmente.";
       }
 
+      if (field === "tipo_evidencia" && !values.tipo_evidencia) {
+        return "Selecciona qué tipo de evidencia subirás.";
+      }
+
       if (field === "experiencia_anios" && values.experiencia_anios < 0) {
         return "Ingresa años de experiencia válidos.";
       }
@@ -441,6 +460,7 @@ function Register() {
     if (userType === "tecnico") {
       fieldsToValidate.push(
         "servicio_id_servicio",
+        "tipo_evidencia",
         "experiencia_anios",
         "descripcion_perfil",
         "documento"
@@ -513,7 +533,7 @@ function Register() {
         if (documento) {
           await uploadTechnicianDocument({
             tecnico_usuario_rut: form.rut,
-            tipo_documento: "CERTIFICADO_TECNICO",
+            tipo_documento: form.tipo_evidencia,
             archivo: documento,
           });
         }
@@ -864,6 +884,30 @@ function Register() {
 
                   <div>
                     <label
+                      htmlFor="tipo_evidencia"
+                      className="mb-2 block font-medium text-[#102033]"
+                    >
+                      Tipo de evidencia
+                    </label>
+                    <select
+                      id="tipo_evidencia"
+                      name="tipo_evidencia"
+                      value={form.tipo_evidencia}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={fieldClass(fieldErrors.tipo_evidencia)}
+                    >
+                      {evidenceOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <FieldError message={fieldErrors.tipo_evidencia} />
+                  </div>
+
+                  <div>
+                    <label
                       htmlFor="nivel_tecnico"
                       className="mb-2 block font-medium text-[#102033]"
                     >
@@ -929,7 +973,7 @@ function Register() {
                     htmlFor="documento"
                     className="mb-2 block font-medium text-[#102033]"
                   >
-                    Documento técnico
+                    Evidencia para verificar tu perfil
                   </label>
                   <input
                     id="documento"
@@ -942,7 +986,7 @@ function Register() {
                   />
                   <FieldError message={fieldErrors.documento} />
                   <p className="mt-2 text-xs text-[#8C5F1D]">
-                    Formatos permitidos: PDF, JPG o PNG.
+                    Puedes subir certificados, fotos de trabajos, referencias o portafolio en PDF, JPG o PNG.
                   </p>
                 </div>
               </div>

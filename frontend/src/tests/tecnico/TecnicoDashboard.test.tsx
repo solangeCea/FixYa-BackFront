@@ -10,8 +10,17 @@ import {
   getSolicitudesTecnico,
 } from "../../services/solicitudService"
 import type { Solicitud } from "../../services/solicitudService"
-import { getTechnicianDashboard } from "../../services/technicianService"
-import type { TecnicoDashboardMetrics } from "../../services/technicianService"
+import {
+  getTechnicianDashboard,
+  getTechnicianDocuments,
+  getTechnicianProfile,
+  uploadTechnicianDocument,
+} from "../../services/technicianService"
+import type {
+  DocumentoTecnico,
+  Tecnico,
+  TecnicoDashboardMetrics,
+} from "../../services/technicianService"
 
 vi.mock("../../components/Navbar", () => ({
   default: () => <nav aria-label="Navegacion principal">Navbar mock</nav>,
@@ -39,6 +48,9 @@ vi.mock("../../services/solicitudService", () => ({
 
 vi.mock("../../services/technicianService", () => ({
   getTechnicianDashboard: vi.fn(),
+  getTechnicianDocuments: vi.fn(),
+  getTechnicianProfile: vi.fn(),
+  uploadTechnicianDocument: vi.fn(),
 }))
 
 const mockUseAuth = vi.mocked(useAuth)
@@ -47,6 +59,9 @@ const mockCreateCotizacion = vi.mocked(createCotizacion)
 const mockGetSolicitudes = vi.mocked(getSolicitudes)
 const mockGetSolicitudesTecnico = vi.mocked(getSolicitudesTecnico)
 const mockGetTechnicianDashboard = vi.mocked(getTechnicianDashboard)
+const mockGetTechnicianDocuments = vi.mocked(getTechnicianDocuments)
+const mockGetTechnicianProfile = vi.mocked(getTechnicianProfile)
+const mockUploadTechnicianDocument = vi.mocked(uploadTechnicianDocument)
 
 const tecnicoRut = "22.222.222-2"
 
@@ -98,6 +113,32 @@ const metrics: TecnicoDashboardMetrics = {
   ingresos_totales: 250000,
   promedio_calificacion: 4.8,
   total_resenas: 12,
+}
+
+const technicianProfile: Tecnico = {
+  usuario_rut: tecnicoRut,
+  descripcion_perfil: "Gasfiter certificado con experiencia residencial",
+  experiencia_anios: 5,
+  nivel_tecnico: "Avanzado",
+  tecnico_verificado: true,
+  estado_verificacion: "APROBADO",
+  observacion_verificacion: "Perfil verificado con evidencia revisada.",
+  fecha_verificacion: "2026-06-14T10:00:00Z",
+  verificado_por_rut: "99.999.999-9",
+}
+
+const technicianDocument: DocumentoTecnico = {
+  id_documento: 1,
+  tecnico_usuario_rut: tecnicoRut,
+  tipo_documento: "EXPERIENCIA_OFICIO",
+  nombre_archivo: "portafolio.pdf",
+  archivo_url: "/uploads/documentos_tecnicos/portafolio.pdf",
+  fecha_subida: "2026-06-13T10:00:00Z",
+  documento_aprobado: true,
+  estado_revision: "APROBADO",
+  observacion_revision: "Este documento fue aprobado por el administrador.",
+  fecha_revision: "2026-06-14T10:00:00Z",
+  revisado_por_rut: "99.999.999-9",
 }
 
 function renderTecnicoDashboard() {
@@ -155,6 +196,9 @@ describe("TecnicoDashboard", () => {
       },
     ])
     mockGetTechnicianDashboard.mockResolvedValue(metrics)
+    mockGetTechnicianProfile.mockResolvedValue(technicianProfile)
+    mockGetTechnicianDocuments.mockResolvedValue([technicianDocument])
+    mockUploadTechnicianDocument.mockResolvedValue(technicianDocument)
     mockCreateCotizacion.mockResolvedValue({
       id_cotizacion: 1,
       solicitud_id_solicitud: 601,

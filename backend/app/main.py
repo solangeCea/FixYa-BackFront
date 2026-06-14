@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from app.database import engine, Base
 
@@ -88,8 +89,99 @@ def seed_database():
         connection.exec_driver_sql(seed_path.read_text(encoding="utf-8"))
 
 
+def ensure_verification_columns():
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+
+    if "tecnico" in tables:
+        tecnico_columns = {
+            column["name"] for column in inspector.get_columns("tecnico")
+        }
+        tecnico_additions = {
+            "estado_verificacion": "VARCHAR(30) DEFAULT 'DOCUMENTOS_PENDIENTES' NOT NULL",
+            "observacion_verificacion": "VARCHAR(500)",
+            "fecha_verificacion": "TIMESTAMP",
+            "verificado_por_rut": "VARCHAR(12)",
+        }
+
+        with engine.begin() as connection:
+            for column_name, column_definition in tecnico_additions.items():
+                if column_name not in tecnico_columns:
+                    connection.execute(
+                        text(
+                            f"ALTER TABLE tecnico ADD COLUMN {column_name} {column_definition}"
+                        )
+                    )
+
+            connection.execute(
+                text(
+                    "UPDATE tecnico "
+                    "SET estado_verificacion = CASE "
+                    "WHEN tecnico_verificado = TRUE THEN 'APROBADO' "
+                    "ELSE 'DOCUMENTOS_PENDIENTES' END "
+                    "WHERE estado_verificacion IS NULL"
+                )
+            )
+
+    if "documento_tecnico" in tables:
+        documento_columns = {
+            column["name"] for column in inspector.get_columns("documento_tecnico")
+        }
+        documento_additions = {
+            "estado_revision": "VARCHAR(30) DEFAULT 'PENDIENTE_REVISION' NOT NULL",
+            "observacion_revision": "VARCHAR(500)",
+            "fecha_revision": "TIMESTAMP",
+            "revisado_por_rut": "VARCHAR(12)",
+        }
+
+        with engine.begin() as connection:
+            for column_name, column_definition in documento_additions.items():
+                if column_name not in documento_columns:
+                    connection.execute(
+                        text(
+                            f"ALTER TABLE documento_tecnico ADD COLUMN {column_name} {column_definition}"
+                        )
+                    )
+
+            connection.execute(
+                text(
+                    "UPDATE documento_tecnico "
+                    "SET estado_revision = CASE "
+                    "WHEN documento_aprobado = TRUE THEN 'APROBADO' "
+                    "ELSE 'PENDIENTE_REVISION' END "
+                    "WHERE estado_revision IS NULL"
+                )
+            )
+
+
+def enforce_verified_technicians_have_review():
+    tables = set(inspect(engine).get_table_names())
+    if "tecnico" not in tables or "documento_tecnico" not in tables:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE tecnico "
+                "SET tecnico_verificado = FALSE, "
+                "estado_verificacion = 'DOCUMENTOS_PENDIENTES', "
+                "observacion_verificacion = "
+                "'Para mantener la verificación necesitamos revisar al menos una evidencia.' "
+                "WHERE tecnico_verificado = TRUE "
+                "AND NOT EXISTS ("
+                "SELECT 1 FROM documento_tecnico d "
+                "WHERE d.tecnico_usuario_rut = tecnico.usuario_rut "
+                "AND (d.documento_aprobado = TRUE OR d.estado_revision = 'APROBADO')"
+                ") "
+                "AND (observacion_verificacion IS NULL OR TRIM(observacion_verificacion) = '')"
+            )
+        )
+
+
 Base.metadata.create_all(bind=engine)
+ensure_verification_columns()
 seed_database()
+enforce_verified_technicians_have_review()
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

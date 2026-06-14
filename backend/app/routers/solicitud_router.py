@@ -99,6 +99,12 @@ def asignar_tecnico_solicitud(
     if not tecnico:
         raise HTTPException(status_code=404, detail="Técnico no encontrado")
 
+    if not tecnico.tecnico_verificado:
+        raise HTTPException(
+            status_code=400,
+            detail="Este técnico aún no está verificado. Debe completar la revisión de evidencias antes de tomar servicios."
+        )
+
     if solicitud.tecnico_usuario_rut is not None:
         raise HTTPException(status_code=400, detail="La solicitud ya tiene un técnico asignado")
 

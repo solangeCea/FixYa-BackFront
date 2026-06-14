@@ -102,6 +102,6 @@ describe("technicianService", () => {
     localStorage.setItem("token", "admin-token")
     mockJsonResponse({ detail: "Error interno" }, false)
 
-    await expect(getTechnicians()).rejects.toThrow(/Error al obtener/)
+    await expect(getTechnicians()).rejects.toThrow(/Error interno/)
   })
 })

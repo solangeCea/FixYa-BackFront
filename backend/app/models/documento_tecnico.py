@@ -18,7 +18,11 @@ class DocumentoTecnico(Base):
     fecha_subida = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     documento_aprobado = Column(Boolean, default=False, nullable=False)
+    estado_revision = Column(String(30), default="PENDIENTE_REVISION", nullable=False)
+    observacion_revision = Column(String(500), nullable=True)
 
     fecha_aprobacion = Column(DateTime, nullable=True)
+    fecha_revision = Column(DateTime, nullable=True)
 
     usuario_rut = Column(String(12), ForeignKey("usuario.rut"), nullable=True)
+    revisado_por_rut = Column(String(12), ForeignKey("usuario.rut"), nullable=True)

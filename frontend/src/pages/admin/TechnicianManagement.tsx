@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   CheckCircle,
+  ExternalLink,
+  FileText,
   Mail,
   Phone,
   Search,
@@ -11,15 +13,20 @@ import {
 } from "lucide-react";
 
 import {
+  approveTechnicianDocument,
   approveTechnician,
+  getTechnicianDocuments,
   getTechnicians,
+  rejectTechnician,
+  rejectTechnicianDocument,
 } from "../../services/technicianService";
-import type { Tecnico } from "../../services/technicianService";
+import type { DocumentoTecnico, Tecnico } from "../../services/technicianService";
 
 import { getUsers } from "../../services/userService";
 import type { UsuarioAdmin } from "../../services/userService";
 import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
+import API_URL from "../../services/api";
 
 type FilterType = "all" | "verified" | "pending";
 
@@ -29,14 +36,59 @@ interface TecnicoAdmin extends Tecnico {
   telefono: string | null;
 }
 
+const evidenceLabels: Record<string, string> = {
+  CERTIFICADO: "Certificado",
+  TITULO: "Título",
+  CURSO: "Curso",
+  LICENCIA: "Licencia",
+  FOTO_TRABAJO: "Fotos de trabajos anteriores",
+  REFERENCIA_LABORAL: "Referencias laborales",
+  PORTAFOLIO: "Portafolio",
+  EXPERIENCIA_OFICIO: "Evidencia de experiencia en oficio",
+  OTRO: "Otra evidencia relevante",
+  CERTIFICADO_TECNICO: "Certificado técnico",
+  ANTECEDENTES: "Antecedentes",
+};
+
+function getEvidenceLabel(tipo: string) {
+  return evidenceLabels[tipo] || tipo;
+}
+
+function getEvidenceStatusStyle(status: DocumentoTecnico["estado_revision"]) {
+  if (status === "APROBADO") {
+    return "bg-[#DDEADF] text-[#2F5F46]";
+  }
+
+  if (status === "RECHAZADO") {
+    return "bg-red-50 text-red-700";
+  }
+
+  return "bg-[#FFF4D8] text-[#8C5F1D]";
+}
+
+function getEvidenceStatusLabel(status: DocumentoTecnico["estado_revision"]) {
+  if (status === "APROBADO") return "Aprobada";
+  if (status === "RECHAZADO") return "Rechazada";
+  return "Pendiente de revisión";
+}
+
 export default function TechnicianManagement() {
   const [technicians, setTechnicians] = useState<TecnicoAdmin[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTechnician, setSelectedTechnician] =
     useState<TecnicoAdmin | null>(null);
+  const [documents, setDocuments] = useState<DocumentoTecnico[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [documentActionLoading, setDocumentActionLoading] = useState<number | null>(
+    null
+  );
+  const [profileObservation, setProfileObservation] = useState("");
+  const [documentObservations, setDocumentObservations] = useState<
+    Record<number, string>
+  >({});
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -67,7 +119,7 @@ export default function TechnicianManagement() {
       );
 
       setTechnicians(tecnicosCompletos);
-    } catch {
+    } catch (err) {
       setError(
         "No pudimos cargar los técnicos registrados. Intenta actualizar el listado."
       );
@@ -80,19 +132,131 @@ export default function TechnicianManagement() {
     cargarTecnicos();
   }, []);
 
-  async function handleApprove(rut: string) {
+  useEffect(() => {
+    async function cargarEvidenciasTecnico(rut: string) {
+      try {
+        setLoadingDocuments(true);
+        setError("");
+        const data = await getTechnicianDocuments(rut);
+        setDocuments(data);
+      } catch (err) {
+        setDocuments([]);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "No pudimos cargar las evidencias del técnico."
+        );
+      } finally {
+        setLoadingDocuments(false);
+      }
+    }
+
+    if (!selectedTechnician) {
+      setDocuments([]);
+      setProfileObservation("");
+      setDocumentObservations({});
+      return;
+    }
+
+    setProfileObservation(selectedTechnician.observacion_verificacion || "");
+    cargarEvidenciasTecnico(selectedTechnician.usuario_rut);
+  }, [selectedTechnician]);
+
+  async function handleApprove(rut: string, observation = profileObservation) {
     try {
       setActionLoading(rut);
       setError("");
       setSuccess("");
 
-      await approveTechnician(rut);
+      await approveTechnician(rut, observation);
       setSuccess("Técnico aprobado. Ya puede aparecer como verificado.");
       await cargarTecnicos();
-    } catch {
-      setError("No pudimos aprobar este técnico. Intenta nuevamente.");
+      setSelectedTechnician(null);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos aprobar este técnico. Intenta nuevamente."
+      );
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function handleRejectTechnician(rut: string) {
+    if (!profileObservation.trim()) {
+      setError("Escribe una observación para que el técnico sepa qué corregir.");
+      return;
+    }
+
+    try {
+      setActionLoading(rut);
+      setError("");
+      setSuccess("");
+
+      await rejectTechnician(rut, profileObservation);
+      setSuccess("Técnico rechazado con observación registrada.");
+      await cargarTecnicos();
+      setSelectedTechnician(null);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos rechazar este técnico. Intenta nuevamente."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleApproveEvidence(documento: DocumentoTecnico) {
+    try {
+      setDocumentActionLoading(documento.id_documento);
+      setError("");
+      setSuccess("");
+
+      await approveTechnicianDocument(
+        documento.id_documento,
+        documentObservations[documento.id_documento]
+      );
+
+      setSuccess("Este documento fue aprobado por el administrador.");
+      setDocuments(await getTechnicianDocuments(documento.tecnico_usuario_rut));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos aprobar esta evidencia. Intenta nuevamente."
+      );
+    } finally {
+      setDocumentActionLoading(null);
+    }
+  }
+
+  async function handleRejectEvidence(documento: DocumentoTecnico) {
+    const observation = documentObservations[documento.id_documento]?.trim();
+
+    if (!observation) {
+      setError("Escribe una observación para que el técnico sepa qué corregir.");
+      return;
+    }
+
+    try {
+      setDocumentActionLoading(documento.id_documento);
+      setError("");
+      setSuccess("");
+
+      await rejectTechnicianDocument(documento.id_documento, observation);
+      setSuccess("Evidencia rechazada con observación registrada.");
+      setDocuments(await getTechnicianDocuments(documento.tecnico_usuario_rut));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos rechazar esta evidencia. Intenta nuevamente."
+      );
+    } finally {
+      setDocumentActionLoading(null);
     }
   }
 
@@ -337,13 +501,12 @@ export default function TechnicianManagement() {
 
                         {!tech.tecnico_verificado && (
                           <button
-                            onClick={() => handleApprove(tech.usuario_rut)}
-                            disabled={actionLoading === tech.usuario_rut}
-                            className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:bg-green-300"
+                            onClick={() => setSelectedTechnician(tech)}
+                            className="rounded-lg bg-[#C8872D] px-3 py-2 text-sm font-medium text-white hover:bg-[#AD711F]"
                           >
                             {actionLoading === tech.usuario_rut
-                              ? "Aprobando técnico..."
-                              : "Aprobar técnico pendiente"}
+                              ? "Revisando evidencias..."
+                              : "Revisar evidencias"}
                           </button>
                         )}
                       </div>
@@ -430,6 +593,139 @@ export default function TechnicianManagement() {
                     ? "Verificado"
                     : "Pendiente de verificación"}
                 </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-[#E6E0D6] bg-[#FBFAF7] p-5">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-black text-[#0E1B2A]">
+                    Evidencias del técnico
+                  </h3>
+                  <p className="mt-1 text-sm text-[#5F6B7A]">
+                    Revisa certificados, fotos, referencias o portafolios antes
+                    de aprobar el perfil.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-[#102033] ring-1 ring-[#E6E0D6]">
+                  {documents.length} evidencias
+                </span>
+              </div>
+
+              {loadingDocuments ? (
+                <p className="rounded-xl bg-white p-4 text-sm text-[#5F6B7A]">
+                  Cargando evidencias...
+                </p>
+              ) : documents.length === 0 ? (
+                <EmptyState
+                  title="Este técnico aún no subió evidencias"
+                  description="Para aprobar este técnico, primero debe existir al menos una evidencia revisada o una justificación registrada."
+                  icon={FileText}
+                />
+              ) : (
+                <div className="space-y-4">
+                  {documents.map((documento) => (
+                    <article
+                      key={documento.id_documento}
+                      className="rounded-xl border border-[#E6E0D6] bg-white p-4"
+                    >
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <p className="font-black text-[#102033]">
+                            {getEvidenceLabel(documento.tipo_documento)}
+                          </p>
+                          <a
+                            href={`${API_URL}${documento.archivo_url}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-[#123F66] hover:text-[#C8872D]"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            {documento.nombre_archivo}
+                          </a>
+                        </div>
+                        <span
+                          className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-black ${getEvidenceStatusStyle(
+                            documento.estado_revision
+                          )}`}
+                        >
+                          {getEvidenceStatusLabel(documento.estado_revision)}
+                        </span>
+                      </div>
+
+                      {documento.observacion_revision && (
+                        <p className="mt-3 rounded-lg bg-[#F8F5EF] p-3 text-sm leading-6 text-[#5F6B7A]">
+                          {documento.observacion_revision}
+                        </p>
+                      )}
+
+                      <textarea
+                        value={documentObservations[documento.id_documento] || ""}
+                        onChange={(event) =>
+                          setDocumentObservations((prev) => ({
+                            ...prev,
+                            [documento.id_documento]: event.target.value,
+                          }))
+                        }
+                        rows={2}
+                        placeholder="Observación para esta evidencia"
+                        className="fixya-input mt-3 resize-none"
+                      />
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleApproveEvidence(documento)}
+                          disabled={documentActionLoading === documento.id_documento}
+                          className="rounded-xl bg-[#2F5F46] px-4 py-2 text-sm font-bold text-white hover:bg-[#244B38] disabled:opacity-60"
+                        >
+                          Aprobar evidencia
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectEvidence(documento)}
+                          disabled={documentActionLoading === documento.id_documento}
+                          className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                        >
+                          Rechazar evidencia
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-[#E6E0D6] bg-white p-5">
+              <label className="mb-2 block text-sm font-bold text-[#102033]">
+                Observación o justificación del perfil
+              </label>
+              <textarea
+                value={profileObservation}
+                onChange={(event) => setProfileObservation(event.target.value)}
+                rows={3}
+                placeholder="Ej: evidencia revisada, experiencia validada por portafolio o motivo de rechazo"
+                className="fixya-input resize-none"
+              />
+              <div className="mt-4 flex flex-wrap gap-2">
+                {!selectedTechnician.tecnico_verificado && (
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(selectedTechnician.usuario_rut)}
+                    disabled={actionLoading === selectedTechnician.usuario_rut}
+                    className="rounded-xl bg-[#2F5F46] px-4 py-3 text-sm font-bold text-white hover:bg-[#244B38] disabled:opacity-60"
+                  >
+                    Aprobar técnico
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleRejectTechnician(selectedTechnician.usuario_rut)}
+                  disabled={actionLoading === selectedTechnician.usuario_rut}
+                  className="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                >
+                  Rechazar técnico
+                </button>
               </div>
             </div>
           </>

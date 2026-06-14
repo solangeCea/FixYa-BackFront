@@ -117,6 +117,10 @@ def serializar_tecnico_publico(db: Session, tecnico: Tecnico):
         "experiencia_anios": tecnico.experiencia_anios,
         "nivel_tecnico": tecnico.nivel_tecnico,
         "tecnico_verificado": tecnico.tecnico_verificado,
+        "estado_verificacion": tecnico.estado_verificacion,
+        "observacion_verificacion": tecnico.observacion_verificacion,
+        "fecha_verificacion": tecnico.fecha_verificacion,
+        "verificado_por_rut": tecnico.verificado_por_rut,
         "nombre_completo": usuario.nombre_completo if usuario else "Tecnico FixYa",
         "correo": usuario.correo if usuario else None,
         "telefono": usuario.telefono if usuario else None,
@@ -264,6 +268,10 @@ def obtener_perfil_tecnico(
         "experiencia_anios": tecnico.experiencia_anios,
         "nivel_tecnico": tecnico.nivel_tecnico,
         "tecnico_verificado": tecnico.tecnico_verificado,
+        "estado_verificacion": tecnico.estado_verificacion,
+        "observacion_verificacion": tecnico.observacion_verificacion,
+        "fecha_verificacion": tecnico.fecha_verificacion,
+        "verificado_por_rut": tecnico.verificado_por_rut,
         "promedio_calificacion": round(float(promedio), 1) if promedio else 0,
         "total_resenas": total
     }
