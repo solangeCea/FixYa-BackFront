@@ -64,7 +64,8 @@ def obtener_solicitudes_tecnico(
 def cambiar_estado_solicitud(
     id_solicitud: int,
     data: SolicitudEstadoUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin)
 ):
     solicitud = solicitud_service.cambiar_estado_solicitud(db, id_solicitud, data)
 
