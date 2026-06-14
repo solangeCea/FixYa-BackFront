@@ -90,6 +90,8 @@ npm.cmd run test:run
 | CP-SOL-002 Campos obligatorios | Al enviar sin completar datos, no llama al backend y muestra errores de validación. | No se llamó `createSolicitud`; se mostraron errores para título, descripción, dirección, tipo de problema y referencia de ubicación. | Aprobado |
 | CP-SOL-003 Carga de servicios | Al cargar catálogos mockeados, se muestran servicios activos para seleccionar. | Se mostraron `Gasfiteria` y `Electricidad`; el servicio inactivo no apareció en el select. | Aprobado |
 | CP-SOL-004 Creación exitosa de solicitud | Al completar el formulario con datos válidos, llama a `createSolicitud` con el payload esperado y muestra confirmación. | Se llamó `createSolicitud` una vez con usuario, servicio, comuna, título, descripción, urgencia, dirección, tipo de problema y referencia; se mostró el mensaje de solicitud enviada correctamente. | Aprobado |
+| CP-SOL-005 Tipo de problema dinámico | Al cambiar el servicio seleccionado, las opciones de tipo de problema se actualizan y no mantienen una selección anterior inválida. | Al seleccionar Electricidad se mostraron opciones como `Enchufe`, `Cables` e `Iluminación`; al cambiar a Gasfitería se mostraron `Fuga de agua`, `Cañería` y `Baño`, se removió `Enchufe` y el valor seleccionado quedó limpio. | Aprobado |
+| CP-SOL-006 Error del backend al crear solicitud | Si el backend falla al crear la solicitud, la pantalla no se rompe, no queda en carga infinita, no muestra éxito y conserva los datos ingresados. | Se mockeó `createSolicitud` con rechazo `Error 500`; se mostró el mensaje de error, el botón volvió a quedar habilitado, no se mostró mensaje de éxito y el formulario mantuvo los datos completados. | Aprobado |
 
 **Comando usado:**  
 ```powershell
@@ -108,12 +110,56 @@ Se agregó `htmlFor` en los labels y `id` correspondiente en los controles de se
 CP-SOL-004: Creación exitosa de solicitud.
 
 **Resultado de pruebas:**  
-La suite completa quedó aprobada con 33 pruebas.
+La suite completa quedó aprobada con 35 pruebas.
 
 **Comando usado:**  
 ```powershell
 npm.cmd run test:run
 ```
+
+## Mejora UX-SOL-001: Tipo de problema dinámico según servicio
+
+**Observación detectada:**  
+El campo `tipo_problema` debía guiar mejor al cliente mostrando opciones relacionadas con el servicio seleccionado, en lugar de depender de opciones genéricas o poco alineadas con cada categoría.
+
+**Mejora aplicada:**  
+Se ajustó el mapa de opciones por servicio para Electricidad, Gasfitería, Carpintería y Cerrajería. Además, los servicios sin categoría definida muestran `Otro` como alternativa disponible.
+
+**Impacto en experiencia de usuario:**  
+El cliente recibe alternativas más claras y contextualizadas, reduce errores al describir la solicitud y facilita que el técnico entienda rápidamente el tipo de problema reportado.
+
+**Caso relacionado:**  
+CP-SOL-005: Tipo de problema cambia según servicio seleccionado.
+
+**Resultado de pruebas:**  
+La suite completa quedó aprobada con 35 pruebas.
+
+**Comando usado:**  
+```powershell
+npm.cmd run test:run
+```
+
+## CP-SOL-006: Error del backend al crear solicitud
+
+**Objetivo:**  
+Validar que el formulario maneje correctamente un fallo del backend al crear una solicitud, sin romper la pantalla ni perder los datos ingresados por el cliente.
+
+**Resultado esperado:**  
+La aplicación debe mostrar un mensaje de error claro, no debe mostrar mensaje de éxito, no debe quedar en estado de carga infinito y no debe limpiar el formulario como si la solicitud hubiera sido creada.
+
+**Resultado obtenido:**  
+Al mockear `createSolicitud` con un rechazo `Error 500`, el componente mostró el mensaje `No pudimos enviar la solicitud`, no renderizó el mensaje de éxito, el botón `Solicitar servicio` quedó habilitado nuevamente y los campos completados conservaron sus valores.
+
+**Estado:**  
+Aprobado.
+
+**Comando usado:**  
+```powershell
+npm.cmd run test:run
+```
+
+**Mejora aplicada:**  
+No fue necesario modificar la lógica del componente. El comportamiento de error ya estaba implementado mediante `catch` y `finally`; se agregó cobertura automatizada para dejar evidencia del caso negativo.
 
 ## Mejora QA-REG-001: Asociación explícita de labels e inputs en Register
 

@@ -269,4 +269,112 @@ describe("SolicitudForm", () => {
       screen.queryByText(/escribe un t.tulo breve para tu solicitud/i)
     ).not.toBeInTheDocument()
   })
+
+  it("CP-SOL-005 cambia el tipo de problema segun el servicio seleccionado", async () => {
+    renderSolicitudForm()
+    await waitForSolicitudFormReady()
+
+    const form = getSolicitudForm()
+    const solicitudForm = within(form)
+    const servicioSelect = solicitudForm.getByLabelText(
+      /servicio que necesitas/i
+    ) as HTMLSelectElement
+    const tipoProblemaSelect = solicitudForm.getByLabelText(
+      /^tipo de problema$/i
+    ) as HTMLSelectElement
+
+    fireEvent.change(servicioSelect, { target: { value: "200" } })
+
+    await waitFor(() => {
+      expect(within(tipoProblemaSelect).getByText("Enchufe")).toBeInTheDocument()
+    })
+    expect(within(tipoProblemaSelect).getByText("Cables")).toBeInTheDocument()
+    expect(
+      within(tipoProblemaSelect).getByText(/iluminaci.n/i)
+    ).toBeInTheDocument()
+
+    fireEvent.change(tipoProblemaSelect, { target: { value: "Enchufe" } })
+    expect(tipoProblemaSelect).toHaveValue("Enchufe")
+
+    fireEvent.change(servicioSelect, { target: { value: "100" } })
+
+    await waitFor(() => {
+      expect(
+        within(tipoProblemaSelect).getByText("Fuga de agua")
+      ).toBeInTheDocument()
+    })
+    expect(within(tipoProblemaSelect).getByText(/ca.er.a/i)).toBeInTheDocument()
+    expect(within(tipoProblemaSelect).getByText(/ba.o/i)).toBeInTheDocument()
+    expect(
+      within(tipoProblemaSelect).queryByText("Enchufe")
+    ).not.toBeInTheDocument()
+    expect(tipoProblemaSelect).toHaveValue("")
+  })
+
+  it("CP-SOL-006 muestra error si el backend falla al crear la solicitud", async () => {
+    mockCreateSolicitud.mockRejectedValueOnce(new Error("Error 500"))
+
+    renderSolicitudForm()
+    await waitForSolicitudFormReady()
+
+    const form = getSolicitudForm()
+    const solicitudForm = within(form)
+    const tituloInput = solicitudForm.getByLabelText(/t.tulo breve/i)
+    const descripcionInput = solicitudForm.getByLabelText(/describe qu. ocurre/i)
+    const direccionInput = solicitudForm.getByLabelText(/direcci.n/i)
+    const tipoProblemaSelect = solicitudForm.getByLabelText(
+      /^tipo de problema$/i
+    )
+    const referenciaInput = solicitudForm.getByLabelText(
+      /referencia de ubicaci.n/i
+    )
+
+    fireEvent.change(solicitudForm.getByLabelText(/servicio que necesitas/i), {
+      target: { value: "100" },
+    })
+    fireEvent.change(solicitudForm.getByLabelText(/comuna del servicio/i), {
+      target: { value: "10" },
+    })
+    fireEvent.change(tituloInput, {
+      target: { value: "Filtracion bajo el lavaplatos" },
+    })
+    fireEvent.change(descripcionInput, {
+      target: { value: "Hay una fuga constante bajo el lavaplatos." },
+    })
+    fireEvent.change(solicitudForm.getByLabelText(/urgencia/i), {
+      target: { value: "ALTA" },
+    })
+    fireEvent.change(direccionInput, {
+      target: { value: "Av Siempre Viva 123" },
+    })
+    fireEvent.change(tipoProblemaSelect, {
+      target: { value: "Fuga de agua" },
+    })
+    fireEvent.change(referenciaInput, {
+      target: { value: "Cocina, bajo el lavaplatos" },
+    })
+
+    fireEvent.submit(form)
+
+    await waitFor(() => {
+      expect(mockCreateSolicitud).toHaveBeenCalledTimes(1)
+    })
+
+    expect(
+      await screen.findByText(/no pudimos enviar la solicitud/i)
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/solicitud enviada correctamente/i)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /solicitar servicio/i })
+    ).toBeEnabled()
+    expect(tituloInput).toHaveValue("Filtracion bajo el lavaplatos")
+    expect(descripcionInput).toHaveValue(
+      "Hay una fuga constante bajo el lavaplatos."
+    )
+    expect(direccionInput).toHaveValue("Av Siempre Viva 123")
+    expect(tipoProblemaSelect).toHaveValue("Fuga de agua")
+    expect(referenciaInput).toHaveValue("Cocina, bajo el lavaplatos")
+  })
 })

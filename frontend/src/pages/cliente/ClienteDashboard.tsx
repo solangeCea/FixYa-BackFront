@@ -57,38 +57,34 @@ const problemOptionsByService = {
   electricidad: [
     "Enchufe",
     "Cables",
-    "Cortocircuito",
     "Iluminación",
-    "Electrodoméstico",
-    "Tablero eléctrico",
-    "Otro problema eléctrico",
+    "Electrodomésticos",
+    "Cortocircuito",
+    "Otro",
   ],
   gasfiteria: [
     "Fuga de agua",
-    "Llave o grifería",
-    "Tubería tapada",
-    "Baño o WC",
-    "Calefón",
+    "Cañería",
+    "Baño",
     "Lavaplatos",
-    "Otro problema de gasfitería",
+    "Calefont",
+    "Otro",
   ],
   carpinteria: [
     "Puerta",
     "Mueble",
     "Repisa",
-    "Piso de madera",
-    "Ventana",
-    "Reparación general",
-    "Otro trabajo de carpintería",
+    "Piso",
+    "Estructura de madera",
+    "Otro",
   ],
   cerrajeria: [
-    "Cambio de chapa",
-    "Llave perdida",
-    "Cerradura trabada",
+    "Cerradura",
+    "Llave",
+    "Chapa",
     "Apertura de puerta",
-    "Instalación de cerradura",
-    "Copia de llave",
-    "Otro problema de cerrajería",
+    "Cambio de cilindro",
+    "Otro",
   ],
 };
 
@@ -120,7 +116,7 @@ function getProblemOptions(servicio?: Servicio) {
     return problemOptionsByService.cerrajeria;
   }
 
-  return [];
+  return ["Otro"];
 }
 
 function FieldError({ message }: { message?: string }) {
