@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
+from fastapi import HTTPException 
 
 from app.models.cotizacion import Cotizacion
 from app.models.solicitud import Solicitud
@@ -8,6 +9,17 @@ from app.pdf.cotizacion_pdf import generar_pdf_cotizacion
 
 
 def crear_cotizacion(db: Session, data: CotizacionCreate):
+
+    cotizacion_existente = db.query(Cotizacion).filter(
+        Cotizacion.solicitud_id_solicitud == data.solicitud_id_solicitud,
+        Cotizacion.tecnico_usuario_rut == data.tecnico_usuario_rut
+    ).first()
+
+    if cotizacion_existente:
+        raise HTTPException(status_code=400,
+        detail="Ya existe una cotización para esta solicitud y técnico")
+
+
     nueva = Cotizacion(
         solicitud_id_solicitud=data.solicitud_id_solicitud,
         tecnico_usuario_rut=data.tecnico_usuario_rut,
