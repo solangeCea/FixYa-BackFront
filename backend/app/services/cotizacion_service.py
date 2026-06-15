@@ -84,6 +84,12 @@ def aceptar_cotizacion(db: Session, id_cotizacion: int):
 
     if not cotizacion:
         return None
+    
+    if cotizacion.estado_cotizacion == "ANULADA":
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede aceptar una cotización anulada"
+        )
 
     cotizacion.estado_cotizacion = "ACEPTADA"
     cotizacion.fecha_aceptacion = datetime.now()
