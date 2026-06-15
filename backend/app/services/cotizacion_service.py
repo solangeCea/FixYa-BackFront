@@ -10,16 +10,26 @@ from app.pdf.cotizacion_pdf import generar_pdf_cotizacion
 
 def crear_cotizacion(db: Session, data: CotizacionCreate):
 
+    solicitud = db.query(Solicitud).filter(
+        Solicitud.id_solicitud == data.solicitud_id_solicitud
+    ).first()
+
+    if solicitud and solicitud.usuario_rut == data.tecnico_usuario_rut:
+        raise HTTPException(
+            status_code=400,
+            detail="El técnico no puede cotizar su propia solicitud"
+        )
+
     cotizacion_existente = db.query(Cotizacion).filter(
         Cotizacion.solicitud_id_solicitud == data.solicitud_id_solicitud,
         Cotizacion.tecnico_usuario_rut == data.tecnico_usuario_rut
     ).first()
 
     if cotizacion_existente:
-        raise HTTPException(status_code=400,
-        detail="Ya existe una cotización para esta solicitud y técnico")
-
-
+        raise HTTPException(
+            status_code=400,
+            detail="Ya existe una cotización para esta solicitud y técnico"
+        )
     nueva = Cotizacion(
         solicitud_id_solicitud=data.solicitud_id_solicitud,
         tecnico_usuario_rut=data.tecnico_usuario_rut,
@@ -36,6 +46,8 @@ def crear_cotizacion(db: Session, data: CotizacionCreate):
     solicitud = db.query(Solicitud).filter(
         Solicitud.id_solicitud == data.solicitud_id_solicitud
     ).first()
+
+    
 
     if solicitud:
         pdf_url = generar_pdf_cotizacion(nueva, solicitud)
