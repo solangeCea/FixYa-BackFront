@@ -3,7 +3,7 @@
 Proyecto: FixYa  
 Frontend: React + TypeScript + Vite  
 Framework de pruebas: Vitest + Testing Library  
-Resultado vigente: 11 archivos de prueba aprobados, 51 pruebas aprobadas  
+Resultado vigente: 12 archivos de prueba aprobados, 53 pruebas aprobadas  
 Comando de ejecución: `npm.cmd run test:run`
 
 ## Matriz RF - Casos de prueba
@@ -25,6 +25,7 @@ Comando de ejecución: `npm.cmd run test:run`
 | RF-013 | Visualización de usuarios del sistema. | CP-ADMIN-004, CP-ADMIN-005, CP-ADMIN-006 | `frontend/src/tests/admin/UserManagement.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
 | RF-014 | Visualización de solicitudes por técnico. | CP-TEC-001, CP-TEC-002, CP-TEC-003, CP-TEC-004, CP-TEC-005 | `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
 | RF-015 | Gestión de cotizaciones por técnico. | CP-TEC-006 | `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
+| RF-016 | Validación de documentos técnicos. El administrador debe poder visualizar y validar certificados, títulos o antecedentes subidos por técnicos antes de aprobar o verificar un perfil técnico, incluyendo manejo de falla al cargar la evidencia. | CP-ADMIN-DOC-001, CP-ADMIN-DOC-002 | `frontend/src/tests/admin/TechnicianManagement.test.tsx`; `docs/evidencia-pruebas.md` | Aprobado |
 
 ## Resumen de cobertura
 
@@ -40,6 +41,19 @@ Comando de ejecución: `npm.cmd run test:run`
 | Reseñas y moderación | `frontend/src/tests/reviews/ReviewManagement.test.tsx` | 4 | Aprobado |
 | Administración - dashboard | `frontend/src/tests/admin/AdminDashboard.test.tsx` | 3 | Aprobado |
 | Administración - usuarios | `frontend/src/tests/admin/UserManagement.test.tsx` | 3 | Aprobado |
+| Administración - técnicos | `frontend/src/tests/admin/TechnicianManagement.test.tsx` | 2 | Aprobado |
 | Técnico - dashboard | `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx` | 6 | Aprobado |
 
-Total documentado: 51 casos de prueba aprobados.
+Total documentado: 53 casos de prueba aprobados.
+
+## Requisito incorporado tras revisión
+
+| Requisito funcional | Caso automatizado | Objetivo | Estado actual |
+| ------------------- | ------------- | -------- | ------------- |
+| RF-016 Validación de documentos técnicos | CP-ADMIN-DOC-001, CP-ADMIN-DOC-002 | Verificar que el administrador pueda visualizar, validar documentos asociados a técnicos y recibir un error controlado si la carga falla. | Aprobado con pruebas automatizadas |
+
+## Matriz RNF - Pruebas no funcionales
+
+| Requisito no funcional | Descripción | Caso de prueba asociado | Evidencia | Estado |
+| ---------------------- | ----------- | ----------------------- | --------- | ------ |
+| RNF-001 | El frontend debe compilar correctamente para producción sin errores TypeScript. | CP-RNF-BUILD-001 | `npm.cmd run build`; `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx`; `docs/evidencia-pruebas.md` | Fallido inicialmente, corregido y aprobado |

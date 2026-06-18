@@ -92,6 +92,69 @@ npm.cmd run test:run
 | CP-ADMIN-004 Renderizado gestión usuarios | La pantalla de gestión de usuarios se renderiza correctamente. | Se mostró `Gestión de usuarios`, texto descriptivo, buscador por nombre/correo/RUT y filtro `Todos`. | Aprobado | `npm.cmd run test:run` |
 | CP-ADMIN-005 Listado de usuarios | Al mockear `userService`, se muestran usuarios con rol ADMIN, CLIENTE y TECNICO. | Se mostraron usuarios mockeados Cliente, Técnico y Admin con correo, comuna, rol y estado. | Aprobado | `npm.cmd run test:run` |
 | CP-ADMIN-006 Error al listar usuarios | Si `userService` falla, se muestra mensaje controlado y la pantalla no se rompe. | Al rechazar `getUsers`, se mostró `No pudimos cargar los usuarios registrados` y no se renderizó la tabla con usuarios mockeados. | Aprobado | `npm.cmd run test:run` |
+| CP-ADMIN-DOC-001 Visualización y validación de documentos técnicos | El administrador puede abrir el perfil de un técnico, visualizar documentos asociados y aprobar un documento pendiente. | Se llamó `getTechnicianDocuments` con el RUT del técnico, se mostró `Certificado SEC`, el enlace `Ver documento`, el estado pendiente y luego se llamó `approveTechnicianDocument` con el ID del documento y el RUT admin. | Aprobado | `npm.cmd run test:run` |
+| CP-ADMIN-DOC-002 Manejo de error al cargar documentos técnicos | Validar que el sistema muestre una falla controlada si no se pueden cargar los documentos del técnico. | Al rechazar `getTechnicianDocuments` con `Error 500`, se mostró `No pudimos cargar los documentos del tecnico` y no se renderizó el documento mockeado. | Aprobado | `npm.cmd run test:run` |
+
+## Brecha QA-ADMIN-DOC-001: Validación de documentos técnicos
+
+**Observación detectada:**  
+Durante la revisión funcional del sistema se identificó una brecha importante en el módulo administrativo: el administrador no podía visualizar los documentos subidos por los técnicos, como certificados, títulos o antecedentes.
+
+**Impacto funcional:**  
+Esto afecta directamente la validación de técnicos, ya que el sistema debe permitir comprobar la evidencia antes de aprobar o verificar un perfil técnico. El flujo fue incorporado para que el administrador pueda revisar documentos desde el perfil técnico antes de validar la evidencia.
+
+**Requisito funcional agregado:**  
+RF-016: Validación de documentos técnicos.
+
+**Caso de prueba automatizado:**  
+CP-ADMIN-DOC-001 y CP-ADMIN-DOC-002.
+
+**Objetivo:**  
+Verificar que el administrador pueda visualizar y validar documentos asociados a técnicos.
+
+**Estado actual:**  
+Aprobado con prueba automatizada.
+
+**Resultado obtenido:**  
+La prueba CP-ADMIN-DOC-001 renderiza la gestión de técnicos, abre el perfil del técnico, carga documentos mediante `getTechnicianDocuments`, muestra el tipo de documento, nombre de archivo, enlace de visualización y estado pendiente. Luego aprueba el documento con `approveTechnicianDocument` usando el RUT del administrador autenticado y actualiza el estado a `Documento aprobado`.
+
+**Prueba negativa de manejo de error:**  
+La prueba CP-ADMIN-DOC-002 simula una falla del backend al cargar documentos técnicos con `Error 500`. No corresponde a una falla real encontrada en el sistema, sino a cobertura de comportamiento esperado ante error: el sistema muestra `No pudimos cargar los documentos del tecnico` y evita mostrar evidencia inexistente o datos inconsistentes.
+
+## Hallazgo RNF-BUILD-001: Build falla por imports no usados
+
+**Tipo de requisito:**  
+No funcional: compilación y calidad estática del frontend.
+
+**Caso de prueba asociado:**  
+CP-RNF-BUILD-001.
+
+**Comando usado:**  
+```powershell
+npm.cmd run build
+```
+
+**Resultado inicial:**  
+Fallido. La compilación TypeScript se detuvo por imports declarados y no usados en `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx`.
+
+**Errores observados:**  
+```text
+src/tests/tecnico/TecnicoDashboard.test.tsx(9,3): error TS6133: 'asignarTecnico' is declared but its value is never read.
+src/tests/tecnico/TecnicoDashboard.test.tsx(10,3): error TS6133: 'finalizarSolicitud' is declared but its value is never read.
+src/tests/tecnico/TecnicoDashboard.test.tsx(13,3): error TS6133: 'iniciarSolicitud' is declared but its value is never read.
+```
+
+**Impacto:**  
+El frontend no podía generar una build de producción, aunque la suite funcional de Vitest estuviera aprobada. Esto afecta la verificabilidad técnica y el despliegue del frontend.
+
+**Corrección aplicada:**  
+Se eliminaron los imports no usados de `asignarTecnico`, `finalizarSolicitud` e `iniciarSolicitud` desde `TecnicoDashboard.test.tsx`, manteniendo los mocks existentes en la suite.
+
+**Resultado después de corregir:**  
+Aprobado. `npm.cmd run build` finalizó correctamente con `tsc -b` y `vite build`.
+
+**Estado:**  
+Fallido inicialmente, corregido y aprobado.
 
 ## Suite de pruebas TECNICO-DASHBOARD
 
@@ -141,7 +204,7 @@ Se agregó `htmlFor` en los labels y `id` correspondiente en los controles de se
 CP-SOL-004: Creación exitosa de solicitud.
 
 **Resultado de pruebas:**  
-La suite completa quedó aprobada con 51 pruebas.
+La suite completa quedó aprobada con 53 pruebas.
 
 **Comando usado:**  
 ```powershell
@@ -163,7 +226,7 @@ El cliente recibe alternativas más claras y contextualizadas, reduce errores al
 CP-SOL-005: Tipo de problema cambia según servicio seleccionado.
 
 **Resultado de pruebas:**  
-La suite completa quedó aprobada con 51 pruebas.
+La suite completa quedó aprobada con 53 pruebas.
 
 **Comando usado:**  
 ```powershell
@@ -201,7 +264,7 @@ Durante la ejecución completa de la suite, Vitest podía agotar memoria al leva
 Se configuró `fileParallelism: false` en `vite.config.ts` para ejecutar los archivos de prueba de forma secuencial y estabilizar el comando estándar `npm.cmd run test:run`.
 
 **Impacto:**  
-La suite completa puede ejecutarse de forma consistente con 11 archivos de prueba y 51 pruebas aprobadas.
+La suite completa puede ejecutarse de forma consistente con 12 archivos de prueba y 53 pruebas aprobadas.
 
 **Comando usado:**  
 ```powershell

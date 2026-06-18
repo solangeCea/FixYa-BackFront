@@ -9,6 +9,18 @@ export interface Tecnico {
   tecnico_verificado: boolean;
 }
 
+export interface DocumentoTecnico {
+  id_documento: number;
+  tecnico_usuario_rut: string;
+  tipo_documento: string;
+  nombre_archivo: string;
+  archivo_url: string;
+  fecha_subida: string;
+  documento_aprobado: boolean;
+  fecha_aprobacion: string | null;
+  usuario_rut: string | null;
+}
+
 export interface TecnicoPublicProfile extends Tecnico {
   nombre_completo: string;
   correo: string | null;
@@ -175,6 +187,52 @@ export async function approveTechnician(rut: string) {
 
   if (!response.ok) {
     throw new Error("Error al aprobar tecnico");
+  }
+
+  return response.json();
+}
+
+export async function getTechnicianDocuments(
+  rut: string
+): Promise<DocumentoTecnico[]> {
+  const token = getToken();
+
+  const response = await fetch(`${API_URL}/documentos-tecnicos/tecnico/${rut}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener documentos tecnicos");
+  }
+
+  return response.json();
+}
+
+export async function approveTechnicianDocument(
+  idDocumento: number,
+  adminRut: string
+): Promise<DocumentoTecnico> {
+  const token = getToken();
+
+  const response = await fetch(
+    `${API_URL}/documentos-tecnicos/${idDocumento}/aprobar`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        usuario_rut: adminRut,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Error al aprobar documento tecnico");
   }
 
   return response.json();

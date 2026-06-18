@@ -6,11 +6,8 @@ import TecnicoDashboard from "../../pages/tecnico/TecnicoDashboard"
 import { getServicios } from "../../services/catalogService"
 import { createCotizacion } from "../../services/cotizacionService"
 import {
-  asignarTecnico,
-  finalizarSolicitud,
   getSolicitudes,
   getSolicitudesTecnico,
-  iniciarSolicitud,
 } from "../../services/solicitudService"
 import type { Solicitud } from "../../services/solicitudService"
 import { getTechnicianDashboard } from "../../services/technicianService"

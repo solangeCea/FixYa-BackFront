@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   CheckCircle,
+  ExternalLink,
+  FileText,
   Mail,
   Phone,
   Search,
@@ -11,13 +13,20 @@ import {
 } from "lucide-react";
 
 import {
+  approveTechnicianDocument,
   approveTechnician,
+  getTechnicianDocuments,
   getTechnicians,
 } from "../../services/technicianService";
-import type { Tecnico } from "../../services/technicianService";
+import type {
+  DocumentoTecnico,
+  Tecnico,
+} from "../../services/technicianService";
 
 import { getUsers } from "../../services/userService";
 import type { UsuarioAdmin } from "../../services/userService";
+import API_URL from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 
@@ -29,14 +38,37 @@ interface TecnicoAdmin extends Tecnico {
   telefono: string | null;
 }
 
+function getDocumentUrl(archivoUrl: string) {
+  if (archivoUrl.startsWith("http")) return archivoUrl;
+  return `${API_URL}${archivoUrl}`;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Sin fecha registrada";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("es-CL", {
+    dateStyle: "medium",
+  }).format(date);
+}
+
 export default function TechnicianManagement() {
+  const { usuario } = useAuth();
   const [technicians, setTechnicians] = useState<TecnicoAdmin[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTechnician, setSelectedTechnician] =
     useState<TecnicoAdmin | null>(null);
+  const [documents, setDocuments] = useState<DocumentoTecnico[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [documentActionLoading, setDocumentActionLoading] = useState<
+    number | null
+  >(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -80,6 +112,30 @@ export default function TechnicianManagement() {
     cargarTecnicos();
   }, []);
 
+  async function cargarDocumentosTecnico(rut: string) {
+    try {
+      setDocumentsLoading(true);
+      setDocumentsError("");
+
+      const data = await getTechnicianDocuments(rut);
+      setDocuments(data);
+    } catch {
+      setDocuments([]);
+      setDocumentsError(
+        "No pudimos cargar los documentos del tecnico. Intenta nuevamente."
+      );
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }
+
+  function handleOpenTechnicianProfile(tech: TecnicoAdmin) {
+    setSelectedTechnician(tech);
+    setSuccess("");
+    setError("");
+    cargarDocumentosTecnico(tech.usuario_rut);
+  }
+
   async function handleApprove(rut: string) {
     try {
       setActionLoading(rut);
@@ -93,6 +149,37 @@ export default function TechnicianManagement() {
       setError("No pudimos aprobar este técnico. Intenta nuevamente.");
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function handleApproveDocument(idDocumento: number) {
+    if (!usuario?.rut) {
+      setError("No pudimos identificar al administrador actual.");
+      return;
+    }
+
+    try {
+      setDocumentActionLoading(idDocumento);
+      setError("");
+      setSuccess("");
+
+      const updatedDocument = await approveTechnicianDocument(
+        idDocumento,
+        usuario.rut
+      );
+
+      setDocuments((currentDocuments) =>
+        currentDocuments.map((document) =>
+          document.id_documento === updatedDocument.id_documento
+            ? updatedDocument
+            : document
+        )
+      );
+      setSuccess("Documento tecnico aprobado correctamente.");
+    } catch {
+      setError("No pudimos aprobar este documento tecnico. Intenta nuevamente.");
+    } finally {
+      setDocumentActionLoading(null);
     }
   }
 
@@ -329,7 +416,7 @@ export default function TechnicianManagement() {
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
                         <button
-                          onClick={() => setSelectedTechnician(tech)}
+                          onClick={() => handleOpenTechnicianProfile(tech)}
                           className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
                         >
                           Ver perfil técnico
@@ -370,7 +457,11 @@ export default function TechnicianManagement() {
         open={Boolean(selectedTechnician)}
         title={selectedTechnician?.nombre_completo || "Perfil técnico"}
         description={selectedTechnician?.descripcion_perfil || "Detalle administrativo del técnico."}
-        onClose={() => setSelectedTechnician(null)}
+        onClose={() => {
+          setSelectedTechnician(null);
+          setDocuments([]);
+          setDocumentsError("");
+        }}
       >
         {selectedTechnician && (
           <>
@@ -432,6 +523,105 @@ export default function TechnicianManagement() {
                 </p>
               </div>
             </div>
+
+            <section className="mt-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Documentos tecnicos
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Evidencia subida por el tecnico para validar su perfil.
+                  </p>
+                </div>
+
+                <FileText className="h-5 w-5 text-teal-700" />
+              </div>
+
+              {documentsLoading && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
+                  Cargando documentos tecnicos...
+                </div>
+              )}
+
+              {documentsError && !documentsLoading && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+                  {documentsError}
+                </div>
+              )}
+
+              {!documentsLoading && !documentsError && documents.length === 0 && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-medium text-slate-600">
+                  No hay documentos tecnicos registrados para este perfil.
+                </div>
+              )}
+
+              {!documentsLoading && !documentsError && documents.length > 0 && (
+                <div className="space-y-3">
+                  {documents.map((document) => (
+                    <article
+                      key={document.id_documento}
+                      className="rounded-xl border border-slate-200 bg-white p-4"
+                    >
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {document.tipo_documento}
+                          </p>
+                          <p className="mt-1 break-words text-sm text-gray-600">
+                            {document.nombre_archivo}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Subido el {formatDate(document.fecha_subida)}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                            document.documento_aprobado
+                              ? "bg-green-100 text-green-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {document.documento_aprobado
+                            ? "Documento aprobado"
+                            : "Pendiente de validacion"}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <a
+                          href={getDocumentUrl(document.archivo_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Ver documento
+                        </a>
+
+                        {!document.documento_aprobado && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleApproveDocument(document.id_documento)
+                            }
+                            disabled={
+                              documentActionLoading === document.id_documento
+                            }
+                            className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:bg-green-300"
+                          >
+                            {documentActionLoading === document.id_documento
+                              ? "Aprobando documento..."
+                              : "Aprobar documento tecnico"}
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           </>
         )}
       </Modal>

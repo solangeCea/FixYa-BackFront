@@ -1,0 +1,19 @@
+
+> fixya-frontend@0.0.0 test:run
+> vitest run src/tests/solicitudes/SolicitudForm.test.tsx -t CP-SOL-004 --reporter=verbose --no-color
+
+
+ RUN  v4.1.8 C:/Users/pablo/FixYa-BackFront/frontend
+
+ ↓ src/tests/solicitudes/SolicitudForm.test.tsx > SolicitudForm > CP-SOL-001 renderiza el formulario de solicitud con sus campos principales
+ ↓ src/tests/solicitudes/SolicitudForm.test.tsx > SolicitudForm > CP-SOL-002 valida campos obligatorios antes de llamar al backend
+ ↓ src/tests/solicitudes/SolicitudForm.test.tsx > SolicitudForm > CP-SOL-003 carga servicios activos disponibles para seleccionar
+ ✓ src/tests/solicitudes/SolicitudForm.test.tsx > SolicitudForm > CP-SOL-004 crea una solicitud con datos validos 505ms
+ ↓ src/tests/solicitudes/SolicitudForm.test.tsx > SolicitudForm > CP-SOL-005 cambia el tipo de problema segun el servicio seleccionado
+ ↓ src/tests/solicitudes/SolicitudForm.test.tsx > SolicitudForm > CP-SOL-006 muestra error si el backend falla al crear la solicitud
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 5 skipped (6)
+   Start at  12:48:27
+   Duration  4.62s (transform 312ms, setup 384ms, import 573ms, tests 508ms, environment 2.69s)
+
