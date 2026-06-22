@@ -19,6 +19,12 @@ def crear_solicitud(db: Session, data: SolicitudCreate):
             status_code=404,
             detail=f"Servicio no encontrado con id {data.servicio_id_servicio}"
         )
+    if servicio_existente.estado_servicio is False:
+        raise HTTPException(
+            status_code=400,
+            detail="El servicio se encuentra inactivo"
+        )
+    
     ###Validar comuna existente
     comuna_existente = db.query(Comuna).filter(
         Comuna.id_comuna == data.comuna_id_comuna
