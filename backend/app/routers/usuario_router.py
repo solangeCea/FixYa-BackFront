@@ -59,6 +59,25 @@ def crear_usuario(
     usuario: UsuarioCreate,
     db: Session = Depends(get_db)
 ):
+    rut_existente = db.query(Usuario).filter(
+        Usuario.rut == usuario.rut
+    ).first()
+
+    if rut_existente:
+        raise HTTPException(
+            status_code=409,
+            detail="El RUT ya está registrado"
+        )
+
+    correo_existente = db.query(Usuario).filter(
+        Usuario.correo == usuario.correo
+    ).first()
+
+    if correo_existente:
+        raise HTTPException(
+            status_code=409,
+            detail="El correo ya está registrado"
+        )
 
     nuevo_usuario = Usuario(
         rut=usuario.rut,
