@@ -6,8 +6,8 @@ class TecnicoCreate(BaseModel):
     descripcion_perfil: str
     experiencia_anios: int = Field(ge=0)
     nivel_tecnico: Literal['Basico','Intermedio','Avanzado']
-    servicios: List[int]
-    comunas: List[int]
+    servicios: List[int] = Field(min_length=1)
+    comunas: List[int] = Field(min_length=1)
 
     @field_validator("servicios")
     @classmethod
