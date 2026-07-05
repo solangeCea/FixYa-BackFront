@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, ClipboardList, Eye, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle, ClipboardList, Eye, Flag, RefreshCw } from "lucide-react";
 
-import { getSolicitudes } from "../../services/solicitudService";
-import type { Solicitud } from "../../services/solicitudService";
+import {
+  getReportesSolicitudes,
+  getSolicitudes,
+  resolverReporteSolicitud,
+} from "../../services/solicitudService";
+import type { Solicitud, SolicitudReporte } from "../../services/solicitudService";
 import { getComunas, getServicios } from "../../services/catalogService";
 import type { Comuna, Servicio } from "../../services/catalogService";
 import EmptyState from "../../components/ui/EmptyState";
@@ -18,6 +22,20 @@ function getEstadoStyle(estado: string) {
 
   return "bg-gray-100 text-gray-700";
 }
+
+const reportReasonLabels: Record<string, string> = {
+  SOSPECHA_ESTAFA: "Sospecha de estafa",
+  SUPLANTACION: "Suplantacion",
+  INFORMACION_FALSA: "Informacion falsa",
+  SOLICITUD_DUPLICADA: "Solicitud duplicada",
+  CONTENIDO_INAPROPIADO: "Contenido inapropiado",
+  SERVICIO_INCORRECTO: "Servicio incorrecto",
+  CONTACTO_SOSPECHOSO: "Contacto sospechoso",
+  UBICACION_SOSPECHOSA: "Ubicacion sospechosa",
+  RIESGO_SEGURIDAD: "Riesgo para el tecnico",
+  PAGO_FUERA_FIXYA: "Pago fuera de FixYa",
+  OTRO_MOTIVO: "Otro motivo",
+};
 
 function DetailItem({
   label,
@@ -40,26 +58,36 @@ function DetailItem({
 
 function RequestManagement() {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [reportes, setReportes] = useState<SolicitudReporte[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [comunas, setComunas] = useState<Comuna[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedSolicitud, setSelectedSolicitud] = useState<Solicitud | null>(null);
+  const [selectedReporte, setSelectedReporte] = useState<SolicitudReporte | null>(null);
+  const [resolverForm, setResolverForm] = useState({
+    estado_reporte: "EN_REVISION",
+    observacion_admin: "",
+    solicitud_activa: "",
+  });
+  const [resolving, setResolving] = useState(false);
 
   async function cargarDatos() {
     try {
       setLoading(true);
       setError("");
 
-      const [solicitudesData, serviciosData, comunasData] = await Promise.all([
+      const [solicitudesData, serviciosData, comunasData, reportesData] = await Promise.all([
         getSolicitudes(),
         getServicios(),
         getComunas(),
+        getReportesSolicitudes(),
       ]);
 
       setSolicitudes(solicitudesData);
       setServicios(serviciosData);
       setComunas(comunasData);
+      setReportes(reportesData);
     } catch (error) {
       console.error(error);
       setError(
@@ -84,6 +112,16 @@ function RequestManagement() {
     [solicitudes]
   );
 
+  const reportesPendientes = useMemo(
+    () =>
+      reportes.filter(
+        (reporte) =>
+          reporte.estado_reporte === "PENDIENTE" ||
+          reporte.estado_reporte === "EN_REVISION"
+      ),
+    [reportes]
+  );
+
   const serviciosPorId = useMemo(() => {
     return new Map(
       servicios.map((servicio) => [
@@ -99,6 +137,40 @@ function RequestManagement() {
     );
   }, [comunas]);
 
+  function openReporte(reporte: SolicitudReporte) {
+    setSelectedReporte(reporte);
+    setResolverForm({
+      estado_reporte: reporte.estado_reporte,
+      observacion_admin: reporte.observacion_admin || "",
+      solicitud_activa: "",
+    });
+  }
+
+  async function handleResolverReporte() {
+    if (!selectedReporte) return;
+
+    try {
+      setResolving(true);
+      setError("");
+      await resolverReporteSolicitud(selectedReporte.id_reporte, {
+        estado_reporte: resolverForm.estado_reporte,
+        observacion_admin: resolverForm.observacion_admin || null,
+        solicitud_activa:
+          resolverForm.solicitud_activa === ""
+            ? null
+            : resolverForm.solicitud_activa === "true",
+      });
+      setSelectedReporte(null);
+      await cargarDatos();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No pudimos resolver el reporte."
+      );
+    } finally {
+      setResolving(false);
+    }
+  }
+
   return (
     <div className="space-y-8 p-6">
       <div>
@@ -111,7 +183,7 @@ function RequestManagement() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-2xl bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">Total solicitudes</p>
           <p className="mt-2 text-3xl font-bold text-gray-900">
@@ -130,6 +202,13 @@ function RequestManagement() {
           <p className="text-sm text-gray-500">Sin técnico asignado</p>
           <p className="mt-2 text-3xl font-bold text-yellow-700">
             {solicitudesSinTecnico.length}
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">Reportes pendientes</p>
+          <p className="mt-2 text-3xl font-bold text-rose-700">
+            {reportesPendientes.length}
           </p>
         </div>
       </div>
@@ -153,6 +232,63 @@ function RequestManagement() {
           <AlertCircle size={20} />
           <p>{error}</p>
         </div>
+      )}
+
+      {reportes.length > 0 && (
+        <section className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Solicitudes reportadas
+              </h2>
+              <p className="text-sm text-gray-500">
+                Revisa motivos, comentarios y estado de moderacion.
+              </p>
+            </div>
+            <span className="rounded-full bg-rose-50 px-3 py-1 text-sm font-bold text-rose-700">
+              {reportesPendientes.length} pendientes
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {reportes.slice(0, 5).map((reporte) => (
+              <div
+                key={reporte.id_reporte}
+                className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 md:flex-row md:items-center md:justify-between"
+              >
+                <div>
+                  <p className="flex items-center gap-2 font-bold text-slate-950">
+                    <Flag className="h-4 w-4 text-rose-600" />
+                    {reporte.solicitud_titulo ||
+                      `Solicitud #${reporte.solicitud_id_solicitud}`}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Motivo: {reportReasonLabels[reporte.motivo] || reporte.motivo}
+                  </p>
+                  {reporte.comentario && (
+                    <p className="mt-1 text-sm text-slate-500">
+                      {reporte.comentario}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                    {reporte.estado_reporte}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openReporte(reporte)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Revisar reporte
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {loading ? (
@@ -299,6 +435,119 @@ function RequestManagement() {
               <DetailItem label="Fecha creación" value={selectedSolicitud.fecha_creacion} />
               <DetailItem label="Costo final" value={selectedSolicitud.costo_final} />
               <DetailItem label="Fecha real" value={selectedSolicitud.fecha_real} />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(selectedReporte)}
+        title={
+          selectedReporte
+            ? `Reporte #${selectedReporte.id_reporte}`
+            : "Reporte de solicitud"
+        }
+        description={selectedReporte?.solicitud_titulo || undefined}
+        onClose={() => setSelectedReporte(null)}
+      >
+        {selectedReporte && (
+          <div className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <DetailItem
+                label="Solicitud"
+                value={selectedReporte.solicitud_id_solicitud}
+              />
+              <DetailItem
+                label="Tecnico reportante"
+                value={selectedReporte.tecnico_usuario_rut}
+              />
+              <DetailItem
+                label="Cliente"
+                value={selectedReporte.cliente_usuario_rut}
+              />
+              <DetailItem
+                label="Motivo"
+                value={
+                  reportReasonLabels[selectedReporte.motivo] ||
+                  selectedReporte.motivo
+                }
+              />
+            </div>
+
+            {selectedReporte.comentario && (
+              <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                {selectedReporte.comentario}
+              </p>
+            )}
+
+            <label className="block text-sm font-semibold text-slate-700">
+              Estado del reporte
+              <select
+                value={resolverForm.estado_reporte}
+                onChange={(event) =>
+                  setResolverForm((prev) => ({
+                    ...prev,
+                    estado_reporte: event.target.value,
+                  }))
+                }
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+              >
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="EN_REVISION">En revision</option>
+                <option value="DESCARTADO">Descartado</option>
+                <option value="CONFIRMADO">Confirmado</option>
+              </select>
+            </label>
+
+            <label className="block text-sm font-semibold text-slate-700">
+              Accion sobre la solicitud
+              <select
+                value={resolverForm.solicitud_activa}
+                onChange={(event) =>
+                  setResolverForm((prev) => ({
+                    ...prev,
+                    solicitud_activa: event.target.value,
+                  }))
+                }
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+              >
+                <option value="">Mantener estado actual</option>
+                <option value="true">Mantener o reactivar visible</option>
+                <option value="false">Ocultar solicitud</option>
+              </select>
+            </label>
+
+            <label className="block text-sm font-semibold text-slate-700">
+              Observacion administrativa
+              <textarea
+                value={resolverForm.observacion_admin}
+                onChange={(event) =>
+                  setResolverForm((prev) => ({
+                    ...prev,
+                    observacion_admin: event.target.value,
+                  }))
+                }
+                rows={3}
+                className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3"
+              />
+            </label>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedReporte(null)}
+                className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleResolverReporte}
+                disabled={resolving}
+                className="rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-700 disabled:bg-teal-300"
+              >
+                {resolving ? "Guardando..." : "Guardar resolucion"}
+              </button>
             </div>
           </div>
         )}

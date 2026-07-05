@@ -127,7 +127,8 @@ def login(
 
     token = crear_token({
         "sub": usuario.correo,
-        "tipo_usuario": usuario.tipo_usuario
+        "tipo_usuario": usuario.tipo_usuario,
+        "rut": usuario.rut
     })
 
     return {

@@ -1,0 +1,17 @@
+ALTER TABLE solicitud
+ADD COLUMN IF NOT EXISTS tipo_inmueble VARCHAR(30),
+ADD COLUMN IF NOT EXISTS detalle_inmueble VARCHAR(200),
+ADD COLUMN IF NOT EXISTS piso VARCHAR(20),
+ADD COLUMN IF NOT EXISTS numero_departamento VARCHAR(30),
+ADD COLUMN IF NOT EXISTS tiene_conserjeria BOOLEAN,
+ADD COLUMN IF NOT EXISTS requiere_autorizacion BOOLEAN,
+ADD COLUMN IF NOT EXISTS horario_disponible VARCHAR(200),
+ADD COLUMN IF NOT EXISTS condiciones_acceso VARCHAR(500),
+ADD COLUMN IF NOT EXISTS instrucciones_acceso VARCHAR(500),
+ADD COLUMN IF NOT EXISTS persona_contacto VARCHAR(120),
+ADD COLUMN IF NOT EXISTS telefono_contacto VARCHAR(20),
+ADD COLUMN IF NOT EXISTS estacionamiento_disponible BOOLEAN,
+ADD COLUMN IF NOT EXISTS tiene_mascotas BOOLEAN;
+
+ALTER TABLE solicitud
+ALTER COLUMN ubicacion_problema_referencia TYPE VARCHAR(200);

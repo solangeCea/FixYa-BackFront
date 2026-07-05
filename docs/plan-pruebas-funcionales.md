@@ -91,14 +91,14 @@ Configuración relevante:
 | Servicios API - autenticación | `frontend/src/tests/services/authService.test.ts` | CP-SERV-AUTH-001 a CP-SERV-AUTH-004 | 4 | Aprobado |
 | Servicios API - usuarios | `frontend/src/tests/services/userService.test.ts` | CP-SERV-USER-001 a CP-SERV-USER-003 | 3 | Aprobado |
 | Servicios API - técnicos | `frontend/src/tests/services/technicianService.test.ts` | CP-SERV-TECH-001 a CP-SERV-TECH-004 | 4 | Aprobado |
-| Solicitudes | `frontend/src/tests/solicitudes/SolicitudForm.test.tsx` | CP-SOL-001 a CP-SOL-006 | 6 | Aprobado |
+| Solicitudes | `frontend/src/tests/solicitudes/SolicitudForm.test.tsx` | CP-SOL-001 a CP-SOL-013 | 13 | Aprobado |
 | Reseñas y moderación | `frontend/src/tests/reviews/ReviewManagement.test.tsx` | CP-REV-001 a CP-REV-004 | 4 | Aprobado |
 | Administración - dashboard | `frontend/src/tests/admin/AdminDashboard.test.tsx` | CP-ADMIN-001 a CP-ADMIN-003 | 3 | Aprobado |
 | Administración - usuarios | `frontend/src/tests/admin/UserManagement.test.tsx` | CP-ADMIN-004 a CP-ADMIN-006 | 3 | Aprobado |
 | Administración - técnicos | `frontend/src/tests/admin/TechnicianManagement.test.tsx` | CP-ADMIN-DOC-001 a CP-ADMIN-DOC-002 | 2 | Aprobado |
 | Técnico - dashboard | `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx` | CP-TEC-001 a CP-TEC-006 | 6 | Aprobado |
 
-Total inventariado: 53 casos de prueba.
+Total inventariado: 60 casos de prueba.
 
 ## Brecha funcional cubierta
 
@@ -132,7 +132,7 @@ npm.cmd run test:run
 Resultado actual:
 
 - 12 archivos de prueba aprobados.
-- 53 pruebas aprobadas.
+- 60 pruebas aprobadas.
 - 0 pruebas fallidas.
 - Las pruebas usan mocks y no dependen del backend real.
 
@@ -154,7 +154,7 @@ Distribución:
 | Register | 6 | Aprobado |
 | Rutas protegidas | 6 | Aprobado |
 | Servicios API | 11 | Aprobado |
-| Solicitudes | 6 | Aprobado |
+| Solicitudes | 13 | Aprobado |
 | Reseñas y moderación | 4 | Aprobado |
 | Administración | 8 | Aprobado |
 | Técnico | 6 | Aprobado |

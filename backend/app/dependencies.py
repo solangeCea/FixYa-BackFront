@@ -1,9 +1,11 @@
-from app.database import get_db
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from sqlalchemy.orm import Session
 
 from app.auth import SECRET_KEY, ALGORITHM
+from app.database import get_db
+from app.models.usuario import Usuario
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/usuarios/login")
@@ -24,7 +26,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
         return {
             "correo": correo,
-            "tipo_usuario": tipo_usuario
+            "tipo_usuario": tipo_usuario,
+            "rut": payload.get("rut")
         }
 
     except JWTError:
@@ -81,3 +84,20 @@ def requiere_rol(roles_permitidos: list[str]):
 solo_admin = requiere_rol(["ADMIN"])
 solo_tecnico = requiere_rol(["TECNICO"])
 solo_cliente = requiere_rol(["CLIENTE"])
+
+
+def get_current_usuario(
+    db: Session = Depends(get_db),
+    usuario_token: dict = Depends(get_current_user)
+):
+    usuario = db.query(Usuario).filter(
+        Usuario.correo == usuario_token["correo"]
+    ).first()
+
+    if not usuario:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado"
+        )
+
+    return usuario

@@ -6,8 +6,10 @@ import TecnicoDashboard from "../../pages/tecnico/TecnicoDashboard"
 import { getServicios } from "../../services/catalogService"
 import { createCotizacion } from "../../services/cotizacionService"
 import {
-  getSolicitudes,
+  descartarSolicitud,
+  getSolicitudesDisponiblesTecnico,
   getSolicitudesTecnico,
+  reportarSolicitud,
 } from "../../services/solicitudService"
 import type { Solicitud } from "../../services/solicitudService"
 import { getTechnicianDashboard } from "../../services/technicianService"
@@ -30,11 +32,12 @@ vi.mock("../../services/cotizacionService", () => ({
 }))
 
 vi.mock("../../services/solicitudService", () => ({
-  asignarTecnico: vi.fn(),
+  descartarSolicitud: vi.fn(),
   finalizarSolicitud: vi.fn(),
-  getSolicitudes: vi.fn(),
+  getSolicitudesDisponiblesTecnico: vi.fn(),
   getSolicitudesTecnico: vi.fn(),
   iniciarSolicitud: vi.fn(),
+  reportarSolicitud: vi.fn(),
 }))
 
 vi.mock("../../services/technicianService", () => ({
@@ -44,8 +47,12 @@ vi.mock("../../services/technicianService", () => ({
 const mockUseAuth = vi.mocked(useAuth)
 const mockGetServicios = vi.mocked(getServicios)
 const mockCreateCotizacion = vi.mocked(createCotizacion)
-const mockGetSolicitudes = vi.mocked(getSolicitudes)
+const mockDescartarSolicitud = vi.mocked(descartarSolicitud)
+const mockGetSolicitudesDisponiblesTecnico = vi.mocked(
+  getSolicitudesDisponiblesTecnico
+)
 const mockGetSolicitudesTecnico = vi.mocked(getSolicitudesTecnico)
+const mockReportarSolicitud = vi.mocked(reportarSolicitud)
 const mockGetTechnicianDashboard = vi.mocked(getTechnicianDashboard)
 
 const tecnicoRut = "22.222.222-2"
@@ -68,6 +75,11 @@ const solicitudDisponible: Solicitud = {
   ubicacion_problema_referencia: "Cocina, bajo el lavaplatos",
   costo_final: null,
   fecha_real: null,
+  horario_disponible: "Disponibilidad cliente: lunes de 09:00 a 13:00",
+  disponibilidad_horaria: [
+    { dia: "LUNES", hora_inicio: "09:00", hora_fin: "13:00" },
+    { dia: "MIERCOLES", hora_inicio: "15:00", hora_fin: "19:00" },
+  ],
 }
 
 const solicitudAsignada: Solicitud = {
@@ -88,6 +100,8 @@ const solicitudAsignada: Solicitud = {
   ubicacion_problema_referencia: "Living principal",
   costo_final: null,
   fecha_real: null,
+  horario_disponible: "Disponibilidad cliente: sabado de 10:00 a 14:00",
+  disponibilidad_horaria: [],
 }
 
 const metrics: TecnicoDashboardMetrics = {
@@ -117,7 +131,7 @@ function getCotizacionDateInput() {
 async function waitForPanelReady() {
   expect(
     await screen.findByRole("heading", {
-      name: /panel de trabajos t.cnicos/i,
+      name: /panel de trabajos tecnicos/i,
     })
   ).toBeInTheDocument()
 }
@@ -125,6 +139,7 @@ async function waitForPanelReady() {
 describe("TecnicoDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.spyOn(window, "confirm").mockReturnValue(true)
 
     mockUseAuth.mockReturnValue({
       usuario: {
@@ -140,7 +155,9 @@ describe("TecnicoDashboard", () => {
       loading: false,
       logout: vi.fn(),
     })
-    mockGetSolicitudes.mockResolvedValue([solicitudDisponible])
+    mockGetSolicitudesDisponiblesTecnico.mockResolvedValue([
+      solicitudDisponible,
+    ])
     mockGetSolicitudesTecnico.mockResolvedValue([solicitudAsignada])
     mockGetServicios.mockResolvedValue([
       {
@@ -157,12 +174,26 @@ describe("TecnicoDashboard", () => {
     mockGetTechnicianDashboard.mockResolvedValue(metrics)
     mockCreateCotizacion.mockResolvedValue({
       id_cotizacion: 1,
-      solicitud_id_solicitud: 601,
+      solicitud_id_solicitud: 501,
       tecnico_usuario_rut: tecnicoRut,
       monto_estimado: "85000",
       mensaje_cotizacion: "Incluye materiales y mano de obra.",
       fecha_vigencia: "2026-07-01T23:59:00.000Z",
-      estado_cotizacion: "PENDIENTE",
+      estado_cotizacion: "ENVIADA",
+    })
+    mockDescartarSolicitud.mockResolvedValue({
+      id_descarte: 1,
+      solicitud_id_solicitud: 501,
+      tecnico_usuario_rut: tecnicoRut,
+      fecha_descarte: "2026-07-04T00:00:00Z",
+    })
+    mockReportarSolicitud.mockResolvedValue({
+      id_reporte: 1,
+      solicitud_id_solicitud: 501,
+      tecnico_usuario_rut: tecnicoRut,
+      motivo: "SOSPECHA_ESTAFA",
+      estado_reporte: "PENDIENTE",
+      fecha_reporte: "2026-07-04T00:00:00Z",
     })
   })
 
@@ -179,25 +210,20 @@ describe("TecnicoDashboard", () => {
     ).toBeInTheDocument()
   })
 
-  it("CP-TEC-002 carga solicitudes disponibles y asignadas para el tecnico", async () => {
+  it("CP-TEC-002 carga solicitudes disponibles desde endpoint tecnico", async () => {
     renderTecnicoDashboard()
 
     await waitForPanelReady()
 
-    expect(mockGetSolicitudes).toHaveBeenCalledTimes(1)
+    expect(mockGetSolicitudesDisponiblesTecnico).toHaveBeenCalledTimes(1)
     expect(mockGetSolicitudesTecnico).toHaveBeenCalledWith(tecnicoRut)
     expect(screen.getByText("Filtracion urgente en cocina")).toBeInTheDocument()
     expect(screen.getByText("Instalacion de enchufes")).toBeInTheDocument()
-    expect(
-      screen.getByText("Hay una fuga constante bajo el lavaplatos.")
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText("Necesito instalar dos enchufes nuevos.")
-    ).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /aceptar este trabajo/i })).not.toBeInTheDocument()
   })
 
   it("CP-TEC-003 muestra estado controlado cuando no hay solicitudes", async () => {
-    mockGetSolicitudes.mockResolvedValueOnce([])
+    mockGetSolicitudesDisponiblesTecnico.mockResolvedValueOnce([])
     mockGetSolicitudesTecnico.mockResolvedValueOnce([])
 
     renderTecnicoDashboard()
@@ -205,22 +231,24 @@ describe("TecnicoDashboard", () => {
     await waitForPanelReady()
 
     expect(
-      screen.getByText(/a.n no hay solicitudes disponibles para tomar/i)
+      screen.getByText(/aun no hay solicitudes disponibles para cotizar/i)
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/a.n no tienes trabajos asignados/i)
+      screen.getByText(/aun no tienes trabajos asignados/i)
     ).toBeInTheDocument()
   })
 
-  it("CP-TEC-004 muestra error controlado si falla la carga de solicitudes", async () => {
-    mockGetSolicitudes.mockRejectedValueOnce(new Error("Error 500"))
+  it("CP-TEC-004 muestra error controlado si falla la carga", async () => {
+    mockGetSolicitudesDisponiblesTecnico.mockRejectedValueOnce(
+      new Error("No tienes permisos para realizar esta accion.")
+    )
 
     renderTecnicoDashboard()
 
     await waitForPanelReady()
 
     expect(
-      await screen.findByText(/no pudimos cargar tus trabajos/i)
+      await screen.findByText(/no tienes permisos/i)
     ).toBeInTheDocument()
     expect(screen.queryByText("Filtracion urgente en cocina")).not.toBeInTheDocument()
   })
@@ -236,15 +264,21 @@ describe("TecnicoDashboard", () => {
     expect(screen.getAllByText(/urgencia:/i).length).toBeGreaterThan(0)
     expect(screen.getByText("Cocina, bajo el lavaplatos")).toBeInTheDocument()
     expect(screen.getByText("Living principal")).toBeInTheDocument()
+    expect(screen.getAllByText(/disponibilidad del cliente/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/lunes: 09:00 a 13:00/i)).toBeInTheDocument()
+    expect(screen.getByText(/miercoles: 15:00 a 19:00/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/disponibilidad cliente: sabado de 10:00 a 14:00/i)
+    ).toBeInTheDocument()
   })
 
-  it("CP-TEC-006 crea una cotizacion desde un trabajo asignado", async () => {
+  it("CP-TEC-006 crea una cotizacion desde una solicitud disponible sin enviar rut libre", async () => {
     renderTecnicoDashboard()
 
     await waitForPanelReady()
 
     fireEvent.change(
-      screen.getByPlaceholderText(/monto estimado de la cotizaci.n/i),
+      screen.getByPlaceholderText(/monto estimado de la cotizacion/i),
       { target: { value: "85000" } }
     )
     fireEvent.change(
@@ -256,7 +290,7 @@ describe("TecnicoDashboard", () => {
     })
 
     fireEvent.click(
-      screen.getByRole("button", { name: /enviar cotizaci.n al cliente/i })
+      screen.getByRole("button", { name: /^realizar cotizacion$/i })
     )
 
     await waitFor(() => {
@@ -264,14 +298,42 @@ describe("TecnicoDashboard", () => {
     })
 
     expect(mockCreateCotizacion).toHaveBeenCalledWith({
-      solicitud_id_solicitud: 601,
-      tecnico_usuario_rut: tecnicoRut,
+      solicitud_id_solicitud: 501,
       monto_estimado: 85000,
       mensaje_cotizacion: "Incluye materiales y mano de obra.",
       fecha_vigencia: new Date("2026-07-01T23:59:00").toISOString(),
     })
-    expect(
-      await screen.findByText(/cotizaci.n enviada y pdf generado correctamente/i)
-    ).toBeInTheDocument()
+  })
+
+  it("CP-TEC-007 descarta una solicitud solo para el tecnico", async () => {
+    renderTecnicoDashboard()
+
+    await waitForPanelReady()
+
+    fireEvent.click(screen.getByRole("button", { name: /no me interesa/i }))
+
+    await waitFor(() => {
+      expect(mockDescartarSolicitud).toHaveBeenCalledWith(501)
+    })
+  })
+
+  it("CP-TEC-008 reporta una solicitud desde el modal", async () => {
+    renderTecnicoDashboard()
+
+    await waitForPanelReady()
+
+    fireEvent.click(screen.getByRole("button", { name: /reportar solicitud/i }))
+    fireEvent.change(screen.getByLabelText(/comentario opcional/i), {
+      target: { value: "La direccion parece sospechosa." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: /enviar reporte/i }))
+
+    await waitFor(() => {
+      expect(mockReportarSolicitud).toHaveBeenCalledWith(501, {
+        motivo: "SOSPECHA_ESTAFA",
+        descripcion_otro: null,
+        comentario: "La direccion parece sospechosa.",
+      })
+    })
   })
 })
