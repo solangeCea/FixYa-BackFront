@@ -12,6 +12,7 @@ from app.models.tecnico import Tecnico
 from app.models.solicitud import Solicitud
 from app.models.resena import Resena
 from app.models.cotizacion import Cotizacion
+from app.models.reporte_solicitud import ReporteSolicitud
 
 
 router = APIRouter(
@@ -63,6 +64,9 @@ def obtener_estadisticas_admin(
     ).scalar()
 
     total_cotizaciones = db.query(Cotizacion).count()
+    reportes_solicitudes_pendientes = db.query(ReporteSolicitud).filter(
+        ReporteSolicitud.estado_reporte.in_(["PENDIENTE", "EN_REVISION"])
+    ).count()
 
     ingresos_estimados = db.query(
         func.sum(Solicitud.costo_final)
@@ -92,6 +96,9 @@ def obtener_estadisticas_admin(
         },
         "cotizaciones": {
             "total": total_cotizaciones
+        },
+        "reportes_solicitudes": {
+            "pendientes": reportes_solicitudes_pendientes
         },
         "ingresos": {
             "total_finalizado": float(ingresos_estimados) if ingresos_estimados else 0

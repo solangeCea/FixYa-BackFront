@@ -1,7 +1,7 @@
 # Matriz completa de casos de prueba
 
 Proyecto: FixYa  
-Fecha de actualización: 15-06-2026  
+Fecha de actualizacion: 18-06-2026
 Suite funcional: `npm.cmd run test:run`  
 Verificación no funcional: `npm.cmd run build`
 
@@ -11,9 +11,9 @@ No todas las pruebas documentadas son funcionales.
 
 | Clasificación | Cantidad | Estado |
 | ------------- | -------- | ------ |
-| Casos funcionales automatizados | 53 | Aprobados |
+| Casos funcionales automatizados | 60 | Aprobados |
 | Caso no funcional de build | 1 | Fallido inicialmente, corregido y aprobado |
-| Total documentado | 54 | Vigente |
+| Total documentado | 61 | Vigente |
 
 ## Casos funcionales
 
@@ -48,12 +48,19 @@ No todas las pruebas documentadas son funcionales.
 | CP-SERV-TECH-002 | Buscar técnicos por servicio y comuna | Funcional - servicio API | Construye URL con filtros y token. | Llamó `/tecnicos/buscar?servicio_id=100&comuna_id=10`. | Aprobado | Media | Valida búsqueda contextualizada. | No aplica |
 | CP-SERV-TECH-003 | Obtener perfil técnico | Funcional - servicio API | Consulta perfil por RUT con token. | Llamó `/tecnicos/22.222.222-2/perfil` y retornó perfil. | Aprobado | Media | Verifica detalle de perfil técnico. | No aplica |
 | CP-SERV-TECH-004 | Error al listar técnicos | Funcional - servicio API negativa | Lanza error controlado ante HTTP fallido. | Con `ok: false`, lanzó error de obtención de técnicos. | Aprobado | Media | Cubre falla del backend o red. | No aplica |
-| CP-SOL-001 | Renderizado formulario solicitud | Funcional - componente | Muestra formulario y botón de solicitud. | Renderizó servicio, comuna, título, descripción, urgencia, dirección, tipo y referencia. | Aprobado | Baja | Verifica disponibilidad inicial del flujo cliente. | No aplica |
-| CP-SOL-002 | Campos obligatorios solicitud | Funcional - validación | No crea solicitud vacía y muestra errores. | No llamó `createSolicitud` y mostró errores requeridos. | Aprobado | Media | Evita solicitudes incompletas. | No aplica |
-| CP-SOL-003 | Carga de servicios | Funcional - catálogos | Muestra servicios activos y oculta inactivos. | Mostró `Gasfiteria` y `Electricidad`; ocultó inactivo. | Aprobado | Media | Valida catálogos visibles al cliente. | No aplica |
-| CP-SOL-004 | Creación exitosa de solicitud | Funcional - flujo | Envía payload correcto y muestra confirmación. | Llamó `createSolicitud` con datos esperados y mostró éxito. | Aprobado | Alta | También cubre mejora de labels del formulario. | Sí |
-| CP-SOL-005 | Tipo de problema dinámico | Funcional - UX | Cambia opciones según servicio y limpia selección inválida. | Cambió opciones por servicio y removió selección incompatible. | Aprobado | Media | Hallazgo UX corregido. | Sí |
-| CP-SOL-006 | Error backend al crear solicitud | Funcional - negativa | Muestra error, no limpia datos ni queda cargando. | Mostró error, reactivó botón y mantuvo datos ingresados. | Aprobado | Media | Cubre resiliencia ante fallo de creación. | No aplica |
+| CP-SOL-001 | Renderizado formulario solicitud | Funcional - componente | Muestra formulario, boton de solicitud y campos base del flujo. | Renderizo servicio, comuna, titulo, descripcion, urgencia, direccion, tipo de problema, referencia y selector de tipo de inmueble. | Aprobado | Baja | Verifica disponibilidad inicial del flujo cliente. | No aplica |
+| CP-SOL-002 | Campos obligatorios solicitud | Funcional - validacion | No crea solicitud vacia y muestra errores. | No llamo `createSolicitud` y mostro errores para datos base y tipo de inmueble. | Aprobado | Media | Evita solicitudes incompletas. | No aplica |
+| CP-SOL-003 | Carga de servicios | Funcional - catalogos | Muestra servicios activos y oculta inactivos. | Mostro `Gasfiteria` y `Electricidad`; oculto inactivo. | Aprobado | Media | Valida catalogos visibles al cliente. | No aplica |
+| CP-SOL-004 | Crear solicitud para casa | Funcional - flujo | Envia payload de casa con estacionamiento, mascotas, acceso y disponibilidad. | Llamo `createSolicitud` con contexto de casa y mostro confirmacion. | Aprobado | Alta | Cubre payload completo del contexto residencial. | Si |
+| CP-SOL-005 | Tipo de problema dinamico | Funcional - UX | Cambia opciones segun servicio y limpia seleccion invalida. | Cambio opciones por servicio y removio seleccion incompatible. | Aprobado | Media | Hallazgo UX corregido. | Si |
+| CP-SOL-006 | Error backend al crear solicitud | Funcional - negativa | Muestra error, no limpia datos ni queda cargando. | Mostro error, reactivo boton y mantuvo datos ingresados. | Aprobado | Media | Cubre resiliencia ante fallo de creacion. | No aplica |
+| CP-SOL-007 | Crear solicitud para departamento | Funcional - flujo | Envia numero, piso, conserjeria, autorizacion, horario, acceso y disponibilidad. | `createSolicitud` recibio contexto de departamento con nuevos campos. | Aprobado | Alta | Valida inmueble residencial vertical. | No aplica |
+| CP-SOL-008 | Crear solicitud para edificio | Funcional - flujo | Envia oficina/departamento, piso, conserjeria, autorizacion y horario permitido. | `createSolicitud` recibio contexto de edificio y autorizacion requerida. | Aprobado | Alta | Valida reglas dinamicas para edificio. | No aplica |
+| CP-SOL-009 | Crear solicitud para local comercial | Funcional - flujo | Envia horario de atencion, fuera de horario, contacto, telefono y funcionamiento del local. | `createSolicitud` recibio contacto, telefono, horario y condiciones comerciales. | Aprobado | Alta | Valida contexto comercial. | No aplica |
+| CP-SOL-010 | Espacio publico con advertencia | Funcional - UX/validacion | Muestra advertencia de permisos y permite enviar contexto minimo. | Se mostro advertencia de permisos municipales y el payload incluyo condicion de autorizacion previa. | Aprobado | Media | Valida aviso preventivo de factibilidad. | No aplica |
+| CP-SOL-011 | Disponibilidad del cliente obligatoria | Funcional - validacion | Bloquea envio si falta disponibilidad. | No llamo `createSolicitud` y mostro error junto al campo de disponibilidad. | Aprobado | Alta | Evita solicitudes sin ventana de coordinacion. | No aplica |
+| CP-SOL-012 | Condiciones o instrucciones de acceso obligatorias | Funcional - validacion | Bloquea envio si no hay condiciones ni instrucciones de acceso. | No llamo `createSolicitud` y mostro errores en los campos de acceso. | Aprobado | Alta | Evita solicitudes sin informacion de llegada. | No aplica |
+| CP-SOL-013 | Payload con nuevos campos | Funcional - contrato frontend | `createSolicitud` recibe todos los campos nuevos esperados. | Se valido payload completo para departamento con tipo de inmueble, piso, acceso, horario y disponibilidad. | Aprobado | Alta | Cubre contrato con backend preparado. | No aplica |
 | CP-REV-001 | Renderizado gestión de reseñas | Funcional - componente admin | Muestra panel de reseñas y botón actualizar. | Mostró encabezado, sección y botón `Actualizar reseñas`. | Aprobado | Baja | Valida entrada al módulo de moderación. | No aplica |
 | CP-REV-002 | Listado de reseñas | Funcional - admin | Muestra reseña, solicitud, estado y motivo. | Mostró reseña `#101`, comentario, solicitud y reporte pendiente. | Aprobado | Media | Permite revisar contenido reportado. | No aplica |
 | CP-REV-003 | Aprobar reseña reportada | Funcional - admin | Llama servicio de aprobación y actualiza estado. | Llamó `approveReview(101)` y cambió a `Aprobada`. | Aprobado | Media | Valida moderación positiva. | No aplica |

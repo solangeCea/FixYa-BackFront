@@ -30,6 +30,7 @@ const dashboardData: AdminDashboardData = {
   resenas_activas: 8,
   resenas_reportadas: 2,
   total_cotizaciones: 7,
+  reportes_solicitudes_pendientes: 1,
   promedio_general_calificaciones: 4.6,
 }
 
@@ -72,7 +73,7 @@ describe("AdminDashboard", () => {
     expect(screen.getByText(/t.cnicos verificados/i)).toBeInTheDocument()
     expect(screen.getAllByText("9").length).toBeGreaterThan(0)
     expect(screen.getByText(/reportes pendientes/i)).toBeInTheDocument()
-    expect(screen.getAllByText("2").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("3").length).toBeGreaterThan(0)
     expect(screen.getAllByText(/cotizaciones/i).length).toBeGreaterThan(0)
     expect(screen.getAllByText("7").length).toBeGreaterThan(0)
   })

@@ -19,6 +19,7 @@ export interface AdminDashboardData {
   resenas_activas: number;
   resenas_reportadas: number;
   total_cotizaciones: number;
+  reportes_solicitudes_pendientes: number;
   promedio_general_calificaciones: number;
 }
 

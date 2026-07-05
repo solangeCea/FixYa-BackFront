@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  createTechnicianProfile,
   getTechnicianProfile,
   getTechnicians,
   searchTechnicians,
@@ -103,5 +104,32 @@ describe("technicianService", () => {
     mockJsonResponse({ detail: "Error interno" }, false)
 
     await expect(getTechnicians()).rejects.toThrow(/Error al obtener/)
+  })
+
+  it("CP-SERV-TECH-005 crea perfil tecnico de registro sin Authorization si no hay token", async () => {
+    const data = {
+      usuario_rut: "22.222.222-2",
+      descripcion_perfil: "Electricista certificado",
+      experiencia_anios: 3,
+      nivel_tecnico: "Intermedio",
+      servicios: [1],
+      comunas: [10],
+    }
+    const perfil = {
+      ...data,
+      tecnico_verificado: false,
+    }
+    mockJsonResponse(perfil)
+
+    const result = await createTechnicianProfile(data)
+
+    expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/tecnicos/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+    expect(result).toEqual(perfil)
   })
 })

@@ -5,7 +5,7 @@ from decimal import Decimal
 
 class CotizacionCreate(BaseModel):
     solicitud_id_solicitud: int
-    tecnico_usuario_rut: str
+    tecnico_usuario_rut: Optional[str] = None
     monto_estimado: Decimal
     mensaje_cotizacion: Optional[str] = None
     fecha_vigencia: datetime

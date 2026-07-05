@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Numeric, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -27,5 +27,50 @@ class Solicitud(Base):
 
     tipo_problema = Column(String(50), nullable=False)
     foto_problema = Column(String(300), nullable=True)
-    ubicacion_problema_referencia = Column(String(30), nullable=False)
+    ubicacion_problema_referencia = Column(String(200), nullable=False)
     fecha_real = Column(DateTime, nullable=True)
+
+    tipo_inmueble = Column(String(30), nullable=True)
+    detalle_inmueble = Column(String(200), nullable=True)
+    piso = Column(String(20), nullable=True)
+    numero_departamento = Column(String(30), nullable=True)
+    tiene_conserjeria = Column(Boolean, nullable=True)
+    requiere_autorizacion = Column(Boolean, nullable=True)
+    horario_disponible = Column(String(200), nullable=True)
+    condiciones_acceso = Column(String(500), nullable=True)
+    instrucciones_acceso = Column(String(500), nullable=True)
+    persona_contacto = Column(String(120), nullable=True)
+    telefono_contacto = Column(String(20), nullable=True)
+    estacionamiento_disponible = Column(Boolean, nullable=True)
+    tiene_mascotas = Column(Boolean, nullable=True)
+
+    disponibilidad_horaria = relationship(
+        "SolicitudDisponibilidad",
+        back_populates="solicitud",
+        cascade="all, delete-orphan",
+        order_by="SolicitudDisponibilidad.id_disponibilidad",
+    )
+
+
+class SolicitudDisponibilidad(Base):
+    __tablename__ = "solicitud_disponibilidad"
+    __table_args__ = (
+        UniqueConstraint(
+            "solicitud_id_solicitud",
+            "dia",
+            name="uq_solicitud_disponibilidad_dia",
+        ),
+    )
+
+    id_disponibilidad = Column(Integer, primary_key=True, index=True)
+    solicitud_id_solicitud = Column(
+        Integer,
+        ForeignKey("solicitud.id_solicitud", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    dia = Column(String(12), nullable=False)
+    hora_inicio = Column(String(5), nullable=False)
+    hora_fin = Column(String(5), nullable=False)
+
+    solicitud = relationship("Solicitud", back_populates="disponibilidad_horaria")
