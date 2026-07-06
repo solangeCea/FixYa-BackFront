@@ -17,4 +17,5 @@ class Tecnico(Base):
     observacion_admin = Column(String(1000), nullable=True)
     admin_revisor_rut = Column(String(12), ForeignKey("usuario.rut"), nullable=True)
 
-    usuario = relationship("Usuario")
+    usuario = relationship("Usuario", foreign_keys=[usuario_rut])
+    admin_revisor = relationship("Usuario", foreign_keys=[admin_revisor_rut])
