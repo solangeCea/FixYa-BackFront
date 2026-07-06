@@ -23,6 +23,10 @@ function getEstadoStyle(estado: string) {
   return "bg-gray-100 text-gray-700";
 }
 
+function isSolicitudActiva(estado: string) {
+  return estado !== "FINALIZADO" && estado !== "CANCELADO";
+}
+
 const reportReasonLabels: Record<string, string> = {
   SOSPECHA_ESTAFA: "Sospecha de estafa",
   SUPLANTACION: "Suplantacion",
@@ -103,12 +107,15 @@ function RequestManagement() {
   }, []);
 
   const solicitudesActivas = useMemo(
-    () => solicitudes.filter((s) => s.estado_trabajo !== "FINALIZADO"),
+    () => solicitudes.filter((s) => isSolicitudActiva(s.estado_trabajo)),
     [solicitudes]
   );
 
   const solicitudesSinTecnico = useMemo(
-    () => solicitudes.filter((s) => !s.tecnico_usuario_rut),
+    () =>
+      solicitudes.filter(
+        (s) => !s.tecnico_usuario_rut && isSolicitudActiva(s.estado_trabajo)
+      ),
     [solicitudes]
   );
 

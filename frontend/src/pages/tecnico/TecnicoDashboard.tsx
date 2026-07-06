@@ -31,7 +31,9 @@ import { getServicios } from "../../services/catalogService";
 import type { Servicio } from "../../services/catalogService";
 import { createCotizacion } from "../../services/cotizacionService";
 import {
+  getMyTechnicianProfile,
   getTechnicianDashboard,
+  type Tecnico,
   type TecnicoDashboardMetrics,
 } from "../../services/technicianService";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
@@ -68,6 +70,15 @@ const reportReasons = [
   ["PAGO_FUERA_FIXYA", "Intenta pagos o acuerdos fuera de FixYa."],
   ["OTRO_MOTIVO", "Otro motivo."],
 ] as const;
+
+function getVerificationLabel(state?: string) {
+  if (state === "APROBADO") return "Aprobado";
+  if (state === "EN_REVISION") return "En revision";
+  if (state === "OBSERVADO") return "Observado";
+  if (state === "RECHAZADO") return "Rechazado";
+  if (state === "SUSPENDIDO") return "Suspendido";
+  return "Pendiente";
+}
 
 type ReportForm = {
   motivo: string;
@@ -116,6 +127,9 @@ function TecnicoDashboard() {
   const [misSolicitudes, setMisSolicitudes] = useState<Solicitud[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [metrics, setMetrics] = useState<TecnicoDashboardMetrics | null>(null);
+  const [technicianProfile, setTechnicianProfile] = useState<Tecnico | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [accionLoading, setAccionLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -144,6 +158,27 @@ function TecnicoDashboard() {
     try {
       setLoading(true);
       setError("");
+
+      const profile = await getMyTechnicianProfile();
+      setTechnicianProfile(profile);
+
+      const verificationState =
+        profile.estado_verificacion ||
+        (profile.tecnico_verificado ? "APROBADO" : "PENDIENTE");
+
+      if (verificationState !== "APROBADO" || !profile.tecnico_verificado) {
+        const [asignadas, serviciosData, metricasData] = await Promise.all([
+          getSolicitudesTecnico(usuario.rut),
+          getServicios(),
+          getTechnicianDashboard(usuario.rut),
+        ]);
+
+        setSolicitudesDisponibles([]);
+        setMisSolicitudes(asignadas);
+        setServicios(serviciosData);
+        setMetrics(metricasData);
+        return;
+      }
 
       const [disponibles, asignadas, serviciosData, metricasData] =
         await Promise.all([
@@ -351,6 +386,13 @@ function TecnicoDashboard() {
     }
   }
 
+  const verificationState =
+    technicianProfile?.estado_verificacion ||
+    (technicianProfile?.tecnico_verificado ? "APROBADO" : "PENDIENTE");
+  const isTechnicianApproved =
+    Boolean(technicianProfile?.tecnico_verificado) &&
+    verificationState === "APROBADO";
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
@@ -364,6 +406,29 @@ function TecnicoDashboard() {
             Cotiza solicitudes compatibles y gestiona los trabajos asignados.
           </p>
         </div>
+
+        {!loading && technicianProfile && !isTechnicianApproved && (
+          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+            <div className="flex items-start gap-3">
+              <Clock className="mt-1 h-6 w-6 text-amber-700" />
+              <div>
+                <p className="text-lg font-bold">
+                  Perfil tecnico {getVerificationLabel(verificationState).toLowerCase()}
+                </p>
+                <p className="mt-2 text-sm leading-6">
+                  Puedes revisar tu panel, pero aun no puedes cotizar,
+                  descartar, reportar ni tomar trabajos hasta que un
+                  administrador apruebe tu perfil tecnico.
+                </p>
+                {technicianProfile.observacion_admin && (
+                  <p className="mt-3 rounded-xl bg-white/70 p-3 text-sm font-medium">
+                    {technicianProfile.observacion_admin}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mb-8 grid gap-6 md:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -674,7 +739,7 @@ function TecnicoDashboard() {
 
                       <AvailabilitySummary solicitud={solicitud} />
 
-                      {solicitud.estado_trabajo === "ASIGNADO" && (
+                      {isTechnicianApproved && solicitud.estado_trabajo === "ASIGNADO" && (
                         <button
                           type="button"
                           onClick={() => handleIniciar(solicitud.id_solicitud)}
@@ -690,7 +755,7 @@ function TecnicoDashboard() {
                         </button>
                       )}
 
-                      {solicitud.estado_trabajo === "EN_PROCESO" && (
+                      {isTechnicianApproved && solicitud.estado_trabajo === "EN_PROCESO" && (
                         <div className="mt-4 space-y-3">
                           <input
                             type="number"

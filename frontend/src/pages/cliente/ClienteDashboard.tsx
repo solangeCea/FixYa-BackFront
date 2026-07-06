@@ -47,6 +47,10 @@ import StatusBadge from "../../components/ui/StatusBadge";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
 
 
+function isSolicitudEnSeguimiento(estado: string) {
+  return estado !== "FINALIZADO" && estado !== "CANCELADO";
+}
+
 const initialForm = {
   servicio_id_servicio: 0,
   region_id_region: 0,
@@ -1003,7 +1007,11 @@ function ClienteDashboard() {
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <TrendingUp className="h-6 w-6 text-violet-600" />
               <p className="mt-4 text-3xl font-black text-slate-950">
-                {solicitudes.filter((item) => item.estado_trabajo !== "FINALIZADO").length}
+                {
+                  solicitudes.filter((item) =>
+                    isSolicitudEnSeguimiento(item.estado_trabajo)
+                  ).length
+                }
               </p>
               <p className="text-sm text-slate-500">En seguimiento</p>
             </div>

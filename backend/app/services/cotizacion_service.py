@@ -14,6 +14,7 @@ from app.models.tecnico_servicio import TecnicoServicio
 from app.models.tecnico_solicitud_descartada import TecnicoSolicitudDescartada
 from app.pdf.cotizacion_pdf import generar_pdf_cotizacion
 from app.schemas.cotizacion_schema import CotizacionCreate, CotizacionUpdate
+from app.dependencies import usuario_tiene_rol
 from app.services.solicitud_service import solicitud_permite_cotizaciones
 
 
@@ -29,10 +30,10 @@ def _validar_tecnico_para_solicitud(
     if not tecnico:
         raise HTTPException(status_code=404, detail="Tecnico no encontrado")
 
-    if not tecnico.tecnico_verificado:
+    if tecnico.estado_verificacion != "APROBADO" or not tecnico.tecnico_verificado:
         raise HTTPException(
             status_code=403,
-            detail="Tu perfil tecnico debe estar verificado para cotizar"
+            detail="Tu perfil tecnico debe estar aprobado para cotizar"
         )
 
     presta_servicio = db.query(TecnicoServicio).filter(
@@ -185,21 +186,32 @@ def listar_por_solicitud_autorizado(db: Session, id_solicitud: int, usuario):
     if not solicitud:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
-    tipo_usuario = usuario.tipo_usuario.value
+    es_admin = usuario_tiene_rol(db, usuario.rut, "ADMIN")
+    es_cliente = usuario_tiene_rol(db, usuario.rut, "CLIENTE")
+    es_tecnico = usuario_tiene_rol(db, usuario.rut, "TECNICO")
 
-    if tipo_usuario == "CLIENTE" and solicitud.usuario_rut != usuario.rut:
-        raise HTTPException(
-            status_code=403,
-            detail="No tienes permisos para ver cotizaciones de esta solicitud"
-        )
+    if es_admin:
+        return listar_por_solicitud(db, id_solicitud)
 
-    if tipo_usuario == "TECNICO":
+    if es_cliente and solicitud.usuario_rut == usuario.rut:
+        return listar_por_solicitud(db, id_solicitud)
+
+    if es_tecnico:
         return db.query(Cotizacion).filter(
             Cotizacion.solicitud_id_solicitud == id_solicitud,
             Cotizacion.tecnico_usuario_rut == usuario.rut,
         ).all()
 
-    return listar_por_solicitud(db, id_solicitud)
+    if es_cliente:
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permisos para ver cotizaciones de esta solicitud"
+        )
+
+    raise HTTPException(
+        status_code=403,
+        detail="No tienes permisos para ver cotizaciones de esta solicitud"
+    )
 
 
 def actualizar_cotizacion(

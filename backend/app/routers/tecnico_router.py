@@ -13,6 +13,7 @@ from app.models.tecnico_servicio import TecnicoServicio
 from app.models.usuario import Usuario
 
 from app.database import get_db
+from app.dependencies import get_current_usuario, solo_admin, usuario_tiene_rol
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate, TecnicoResponse
 from app.services import tecnico_service
 from app.services.resena_service import generar_resumen_reputacion
@@ -23,7 +24,11 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=TecnicoResponse)
-def crear_tecnico(tecnico: TecnicoCreate, db: Session = Depends(get_db)):
+def crear_tecnico(
+    tecnico: TecnicoCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
+):
     nuevo_tecnico = tecnico_service.crear_tecnico(db, tecnico)
 
     if not nuevo_tecnico:
@@ -33,7 +38,10 @@ def crear_tecnico(tecnico: TecnicoCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[TecnicoResponse])
-def listar_tecnicos(db: Session = Depends(get_db)):
+def listar_tecnicos(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
+):
     return tecnico_service.listar_tecnicos(db)
 
 
@@ -52,7 +60,8 @@ def buscar_tecnicos_por_servicio_comuna(
     ).filter(
         TecnicoServicio.servicio_id_servicio == servicio_id,
         TecnicoComuna.comuna_id_comuna == comuna_id,
-        Tecnico.tecnico_verificado == True
+        Tecnico.tecnico_verificado == True,
+        Tecnico.estado_verificacion == "APROBADO",
     ).all()
 
     return tecnicos
@@ -117,6 +126,7 @@ def serializar_tecnico_publico(db: Session, tecnico: Tecnico):
         "experiencia_anios": tecnico.experiencia_anios,
         "nivel_tecnico": tecnico.nivel_tecnico,
         "tecnico_verificado": tecnico.tecnico_verificado,
+        "estado_verificacion": tecnico.estado_verificacion,
         "nombre_completo": usuario.nombre_completo if usuario else "Tecnico FixYa",
         "correo": usuario.correo if usuario else None,
         "telefono": usuario.telefono if usuario else None,
@@ -139,8 +149,13 @@ def obtener_top_tecnicos(
     ).join(
         Solicitud,
         Solicitud.id_solicitud == Resena.solicitud_id_solicitud
+    ).join(
+        Tecnico,
+        Tecnico.usuario_rut == Solicitud.tecnico_usuario_rut
     ).filter(
-        Resena.resena_activa == "S"
+        Resena.resena_activa == "S",
+        Tecnico.tecnico_verificado == True,
+        Tecnico.estado_verificacion == "APROBADO",
     ).group_by(
         Solicitud.tecnico_usuario_rut
     ).order_by(
@@ -160,7 +175,8 @@ def obtener_top_tecnicos(
 @router.get("/publicos/perfiles")
 def listar_perfiles_publicos_tecnicos(db: Session = Depends(get_db)):
     tecnicos = db.query(Tecnico).filter(
-        Tecnico.tecnico_verificado == True
+        Tecnico.tecnico_verificado == True,
+        Tecnico.estado_verificacion == "APROBADO",
     ).all()
 
     return [
@@ -170,7 +186,11 @@ def listar_perfiles_publicos_tecnicos(db: Session = Depends(get_db)):
 
 
 @router.get("/{rut}", response_model=TecnicoResponse)
-def obtener_tecnico(rut: str, db: Session = Depends(get_db)):
+def obtener_tecnico(
+    rut: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
+):
     tecnico = tecnico_service.obtener_tecnico(db, rut)
 
     if not tecnico:
@@ -180,7 +200,12 @@ def obtener_tecnico(rut: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{rut}", response_model=TecnicoResponse)
-def actualizar_tecnico(rut: str, tecnico: TecnicoUpdate, db: Session = Depends(get_db)):
+def actualizar_tecnico(
+    rut: str,
+    tecnico: TecnicoUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
+):
     tecnico_actualizado = tecnico_service.actualizar_tecnico(db, rut, tecnico)
 
     if not tecnico_actualizado:
@@ -190,7 +215,11 @@ def actualizar_tecnico(rut: str, tecnico: TecnicoUpdate, db: Session = Depends(g
 
 
 @router.delete("/{rut}")
-def eliminar_tecnico(rut: str, db: Session = Depends(get_db)):
+def eliminar_tecnico(
+    rut: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
+):
     tecnico_eliminado = tecnico_service.eliminar_tecnico(db, rut)
 
     if not tecnico_eliminado:
@@ -271,7 +300,8 @@ def obtener_perfil_tecnico(
 def asignar_comuna_tecnico(
     rut: str,
     id_comuna: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
 ):
     tecnico = db.query(Tecnico).filter(
         Tecnico.usuario_rut == rut
@@ -327,7 +357,8 @@ def listar_comunas_tecnico(
 def eliminar_comuna_tecnico(
     rut: str,
     id_comuna: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
 ):
     tecnico_comuna = db.query(TecnicoComuna).filter(
         TecnicoComuna.tecnico_usuario_rut == rut,
@@ -352,8 +383,23 @@ def eliminar_comuna_tecnico(
 @router.get("/{rut}/dashboard")
 def obtener_dashboard_tecnico(
     rut: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_usuario),
 ):
+    es_admin = usuario_tiene_rol(db, usuario_actual.rut, "ADMIN")
+
+    if not es_admin and not usuario_tiene_rol(db, usuario_actual.rut, "TECNICO"):
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permisos para ver dashboard tecnico"
+        )
+
+    if not es_admin and usuario_actual.rut != rut:
+        raise HTTPException(
+            status_code=403,
+            detail="No puedes ver el dashboard de otro tecnico"
+        )
+
     solicitudes_asignadas = db.query(Solicitud).filter(
         Solicitud.tecnico_usuario_rut == rut,
         Solicitud.estado_trabajo == "ASIGNADO"

@@ -33,6 +33,7 @@ from app.schemas.reporte_solicitud_schema import (
     ReporteSolicitudCreate,
     ReporteSolicitudResolver,
 )
+from app.schemas.solicitud_schema import SolicitudEstadoUpdate
 from app.services import cotizacion_service, solicitud_service
 
 
@@ -380,6 +381,54 @@ class TecnicoSolicitudFlowTest(unittest.TestCase):
             ReporteSolicitud.id_reporte == reporte.id_reporte
         ).first()
         self.assertEqual("Se oculta mientras se revisa.", reporte_db.observacion_admin)
+
+    def test_cambiar_estado_usa_en_proceso_y_desactiva_estados_terminales(self):
+        solicitud = self._crear_solicitud(
+            estado="ASIGNADO",
+            tecnico_rut=self.tecnico_rut,
+        )
+
+        en_proceso = solicitud_service.cambiar_estado_solicitud(
+            self.db,
+            solicitud.id_solicitud,
+            SolicitudEstadoUpdate(
+                estado_trabajo="EN_PROCESO",
+                motivo="Inicio administrativo",
+                usuario_rut=self.admin_rut,
+            ),
+        )
+        self.db.refresh(solicitud)
+
+        self.assertEqual("EN_PROCESO", en_proceso.estado_trabajo)
+        self.assertIsNotNone(solicitud.fecha_inicio)
+        self.assertTrue(solicitud.solicitud_activa)
+
+        estado_viejo = solicitud_service.cambiar_estado_solicitud(
+            self.db,
+            solicitud.id_solicitud,
+            SolicitudEstadoUpdate(
+                estado_trabajo="EN_EJECUCION",
+                motivo="Estado antiguo",
+                usuario_rut=self.admin_rut,
+            ),
+        )
+
+        self.assertEqual("ESTADO_INVALIDO", estado_viejo)
+
+        finalizada = solicitud_service.cambiar_estado_solicitud(
+            self.db,
+            solicitud.id_solicitud,
+            SolicitudEstadoUpdate(
+                estado_trabajo="FINALIZADO",
+                motivo="Cierre administrativo",
+                usuario_rut=self.admin_rut,
+            ),
+        )
+        self.db.refresh(solicitud)
+
+        self.assertEqual("FINALIZADO", finalizada.estado_trabajo)
+        self.assertIsNotNone(solicitud.fecha_real)
+        self.assertFalse(solicitud.solicitud_activa)
 
 
 if __name__ == "__main__":

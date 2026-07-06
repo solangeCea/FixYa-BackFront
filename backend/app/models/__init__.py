@@ -1,4 +1,5 @@
 from .usuario import Usuario
+from .usuario_rol import UsuarioRol
 from .tecnico import Tecnico
 from .solicitud import Solicitud, SolicitudDisponibilidad
 from .cotizacion import Cotizacion

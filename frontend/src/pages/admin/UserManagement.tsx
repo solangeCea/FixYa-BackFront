@@ -18,6 +18,15 @@ function getRolLabel(rol: string) {
   return rol;
 }
 
+function getUserRoles(user: UsuarioAdmin) {
+  const roles = user.roles?.length ? user.roles : [user.tipo_usuario];
+  return Array.from(new Set(roles));
+}
+
+function getRolesLabel(user: UsuarioAdmin) {
+  return getUserRoles(user).map(getRolLabel).join(" / ");
+}
+
 function DetailItem({
   label,
   value,
@@ -74,7 +83,7 @@ export default function UserManagement() {
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
       const matchesFilter =
-        filter === "all" || user.tipo_usuario === filter;
+        filter === "all" || getUserRoles(user).includes(filter);
 
       const search = searchTerm.toLowerCase();
 
@@ -94,15 +103,15 @@ export default function UserManagement() {
   }, [comunas]);
 
   const totalClientes = users.filter(
-    (user) => user.tipo_usuario === "CLIENTE"
+    (user) => getUserRoles(user).includes("CLIENTE")
   ).length;
 
   const totalTecnicos = users.filter(
-    (user) => user.tipo_usuario === "TECNICO"
+    (user) => getUserRoles(user).includes("TECNICO")
   ).length;
 
   const totalAdmins = users.filter(
-    (user) => user.tipo_usuario === "ADMIN"
+    (user) => getUserRoles(user).includes("ADMIN")
   ).length;
 
   return (
@@ -247,7 +256,7 @@ export default function UserManagement() {
                     Comuna
                   </th>
                   <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                    Rol
+                    Roles
                   </th>
                   <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                     Estado
@@ -310,7 +319,7 @@ export default function UserManagement() {
 
                     <td className="px-6 py-4">
                       <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700">
-                        {getRolLabel(user.tipo_usuario)}
+                        {getRolesLabel(user)}
                       </span>
                     </td>
 
@@ -364,7 +373,7 @@ export default function UserManagement() {
           <div className="space-y-5">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold text-cyan-700">
-                {getRolLabel(selectedUser.tipo_usuario)}
+                {getRolesLabel(selectedUser)}
               </span>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -391,7 +400,7 @@ export default function UserManagement() {
                     : "Comuna no registrada"
                 }
               />
-              <DetailItem label="Rol" value={getRolLabel(selectedUser.tipo_usuario)} />
+              <DetailItem label="Roles" value={getRolesLabel(selectedUser)} />
             </div>
 
             <div className="rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900">

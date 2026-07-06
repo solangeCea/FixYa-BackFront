@@ -5,7 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_usuario, solo_admin
+from app.dependencies import (
+    get_current_usuario,
+    require_approved_technician_usuario,
+    solo_admin,
+    usuario_tiene_rol,
+)
 from app.models.historial_solicitud import HistorialSolicitud
 from app.models.solicitud import Solicitud
 from app.models.tecnico import Tecnico
@@ -32,8 +37,8 @@ router = APIRouter(
 )
 
 
-def _require_role(usuario, rol: str):
-    if usuario.tipo_usuario.value != rol:
+def _require_role(db: Session, usuario, rol: str):
+    if not usuario_tiene_rol(db, usuario.rut, rol):
         raise HTTPException(
             status_code=403,
             detail="No tienes permisos para realizar esta accion"
@@ -46,7 +51,7 @@ def crear_solicitud(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    _require_role(usuario_actual, "CLIENTE")
+    _require_role(db, usuario_actual, "CLIENTE")
     solicitud.usuario_rut = usuario_actual.rut
     return solicitud_service.crear_solicitud(db, solicitud)
 
@@ -64,7 +69,7 @@ def obtener_solicitudes_disponibles_tecnico(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    _require_role(usuario_actual, "TECNICO")
+    require_approved_technician_usuario(db, usuario_actual)
     return solicitud_service.listar_solicitudes_disponibles_tecnico(
         db,
         usuario_actual.rut,
@@ -77,7 +82,15 @@ def obtener_solicitudes_cliente(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    if usuario_actual.tipo_usuario.value == "CLIENTE" and usuario_actual.rut != rut:
+    es_admin = usuario_tiene_rol(db, usuario_actual.rut, "ADMIN")
+
+    if not es_admin and not usuario_tiene_rol(db, usuario_actual.rut, "CLIENTE"):
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permisos para ver solicitudes de cliente"
+        )
+
+    if not es_admin and usuario_actual.rut != rut:
         raise HTTPException(
             status_code=403,
             detail="No puedes ver solicitudes de otro cliente"
@@ -94,7 +107,15 @@ def obtener_solicitudes_tecnico(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    if usuario_actual.tipo_usuario.value == "TECNICO" and usuario_actual.rut != rut:
+    es_admin = usuario_tiene_rol(db, usuario_actual.rut, "ADMIN")
+
+    if not es_admin and not usuario_tiene_rol(db, usuario_actual.rut, "TECNICO"):
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permisos para ver trabajos de tecnico"
+        )
+
+    if not es_admin and usuario_actual.rut != rut:
         raise HTTPException(
             status_code=403,
             detail="No puedes ver trabajos de otro tecnico"
@@ -114,7 +135,7 @@ def descartar_solicitud(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    _require_role(usuario_actual, "TECNICO")
+    require_approved_technician_usuario(db, usuario_actual)
     return solicitud_service.descartar_solicitud_tecnico(
         db,
         id_solicitud,
@@ -132,7 +153,7 @@ def reportar_solicitud(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    _require_role(usuario_actual, "TECNICO")
+    require_approved_technician_usuario(db, usuario_actual)
     return solicitud_service.reportar_solicitud_tecnico(
         db,
         id_solicitud,
@@ -162,7 +183,7 @@ def resolver_reporte_solicitud(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    _require_role(usuario_actual, "ADMIN")
+    _require_role(db, usuario_actual, "ADMIN")
     return solicitud_service.resolver_reporte_solicitud(
         db,
         id_reporte,
@@ -210,6 +231,12 @@ def asignar_tecnico_solicitud(
     if not tecnico:
         raise HTTPException(status_code=404, detail="Tecnico no encontrado")
 
+    if tecnico.estado_verificacion != "APROBADO" or not tecnico.tecnico_verificado:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo puedes asignar tecnicos aprobados"
+        )
+
     if solicitud.tecnico_usuario_rut is not None:
         raise HTTPException(
             status_code=400,
@@ -245,7 +272,7 @@ def iniciar_solicitud(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    _require_role(usuario_actual, "TECNICO")
+    require_approved_technician_usuario(db, usuario_actual)
 
     solicitud = db.query(Solicitud).filter(
         Solicitud.id_solicitud == id_solicitud
@@ -300,7 +327,7 @@ def finalizar_solicitud(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    _require_role(usuario_actual, "TECNICO")
+    require_approved_technician_usuario(db, usuario_actual)
 
     solicitud = db.query(Solicitud).filter(
         Solicitud.id_solicitud == id_solicitud
@@ -324,6 +351,7 @@ def finalizar_solicitud(
     solicitud.estado_trabajo = "FINALIZADO"
     solicitud.fecha_real = datetime.utcnow()
     solicitud.costo_final = data.costo_final
+    solicitud.solicitud_activa = False
 
     historial = HistorialSolicitud(
         solicitud_id_solicitud=solicitud.id_solicitud,
@@ -350,7 +378,7 @@ def cancelar_solicitud(
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
 ):
-    _require_role(usuario_actual, "CLIENTE")
+    _require_role(db, usuario_actual, "CLIENTE")
 
     solicitud = db.query(Solicitud).filter(
         Solicitud.id_solicitud == id_solicitud

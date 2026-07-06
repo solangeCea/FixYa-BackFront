@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 
 from app.models.usuario import Usuario
+from app.models.usuario_rol import UsuarioRol
 from app.models.tecnico import Tecnico
 from app.models.solicitud import Solicitud
 from app.models.resena import Resena
@@ -20,20 +21,23 @@ def obtener_dashboard_admin(db: Session):
 
     total_tecnicos = db.query(Tecnico).count()
 
-    total_clientes = db.query(Usuario).filter(
-        Usuario.tipo_usuario == "CLIENTE"
-    ).count()
+    total_clientes = db.query(UsuarioRol.usuario_rut).filter(
+        UsuarioRol.rol == "CLIENTE",
+        UsuarioRol.activo == True,
+    ).distinct().count()
 
-    total_admins = db.query(Usuario).filter(
-        Usuario.tipo_usuario == "ADMIN"
-    ).count()
+    total_admins = db.query(UsuarioRol.usuario_rut).filter(
+        UsuarioRol.rol == "ADMIN",
+        UsuarioRol.activo == True,
+    ).distinct().count()
 
     tecnicos_verificados = db.query(Tecnico).filter(
-        Tecnico.tecnico_verificado == True
+        Tecnico.tecnico_verificado == True,
+        Tecnico.estado_verificacion == "APROBADO",
     ).count()
 
     tecnicos_pendientes = db.query(Tecnico).filter(
-        Tecnico.tecnico_verificado == False
+        Tecnico.estado_verificacion != "APROBADO"
     ).count()
 
     total_solicitudes = db.query(Solicitud).count()
