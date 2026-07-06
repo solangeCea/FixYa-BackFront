@@ -148,53 +148,55 @@ function Register() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    async function cargarComunas() {
-      try {
-        setLoadingComunas(true);
-        setError("");
+  async function cargarCatalogos() {
+    try {
+      setLoadingComunas(true);
+      setError("");
 
-        const [regionesData, comunasData, serviciosData] = await Promise.all([
-          getRegiones(),
-          getComunas(),
-          getServicios(),
-        ]);
+      const [regionesData, comunasData, serviciosData] = await Promise.all([
+        getRegiones(),
+        getComunas(),
+        getServicios(),
+      ]);
 
-        const serviciosActivos = serviciosData.filter(
-          (servicio) => servicio.estado_servicio
-        );
+      const serviciosActivos = serviciosData.filter(
+        (servicio) => servicio.estado_servicio
+      );
 
-        const primeraRegion = regionesData[0]?.id_region || 0;
-        const comunasRegion = comunasData.filter(
-          (comuna) => comuna.region_id_region === primeraRegion
-        );
+      const primeraRegion = regionesData[0]?.id_region || 0;
+      const comunasRegion = comunasData.filter(
+        (comuna) => comuna.region_id_region === primeraRegion
+      );
 
-        setRegiones(regionesData);
-        setComunas(comunasData);
-        setServicios(serviciosActivos);
-        setForm((prev) => ({
-          ...prev,
-          region_id_region: prev.region_id_region || primeraRegion,
-          comuna_id_comuna:
-            prev.comuna_id_comuna ||
-            comunasRegion[0]?.id_comuna ||
-            comunasData[0]?.id_comuna ||
-            0,
-          servicio_id_servicio:
-            prev.servicio_id_servicio ||
-            serviciosActivos[0]?.id_servicio ||
-            0,
-        }));
-      } catch {
-        setError(
-          "No pudimos cargar regiones, comunas y servicios. Intenta actualizar la página antes de registrarte."
-        );
-      } finally {
-        setLoadingComunas(false);
-      }
+      setRegiones(regionesData);
+      setComunas(comunasData);
+      setServicios(serviciosActivos);
+      setForm((prev) => ({
+        ...prev,
+        region_id_region: prev.region_id_region || primeraRegion,
+        comuna_id_comuna:
+          prev.comuna_id_comuna ||
+          comunasRegion[0]?.id_comuna ||
+          comunasData[0]?.id_comuna ||
+          0,
+        servicio_id_servicio:
+          prev.servicio_id_servicio ||
+          serviciosActivos[0]?.id_servicio ||
+          0,
+      }));
+    } catch {
+      setError(
+        "No pudimos cargar regiones, comunas y servicios. Verifica que el servidor esté disponible y vuelve a intentarlo."
+      );
+    } finally {
+      setLoadingComunas(false);
     }
+  }
 
-    cargarComunas();
+  useEffect(() => {
+    cargarCatalogos();
+    // Solo se ejecuta al montar; el reintento manual usa el botón "Reintentar".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleChange(
@@ -623,9 +625,19 @@ function Register() {
           </div>
 
           {error && (
-            <div className="mb-6 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              <AlertCircle size={18} />
-              {error}
+            <div className="mb-6 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between">
+              <span className="flex items-center gap-2">
+                <AlertCircle size={18} />
+                {error}
+              </span>
+              <button
+                type="button"
+                onClick={cargarCatalogos}
+                disabled={loadingComunas}
+                className="shrink-0 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loadingComunas ? "Reintentando..." : "Reintentar"}
+              </button>
             </div>
           )}
 
