@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -156,7 +156,7 @@ describe("Login", () => {
     expect(localStorage.getItem("token")).toBe("tecnico-token")
   })
 
-  it("CP-AUTH-003 permite iniciar sesion con rol ADMIN correcto", async () => {
+  it("CP-AUTH-003 permite iniciar sesion como ADMIN desde el acceso administrativo", async () => {
     mockLogin.mockResolvedValue({
       access_token: "admin-token",
       token_type: "bearer",
@@ -166,12 +166,27 @@ describe("Login", () => {
     )
 
     renderLogin()
+    const user = userEvent.setup()
 
-    await submitLogin({
-      roleName: "Administrador",
-      correo: "admin@fixya.cl",
-      contrasena: "Admin1234",
-    })
+    // La tarjeta de administrador ya no existe en la pantalla principal.
+    expect(
+      screen.queryByRole("heading", { name: "Administrador" })
+    ).not.toBeInTheDocument()
+
+    // Se accede mediante el ícono discreto que abre el modal administrativo.
+    await user.click(
+      screen.getByRole("button", { name: /acceso administrativo/i })
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    await user.type(
+      within(dialog).getByPlaceholderText("admin@fixya.cl"),
+      "admin@fixya.cl"
+    )
+    await user.type(within(dialog).getByPlaceholderText("********"), "Admin1234")
+    await user.click(
+      within(dialog).getByRole("button", { name: /ingresar al panel/i })
+    )
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/admin/panel")
@@ -183,6 +198,46 @@ describe("Login", () => {
       "sesion-activa:ADMIN"
     )
     expect(localStorage.getItem("token")).toBe("admin-token")
+  })
+
+  it("CP-AUTH-007 bloquea el acceso administrativo con credenciales no administrativas", async () => {
+    mockLogin.mockResolvedValue({
+      access_token: "cliente-token",
+      token_type: "bearer",
+    })
+    mockObtenerUsuarioActual.mockResolvedValue(
+      buildUsuario("CLIENTE", "cliente@fixya.cl")
+    )
+
+    renderLogin()
+    const user = userEvent.setup()
+
+    await user.click(
+      screen.getByRole("button", { name: /acceso administrativo/i })
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    await user.type(
+      within(dialog).getByPlaceholderText("admin@fixya.cl"),
+      "cliente@fixya.cl"
+    )
+    await user.type(within(dialog).getByPlaceholderText("********"), "Cliente1234")
+    await user.click(
+      within(dialog).getByRole("button", { name: /ingresar al panel/i })
+    )
+
+    await waitFor(() => {
+      expect(mockObtenerUsuarioActual).toHaveBeenCalledWith("cliente-token")
+    })
+
+    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(
+      within(dialog).getByText(/no corresponden a una cuenta administrativa/i)
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText("session-status")).toHaveTextContent(
+      "sesion-inactiva"
+    )
+    expect(localStorage.getItem("token")).toBeNull()
   })
 
   it("CP-AUTH-004 bloquea credenciales correctas cuando el rol seleccionado no coincide", async () => {
