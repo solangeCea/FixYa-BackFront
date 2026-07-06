@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-import { createUser } from "../../services/userService";
+import { createUser, registerTechnician } from "../../services/userService";
 import type { UsuarioCreate } from "../../services/userService";
 import { getComunas, getRegiones } from "../../services/catalogService";
 import type { Comuna, Region } from "../../services/catalogService";
@@ -19,10 +19,7 @@ import { getServicios } from "../../services/catalogService";
 import type { Servicio } from "../../services/catalogService";
 import { login } from "../../services/authService";
 import { saveToken } from "../../services/token";
-import {
-  createTechnicianProfile,
-  uploadTechnicianDocument,
-} from "../../services/technicianService";
+import { uploadTechnicianDocument } from "../../services/technicianService";
 
 type UserType = "cliente" | "tecnico";
 type RegisterField = keyof RegisterForm | "documento";
@@ -57,7 +54,7 @@ const initialForm: RegisterForm = {
   comuna_id_comuna: 0,
   descripcion_perfil: "",
   experiencia_anios: 0,
-  nivel_tecnico: "Inicial",
+  nivel_tecnico: "Basico",
   servicio_id_servicio: 0,
 };
 
@@ -495,11 +492,10 @@ function Register() {
         tipo_usuario: userType === "cliente" ? "CLIENTE" : "TECNICO",
       };
 
-      await createUser(payload);
-
       if (userType === "tecnico") {
-        await createTechnicianProfile({
-          usuario_rut: form.rut,
+        await registerTechnician({
+          ...payload,
+          tipo_usuario: "TECNICO",
           descripcion_perfil: form.descripcion_perfil,
           experiencia_anios: form.experiencia_anios,
           nivel_tecnico: form.nivel_tecnico,
@@ -517,6 +513,8 @@ function Register() {
             archivo: documento,
           });
         }
+      } else {
+        await createUser(payload);
       }
 
       navigate("/login");
@@ -877,7 +875,7 @@ function Register() {
                       onBlur={handleBlur}
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
                     >
-                      <option value="Inicial">Inicial</option>
+                      <option value="Basico">Basico</option>
                       <option value="Intermedio">Intermedio</option>
                       <option value="Avanzado">Avanzado</option>
                     </select>

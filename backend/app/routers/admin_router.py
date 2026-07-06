@@ -1,6 +1,10 @@
+from datetime import datetime
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.services import admin_service
@@ -21,6 +25,30 @@ router = APIRouter(
 )
 
 
+class TecnicoRevisionRequest(BaseModel):
+    estado_verificacion: Literal[
+        "EN_REVISION",
+        "OBSERVADO",
+        "APROBADO",
+        "RECHAZADO",
+        "SUSPENDIDO",
+    ]
+    observacion_admin: str | None = None
+
+
+def _actualizar_revision_tecnico(
+    tecnico: Tecnico,
+    admin_rut: str | None,
+    estado_verificacion: str,
+    observacion_admin: str | None = None,
+):
+    tecnico.estado_verificacion = estado_verificacion
+    tecnico.tecnico_verificado = estado_verificacion == "APROBADO"
+    tecnico.fecha_revision = datetime.utcnow()
+    tecnico.admin_revisor_rut = admin_rut
+    tecnico.observacion_admin = observacion_admin
+
+
 @router.get("/dashboard", response_model=AdminDashboardResponse)
 def obtener_dashboard_admin(
     db: Session = Depends(get_db),
@@ -38,12 +66,14 @@ def obtener_estadisticas_admin(
 
     total_tecnicos = db.query(Tecnico).count()
     tecnicos_verificados = db.query(Tecnico).filter(
-        Tecnico.tecnico_verificado == True
+        Tecnico.tecnico_verificado == True,
+        Tecnico.estado_verificacion == "APROBADO",
     ).count()
 
     total_solicitudes = db.query(Solicitud).count()
     solicitudes_activas = db.query(Solicitud).filter(
-        Solicitud.solicitud_activa == True
+        Solicitud.solicitud_activa == True,
+        Solicitud.estado_trabajo.notin_(["FINALIZADO", "CANCELADO"])
     ).count()
     solicitudes_finalizadas = db.query(Solicitud).filter(
         Solicitud.estado_trabajo == "FINALIZADO"
@@ -122,7 +152,12 @@ def verificar_tecnico(
             detail="Técnico no encontrado"
         )
 
-    tecnico.tecnico_verificado = True
+    _actualizar_revision_tecnico(
+        tecnico,
+        current_user.get("rut"),
+        "APROBADO",
+        "Tecnico aprobado por administrador",
+    )
 
     db.commit()
     db.refresh(tecnico)
@@ -130,5 +165,46 @@ def verificar_tecnico(
     return {
         "mensaje": "Técnico verificado correctamente",
         "usuario_rut": tecnico.usuario_rut,
-        "tecnico_verificado": tecnico.tecnico_verificado
+        "tecnico_verificado": tecnico.tecnico_verificado,
+        "estado_verificacion": tecnico.estado_verificacion,
+        "fecha_revision": tecnico.fecha_revision,
+        "admin_revisor_rut": tecnico.admin_revisor_rut,
+    }
+
+
+@router.put("/tecnicos/{rut}/revision")
+def revisar_tecnico(
+    rut: str,
+    data: TecnicoRevisionRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
+):
+    tecnico = db.query(Tecnico).filter(
+        Tecnico.usuario_rut == rut
+    ).first()
+
+    if not tecnico:
+        raise HTTPException(
+            status_code=404,
+            detail="Tecnico no encontrado"
+        )
+
+    _actualizar_revision_tecnico(
+        tecnico,
+        current_user.get("rut"),
+        data.estado_verificacion,
+        data.observacion_admin,
+    )
+
+    db.commit()
+    db.refresh(tecnico)
+
+    return {
+        "mensaje": "Revision tecnica actualizada correctamente",
+        "usuario_rut": tecnico.usuario_rut,
+        "tecnico_verificado": tecnico.tecnico_verificado,
+        "estado_verificacion": tecnico.estado_verificacion,
+        "fecha_revision": tecnico.fecha_revision,
+        "admin_revisor_rut": tecnico.admin_revisor_rut,
+        "observacion_admin": tecnico.observacion_admin,
     }

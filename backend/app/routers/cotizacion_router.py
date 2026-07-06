@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.database import get_db
-from app.dependencies import get_current_usuario, solo_admin
+from app.dependencies import (
+    get_current_usuario,
+    require_approved_technician_usuario,
+    solo_admin,
+    usuario_tiene_rol,
+)
 from app.schemas.cotizacion_schema import (
     CotizacionCreate,
     CotizacionResponse,
@@ -24,13 +29,7 @@ def crear_cotizacion(
     db: Session = Depends(get_db),
     usuario=Depends(get_current_usuario),
 ):
-    if usuario.tipo_usuario.value != "TECNICO":
-        from fastapi import HTTPException
-
-        raise HTTPException(
-            status_code=403,
-            detail="Solo tecnicos pueden crear cotizaciones"
-        )
+    require_approved_technician_usuario(db, usuario)
 
     return cotizacion_service.crear_cotizacion(db, cotizacion, usuario.rut)
 
@@ -98,9 +97,7 @@ def aceptar_cotizacion(
     db: Session = Depends(get_db),
     usuario=Depends(get_current_usuario),
 ):
-    if usuario.tipo_usuario.value != "CLIENTE":
-        from fastapi import HTTPException
-
+    if not usuario_tiene_rol(db, usuario.rut, "CLIENTE"):
         raise HTTPException(
             status_code=403,
             detail="Solo clientes pueden aceptar cotizaciones"
@@ -115,9 +112,7 @@ def rechazar_cotizacion(
     db: Session = Depends(get_db),
     usuario=Depends(get_current_usuario),
 ):
-    if usuario.tipo_usuario.value != "CLIENTE":
-        from fastapi import HTTPException
-
+    if not usuario_tiene_rol(db, usuario.rut, "CLIENTE"):
         raise HTTPException(
             status_code=403,
             detail="Solo clientes pueden rechazar cotizaciones"

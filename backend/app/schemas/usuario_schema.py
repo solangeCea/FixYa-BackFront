@@ -1,6 +1,7 @@
 import re
 from pydantic import BaseModel, field_validator
 from datetime import date
+from typing import List
 
 from app.enums.usuario_enum import TipoUsuario
 
@@ -50,3 +51,42 @@ class UsuarioCreate(BaseModel):
             raise ValueError("El RUT ingresado no es válido")
 
         return rut
+
+
+class UsuarioRolResponse(BaseModel):
+    usuario_rut: str
+    rol: str
+    activo: bool
+
+    class Config:
+        from_attributes = True
+
+
+class UsuarioMeResponse(BaseModel):
+    rut: str
+    nombre_completo: str
+    correo: str
+    telefono: str | None = None
+    tipo_usuario: str
+    comuna_id_comuna: int
+    estado_usuario: bool
+    roles: List[str]
+
+    class Config:
+        from_attributes = True
+
+
+class RegistroTecnicoCreate(UsuarioCreate):
+    descripcion_perfil: str
+    experiencia_anios: int
+    nivel_tecnico: str
+    servicios: List[int]
+    comunas: List[int]
+
+
+class SolicitudRolTecnicoCreate(BaseModel):
+    descripcion_perfil: str
+    experiencia_anios: int
+    nivel_tecnico: str
+    servicios: List[int]
+    comunas: List[int]

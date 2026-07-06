@@ -17,7 +17,15 @@ from app.models.reporte_solicitud import ReporteSolicitud
 from app.models.cotizacion import Cotizacion
 
 
+ESTADOS_SOLICITUD_VALIDOS = {
+    "INICIADO",
+    "ASIGNADO",
+    "EN_PROCESO",
+    "FINALIZADO",
+    "CANCELADO",
+}
 ESTADOS_SOLICITUD_COTIZABLE = {"INICIADO"}
+ESTADOS_SOLICITUD_TERMINALES = {"FINALIZADO", "CANCELADO"}
 
 def crear_solicitud(db: Session, data: SolicitudCreate):
     ###validar servicio existente
@@ -108,10 +116,10 @@ def _obtener_tecnico_verificado(db: Session, rut: str):
     if not tecnico:
         raise HTTPException(status_code=404, detail="Tecnico no encontrado")
 
-    if not tecnico.tecnico_verificado:
+    if tecnico.estado_verificacion != "APROBADO" or not tecnico.tecnico_verificado:
         raise HTTPException(
             status_code=403,
-            detail="Tu perfil tecnico debe estar verificado para realizar esta accion"
+            detail="Tu perfil tecnico debe estar aprobado para realizar esta accion"
         )
 
     return tecnico
@@ -367,24 +375,19 @@ def cambiar_estado_solicitud(db: Session, id_solicitud: int, data):
     if not solicitud:
         return None
 
-    estados_validos = [
-        "INICIADO",
-        "ASIGNADO",
-        "EN_EJECUCION",
-        "FINALIZADO",
-        "CANCELADO"
-    ]
-
-    if data.estado_trabajo not in estados_validos:
+    if data.estado_trabajo not in ESTADOS_SOLICITUD_VALIDOS:
         return "ESTADO_INVALIDO"
 
     solicitud.estado_trabajo = data.estado_trabajo
 
-    if data.estado_trabajo == "EN_EJECUCION":
-        solicitud.fecha_inicio = datetime.now()
+    if data.estado_trabajo == "EN_PROCESO":
+        solicitud.fecha_inicio = datetime.utcnow()
 
     if data.estado_trabajo == "FINALIZADO":
-        solicitud.fecha_real = datetime.now()
+        solicitud.fecha_real = datetime.utcnow()
+
+    if data.estado_trabajo in ESTADOS_SOLICITUD_TERMINALES:
+        solicitud.solicitud_activa = False
 
     historial = HistorialSolicitud(
         motivo=data.motivo,

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 
-from app.models import usuario, comuna, region
+from app.models import usuario, usuario_rol, comuna, region
 from app.models import tecnico, tecnico_servicio, tecnico_comuna
 from app.models import solicitud, servicio, cotizacion
 from app.models import historial_solicitud, resena, Notificacion

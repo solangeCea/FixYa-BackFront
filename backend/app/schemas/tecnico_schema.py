@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Literal
+from datetime import datetime
 
 class TecnicoCreate(BaseModel):
     usuario_rut: str
@@ -36,6 +37,11 @@ class TecnicoResponse(BaseModel):
     experiencia_anios: int
     nivel_tecnico: str
     tecnico_verificado: bool
+    estado_verificacion: str = "PENDIENTE"
+    fecha_solicitud: Optional[datetime] = None
+    fecha_revision: Optional[datetime] = None
+    observacion_admin: Optional[str] = None
+    admin_revisor_rut: Optional[str] = None
 
     class Config:
         from_attributes = True

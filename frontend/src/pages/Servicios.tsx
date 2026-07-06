@@ -222,7 +222,8 @@ function Servicios() {
   }, [selectedServicio, selectedComunaId]);
 
   const loginPath = `/login?next=${encodeURIComponent(solicitudPath)}`;
-  const canRequestService = !usuario || usuario.tipo_usuario === "CLIENTE";
+  const roles = usuario ? (usuario.roles?.length ? usuario.roles : [usuario.tipo_usuario]) : [];
+  const canRequestService = !usuario || roles.includes("CLIENTE");
   const requestHref = usuario ? solicitudPath : loginPath;
 
   return (
