@@ -4,7 +4,7 @@ from sqlalchemy import func
 
 from app.database import get_db
 from app.services import admin_service
-from app.schemas.admin_schema import AdminDashboardResponse
+from app.schemas.admin_schema import AdminDashboardResponse, AdminAnaliticaResponse
 from app.dependencies import solo_admin
 
 from app.models.usuario import Usuario
@@ -26,6 +26,14 @@ def obtener_dashboard_admin(
     current_user: dict = Depends(solo_admin)
 ):
     return admin_service.obtener_dashboard_admin(db)
+
+
+@router.get("/analitica", response_model=AdminAnaliticaResponse)
+def obtener_analitica_admin(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin)
+):
+    return admin_service.obtener_analitica_admin(db)
 
 
 @router.get("/estadisticas")
