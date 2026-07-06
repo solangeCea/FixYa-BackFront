@@ -765,6 +765,53 @@ técnicos sigue funcionando tras el refactor (HTTP 200).
 Se validan tipo y tamaño tanto en frontend como en backend. Los archivos se sirven
 desde el mismo mount estático `/uploads` ya existente.
 
+## M-24 · 2026-07-06 — Discrepancia de validación al crear solicitudes (frontend vs. backend)
+**Categoría:** Corrección de errores
+
+### Problema detectado
+Al crear una solicitud con todos los campos completos, el formulario no la creaba
+y mostraba "No pudimos enviar la solicitud. Revisa los datos", sin indicar qué
+campo era inválido.
+
+### Causa
+El mensaje provenía del bloque `catch` (la petición al backend falló), no de la
+validación del frontend. El schema `SolicitudCreate` (Pydantic) exige longitudes
+mínimas —`titulo_solicitud`≥10, `descripcion_problema`≥20, `direccion`≥10,
+`ubicacion_problema_referencia`≥3— pero el frontend solo validaba que los campos no
+estuvieran vacíos. Un texto corto pero no vacío (p. ej. descripción de 17
+caracteres) pasaba la validación del cliente y el backend lo rechazaba con HTTP 422
+(`string_too_short`). Además, `createSolicitud` lanzaba un error genérico sin leer
+el detalle de la respuesta, ocultando la causa real.
+
+### Solución implementada
+- Se alinearon las validaciones del frontend con el schema del backend: mensajes
+  específicos por campo cuando no se cumple la longitud mínima, más `maxLength` en
+  los inputs para respetar los máximos, y pistas de mínimo en título y descripción.
+- Se mejoró `createSolicitud` para propagar el `detail` (mensajes en español) que
+  devuelve el backend en sus `HTTPException`, y `handleSubmit` ahora muestra ese
+  mensaje en lugar de uno genérico fijo.
+
+### Archivos modificados
+- `frontend/src/pages/cliente/ClienteDashboard.tsx`
+- `frontend/src/services/solicitudService.ts`
+- `frontend/src/tests/solicitudes/SolicitudForm.test.tsx` (ajuste del caso de error)
+
+### Impacto
+El usuario recibe feedback claro y anticipado por campo, evitando envíos que el
+backend rechazaría; los errores del servidor se muestran con su mensaje real. No se
+modificó el backend ni el contrato de la API.
+
+### Verificación
+Reproducción directa del fallo vía API: descripción de 17 caracteres → HTTP 422
+(`descripcion_problema`, "String should have at least 20 characters"); descripción
+≥20 → HTTP 200. Tras la corrección: `tsc -b`, `vite build` y Vitest **57/57** en
+verde.
+
+### Observaciones
+Las validaciones de longitud quedaron como única fuente de verdad en el backend
+(schema) y replicadas en el frontend solo para UX; conviene mantenerlas
+sincronizadas ante futuros cambios del schema.
+
 ## M-25 · 2026-07-06 — Perfil editable del técnico ("Mi Perfil")
 **Categoría:** Mejora funcional
 

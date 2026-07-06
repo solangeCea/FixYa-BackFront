@@ -450,16 +450,42 @@ function ClienteDashboard() {
       return;
     }
 
+    // Longitudes mínimas alineadas con el schema del backend (SolicitudCreate)
+    // para evitar rechazos 422 y dar feedback claro por campo.
+    const titulo = form.titulo_solicitud.trim();
+    const descripcion = form.descripcion_problema.trim();
+    const direccion = form.direccion.trim();
+    const referencia = form.ubicacion_problema_referencia.trim();
+
     const nextErrors: Record<string, string> = {};
     if (!form.servicio_id_servicio) nextErrors.servicio_id_servicio = "Selecciona un servicio.";
     if (!form.region_id_region) nextErrors.region_id_region = "Selecciona una región.";
     if (!form.comuna_id_comuna) nextErrors.comuna_id_comuna = "Selecciona una comuna.";
-    if (!form.titulo_solicitud.trim()) nextErrors.titulo_solicitud = "Escribe un título breve para tu solicitud.";
-    if (!form.descripcion_problema.trim()) nextErrors.descripcion_problema = "Describe qué ocurre para orientar al técnico.";
-    if (!form.direccion.trim()) nextErrors.direccion = "Ingresa la dirección donde necesitas el servicio.";
+
+    if (!titulo) {
+      nextErrors.titulo_solicitud = "Escribe un título breve para tu solicitud.";
+    } else if (titulo.length < 10) {
+      nextErrors.titulo_solicitud = "El título debe tener al menos 10 caracteres.";
+    }
+
+    if (!descripcion) {
+      nextErrors.descripcion_problema = "Describe qué ocurre para orientar al técnico.";
+    } else if (descripcion.length < 20) {
+      nextErrors.descripcion_problema = "La descripción debe tener al menos 20 caracteres.";
+    }
+
+    if (!direccion) {
+      nextErrors.direccion = "Ingresa la dirección donde necesitas el servicio.";
+    } else if (direccion.length < 10) {
+      nextErrors.direccion = "La dirección debe tener al menos 10 caracteres.";
+    }
+
     if (!form.tipo_problema.trim()) nextErrors.tipo_problema = "Selecciona el tipo de problema según el servicio.";
-    if (!form.ubicacion_problema_referencia.trim()) {
+
+    if (!referencia) {
       nextErrors.ubicacion_problema_referencia = "Agrega una referencia para ubicar mejor el problema.";
+    } else if (referencia.length < 3) {
+      nextErrors.ubicacion_problema_referencia = "La referencia debe tener al menos 3 caracteres.";
     }
 
     setFieldErrors(nextErrors);
@@ -501,8 +527,12 @@ function ClienteDashboard() {
       }));
 
       await cargarSolicitudes();
-    } catch {
-      setError("No pudimos enviar la solicitud. Revisa los datos e inténtalo nuevamente.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos enviar la solicitud. Revisa los datos e inténtalo nuevamente."
+      );
     } finally {
       setCreandoSolicitud(false);
     }
@@ -743,9 +773,11 @@ function ClienteDashboard() {
                 name="titulo_solicitud"
                 value={form.titulo_solicitud}
                 onChange={handleChange}
+                maxLength={100}
                 placeholder="Ej: Filtración bajo el lavaplatos"
                 className={fieldClass(fieldErrors.titulo_solicitud)}
               />
+              <p className="mt-1 text-xs text-slate-400">Mínimo 10 caracteres.</p>
               <FieldError message={fieldErrors.titulo_solicitud} />
               </div>
 
@@ -761,10 +793,12 @@ function ClienteDashboard() {
                 name="descripcion_problema"
                 value={form.descripcion_problema}
                 onChange={handleChange}
+                maxLength={1000}
                 placeholder="Describe el problema con el mayor detalle posible"
                 rows={4}
                 className={`${fieldClass(fieldErrors.descripcion_problema)} resize-none`}
               />
+              <p className="mt-1 text-xs text-slate-400">Mínimo 20 caracteres.</p>
               <FieldError message={fieldErrors.descripcion_problema} />
               </div>
 
@@ -800,6 +834,7 @@ function ClienteDashboard() {
                 name="direccion"
                 value={form.direccion}
                 onChange={handleChange}
+                maxLength={200}
                 placeholder="Ej: Av. Providencia 1234, depto 45"
                 className={fieldClass(fieldErrors.direccion)}
               />
@@ -920,6 +955,7 @@ function ClienteDashboard() {
                 name="ubicacion_problema_referencia"
                 value={form.ubicacion_problema_referencia}
                 onChange={handleChange}
+                maxLength={200}
                 placeholder="Ej: Cocina, segundo piso, portón negro"
                 className={fieldClass(fieldErrors.ubicacion_problema_referencia)}
               />
