@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models.tecnico import Tecnico
@@ -59,7 +61,8 @@ def crear_tecnico(db: Session, tecnico_data: TecnicoCreate):
         descripcion_perfil=tecnico_data.descripcion_perfil,
         experiencia_anios=tecnico_data.experiencia_anios,
         nivel_tecnico=tecnico_data.nivel_tecnico,
-        tecnico_verificado=False
+        tecnico_verificado=False,
+        estado_verificacion="PENDIENTE",
     )
 
     db.add(nuevo_tecnico)
@@ -110,6 +113,10 @@ def actualizar_tecnico(db: Session, rut: str, tecnico_data: TecnicoUpdate):
 
     for campo, valor in datos.items():
         setattr(tecnico, campo, valor)
+
+    if "tecnico_verificado" in datos:
+        tecnico.estado_verificacion = "APROBADO" if tecnico.tecnico_verificado else "PENDIENTE"
+        tecnico.fecha_revision = datetime.utcnow()
 
     db.commit()
     db.refresh(tecnico)

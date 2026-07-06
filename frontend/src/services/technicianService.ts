@@ -7,6 +7,11 @@ export interface Tecnico {
   experiencia_anios: number;
   nivel_tecnico: string;
   tecnico_verificado: boolean;
+  estado_verificacion?: string;
+  fecha_solicitud?: string | null;
+  fecha_revision?: string | null;
+  observacion_admin?: string | null;
+  admin_revisor_rut?: string | null;
 }
 
 export interface DocumentoTecnico {
@@ -157,13 +162,17 @@ export async function createTechnicianProfile(data: {
   comunas: number[];
 }): Promise<Tecnico> {
   const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const response = await fetch(`${API_URL}/tecnicos/`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: JSON.stringify(data),
   });
 
@@ -187,6 +196,23 @@ export async function approveTechnician(rut: string) {
 
   if (!response.ok) {
     throw new Error("Error al aprobar tecnico");
+  }
+
+  return response.json();
+}
+
+export async function getMyTechnicianProfile(): Promise<Tecnico> {
+  const token = getToken();
+
+  const response = await fetch(`${API_URL}/usuarios/me/perfil-tecnico`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener tu perfil tecnico");
   }
 
   return response.json();

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.database import get_db
+from app.dependencies import solo_admin
 from app.models.usuario import Usuario
 from app.models.tecnico import Tecnico
 from app.models.solicitud import Solicitud
@@ -15,21 +16,26 @@ router = APIRouter(
 
 
 @router.get("/admin")
-def obtener_dashboard_admin(db: Session = Depends(get_db)):
+def obtener_dashboard_admin(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(solo_admin),
+):
     total_usuarios = db.query(Usuario).count()
 
     total_tecnicos = db.query(Tecnico).count()
 
     tecnicos_verificados = db.query(Tecnico).filter(
-        Tecnico.tecnico_verificado == True
+        Tecnico.tecnico_verificado == True,
+        Tecnico.estado_verificacion == "APROBADO",
     ).count()
 
     tecnicos_pendientes = db.query(Tecnico).filter(
-        Tecnico.tecnico_verificado == False
+        Tecnico.estado_verificacion != "APROBADO"
     ).count()
 
     solicitudes_activas = db.query(Solicitud).filter(
-        Solicitud.estado_trabajo != "FINALIZADO"
+        Solicitud.solicitud_activa == True,
+        Solicitud.estado_trabajo.notin_(["FINALIZADO", "CANCELADO"])
     ).count()
 
     solicitudes_finalizadas = db.query(Solicitud).filter(

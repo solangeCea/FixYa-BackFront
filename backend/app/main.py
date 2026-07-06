@@ -8,10 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
 
-from app.models import usuario, comuna, region
+from app.models import usuario, usuario_rol, comuna, region
 from app.models import tecnico, tecnico_servicio, tecnico_comuna
 from app.models import solicitud, servicio, cotizacion
 from app.models import historial_solicitud, resena, Notificacion
+from app.models import tecnico_solicitud_descartada, reporte_solicitud
 
 from app.routers.usuario_router import router as usuario_router
 from app.routers.tecnico_router import router as tecnico_router
@@ -34,10 +35,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
+FRONTEND_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:5174,http://127.0.0.1:5174",
+    ).split(",")
+    if origin.strip()
+]
+
 # CORS PARA REACT
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # en producción se cambia
+    allow_origins=FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,7 +99,21 @@ def seed_database():
         connection.exec_driver_sql(seed_path.read_text(encoding="utf-8"))
 
 
+def apply_database_migrations():
+    if engine.dialect.name != "postgresql":
+        return
+
+    migrations_path = Path(__file__).resolve().parent.parent / "database" / "migrations"
+    if not migrations_path.exists():
+        return
+
+    with engine.begin() as connection:
+        for migration_path in sorted(migrations_path.glob("*.sql")):
+            connection.exec_driver_sql(migration_path.read_text(encoding="utf-8"))
+
+
 Base.metadata.create_all(bind=engine)
+apply_database_migrations()
 seed_database()
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

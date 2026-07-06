@@ -73,6 +73,9 @@ function AdminDashboard() {
     );
   }
 
+  const reportesPendientes =
+    dashboard.resenas_reportadas + dashboard.reportes_solicitudes_pendientes;
+
   const quickActions = [
     {
       title: "Revisar técnicos pendientes",
@@ -87,6 +90,13 @@ function AdminDashboard() {
       link: "/admin/resenas",
       count: dashboard.resenas_reportadas,
       icon: Star,
+    },
+    {
+      title: "Revisar solicitudes reportadas",
+      description: "Evalua reportes levantados por tecnicos.",
+      link: "/admin/solicitudes",
+      count: dashboard.reportes_solicitudes_pendientes,
+      icon: AlertCircle,
     },
     {
       title: "Solicitudes",
@@ -145,8 +155,8 @@ function AdminDashboard() {
         />
         <StatCard
           label="Reportes pendientes"
-          value={dashboard.resenas_reportadas}
-          description="Reseñas por moderar"
+          value={reportesPendientes}
+          description="Reseñas y solicitudes por moderar"
           icon={AlertCircle}
           tone="red"
         />
