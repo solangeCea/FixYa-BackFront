@@ -25,6 +25,10 @@ export interface Review {
   fecha_resolucion?: string | null;
   usuario_rut_reporta?: string | null;
   admin_rut_resuelve?: string | null;
+  categorias?: string | null;
+  sentimiento?: string | null;
+  resumen_ia?: string | null;
+  analisis_modo?: string | null;
 }
 
 export async function getReviews(): Promise<Review[]> {

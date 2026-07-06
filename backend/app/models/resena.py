@@ -34,3 +34,9 @@ class Resena(Base):
 
     usuario_rut_reporta = Column(String(12), ForeignKey("usuario.rut"), nullable=True)
     admin_rut_resuelve = Column(String(12), ForeignKey("usuario.rut"), nullable=True)
+
+    # Análisis de IA (moderación + clasificación) calculado al crear la reseña
+    categorias = Column(String(300), nullable=True)
+    sentimiento = Column(String(20), nullable=True)
+    resumen_ia = Column(String(300), nullable=True)
+    analisis_modo = Column(String(30), nullable=True)

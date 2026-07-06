@@ -858,3 +858,62 @@ Al agregarse una columna (`direccion`) y no existir migraciones (el proyecto usa
 `create_all`), en bases de datos existentes debe recrearse el volumen
 (`docker compose down -v && up --build`) o aplicarse `ALTER TABLE usuario ADD
 COLUMN direccion VARCHAR(200)`. En clones nuevos, `create_all` la crea sola.
+
+## M-26 · 2026-07-06 — IA de moderación y clasificación de reseñas (Google Gemini + fallback local)
+**Categoría:** Mejora funcional / IA
+
+### Problema detectado
+La "IA" de reseñas no era IA: la moderación era una lista fija de 9 palabras
+(evadible con tildes o leetspeak, p. ej. `idi0ta`) y la "clasificación/resumen"
+era conteo de palabras clave. La integración con OpenAI estaba **deshabilitada**
+(`OPENAI_API_KEY` vacía), apuntaba a un modelo inexistente (`gpt-5.4-mini`) y su
+resultado **no se mostraba en ningún componente** del frontend (código muerto). No
+cumplía el objetivo de incorporar una tecnología de IA de forma útil y demostrable.
+
+### Causa
+La solución previa dependía de heurísticas locales y de una integración LLM mal
+configurada y nunca consumida por la UI.
+
+### Solución implementada
+- **Motor IA (`ia_service.py`):** función única `analizar_resena(comentario, calificacion)`
+  que, en **una sola llamada**, modera + clasifica + resume. Usa **Google Gemini**
+  (`GEMINI_API_KEY`, capa gratuita) con salida JSON estructurada (`responseSchema`):
+  `es_ofensiva`, `motivo`, `categorias` (Puntualidad, Calidad del trabajo,
+  Comunicación, Precio, Profesionalismo, Limpieza), `sentimiento` y `resumen`
+  (etiqueta estilo Uber). Si no hay clave o falla, cae a un **análisis local mejorado**
+  que normaliza tildes y leetspeak (ahora sí detecta `idi0ta`).
+- **Flujo:** en `crear_resena` se analiza **antes de almacenar**; si es ofensiva se
+  guarda oculta (`resena_activa="N"`) y reportada para revisión del admin. La
+  clasificación (categorías/sentimiento/resumen/modo) se persiste en columnas nuevas.
+- **Persistencia:** columnas `categorias`, `sentimiento`, `resumen_ia`, `analisis_modo`
+  en `resena` (migración idempotente auto-aplicada al arrancar).
+- **Frontend:** el panel de administración de reseñas muestra el bloque "Análisis de
+  IA" con sentimiento (color), etiquetas de categoría y resumen, indicando el modo
+  (IA (Gemini)/Local).
+- Se corrigió el `Config`/`from_attributes` mal indentado del `ResenaResponse`.
+
+### Archivos modificados
+- `backend/app/services/ia_service.py` (nuevo), `backend/app/services/resena_service.py`
+- `backend/app/routers/resena_router.py`, `backend/app/schemas/resena_schema.py`, `backend/app/models/resena.py`
+- `backend/database/migrations/20260707_add_resena_ia_analysis.sql` (nuevo)
+- `docker-compose.yml`, `backend/.env.example`
+- `frontend/src/services/reviewService.ts`, `frontend/src/pages/admin/ReviewManagement.tsx`
+
+### Impacto
+La plataforma incorpora IA real (LLM) demostrable para moderar y clasificar reseñas,
+protegiendo a los técnicos de contenido ofensivo y ofreciendo etiquetas/sentimiento
+estilo Uber, con degradación elegante a análisis local sin conexión ni costo.
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest ReviewManagement 4/4 y suite 66/72
+(los 6 rojos son preexistentes de `main` en `TecnicoDashboard`, ajenos a este cambio).
+Pruebas en vivo (modo local): moderación bloquea ofensivas y leetspeak; clasificación
+correcta de categorías/sentimiento; backfill de 13 reseñas del seed; la API `/resenas/`
+expone el análisis; endpoint de resumen con codificación UTF-8 correcta (verificado con
+httpx en el contenedor).
+
+### Observaciones
+Para activar el modo IA basta poner `GEMINI_API_KEY` (clave gratuita en
+https://aistudio.google.com/app/apikey) en el `.env` y reiniciar el backend; sin clave,
+el sistema usa el análisis local automáticamente. Modelo configurable con `GEMINI_MODEL`
+(por defecto `gemini-2.0-flash`).

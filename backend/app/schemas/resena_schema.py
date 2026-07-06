@@ -23,8 +23,13 @@ class ResenaResponse(BaseModel):
     resena_reportada: Optional[str] = None
     motivo_reporte: Optional[str] = None
 
-    
-class Config:
+    # Análisis de IA (moderación + clasificación)
+    categorias: Optional[str] = None
+    sentimiento: Optional[str] = None
+    resumen_ia: Optional[str] = None
+    analisis_modo: Optional[str] = None
+
+    class Config:
         from_attributes = True
 
 class ResolverReporteResena(BaseModel):

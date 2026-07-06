@@ -5,33 +5,12 @@ import os
 
 import httpx
 
-
-PALABRAS_OFENSIVAS = [
-    "idiota",
-    "estupido",
-    "estúpido",
-    "imbecil",
-    "imbécil",
-    "mierda",
-    "weon",
-    "weón",
-    "ctm"
-]
-
-
-def detectar_lenguaje_ofensivo(comentario: str) -> bool:
-    if not comentario:
-        return False
-
-    comentario_lower = comentario.lower()
-
-    return any(
-        palabra in comentario_lower
-        for palabra in PALABRAS_OFENSIVAS
-    )
+from app.services import ia_service
+from app.services.ia_service import detectar_lenguaje_ofensivo
 
 
 def preparar_estado_resena(comentario: str):
+    """Solo moderación (compatibilidad). Usa el detector del motor de IA."""
     ofensiva = detectar_lenguaje_ofensivo(comentario)
 
     if ofensiva:
@@ -50,6 +29,40 @@ def preparar_estado_resena(comentario: str):
         "fecha_reporte": None,
         "reporte_resuelto": None
     }
+
+
+def analizar_y_preparar_resena(comentario: str, calificacion=None) -> dict:
+    """Analiza la reseña con IA (o fallback local) y devuelve TODOS los campos
+    que se persisten: estado de moderación + clasificación (categorías,
+    sentimiento, resumen y modo de análisis)."""
+    analisis = ia_service.analizar_resena(comentario, calificacion)
+
+    datos = {
+        "categorias": ", ".join(analisis["categorias"]) or None,
+        "sentimiento": analisis["sentimiento"],
+        "resumen_ia": analisis["resumen"] or None,
+        "analisis_modo": analisis["modo"],
+    }
+
+    if analisis["es_ofensiva"]:
+        datos.update({
+            "resena_activa": "N",
+            "resena_reportada": "S",
+            "motivo_reporte": analisis["motivo"]
+            or "Contenido inapropiado detectado automáticamente",
+            "fecha_reporte": datetime.utcnow(),
+            "reporte_resuelto": "N",
+        })
+    else:
+        datos.update({
+            "resena_activa": "S",
+            "resena_reportada": "N",
+            "motivo_reporte": None,
+            "fecha_reporte": None,
+            "reporte_resuelto": None,
+        })
+
+    return datos
 
 
 SENALES_REPUTACION = {

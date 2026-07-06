@@ -7,7 +7,10 @@ from app.models.solicitud import Solicitud
 from app.models.usuario import Usuario
 from app.schemas.resena_schema import ResenaCreate, ResenaResponse
 from app.dependencies import get_current_user
-from app.services.resena_service import generar_resumen_reputacion, preparar_estado_resena
+from app.services.resena_service import (
+    generar_resumen_reputacion,
+    analizar_y_preparar_resena,
+)
 from app.schemas.resena_schema import ResenaCreate, ResenaResponse, ResolverReporteResena
 from datetime import datetime
 
@@ -55,14 +58,16 @@ def crear_resena(
     if resena_existente:
         raise HTTPException(status_code=400, detail="Esta solicitud ya tiene una reseña")
 
-    estado_resena = preparar_estado_resena(data.comentario)
+    # IA: modera (bloquea ofensivas) y clasifica (categorías/sentimiento/resumen)
+    # ANTES de almacenar la reseña.
+    datos_analisis = analizar_y_preparar_resena(data.comentario, data.calificacion)
 
     nueva_resena = Resena(
         solicitud_id_solicitud=solicitud.id_solicitud,
         usuario_rut=usuario.rut,
         calificacion=data.calificacion,
         comentario=data.comentario,
-        **estado_resena
+        **datos_analisis
     )
 
     db.add(nueva_resena)

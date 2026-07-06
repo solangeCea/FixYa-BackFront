@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle, Eye, EyeOff, RefreshCw, Star } from "lucide-react";
+import { AlertTriangle, CheckCircle, Eye, EyeOff, RefreshCw, Sparkles, Star, Tag } from "lucide-react";
 
 import {
   approveReview,
@@ -19,6 +19,62 @@ function isResolved(review: Review) {
 function getResolutionLabel(review: Review) {
   if (!isResolved(review)) return null;
   return review.resena_activa === "S" ? "Aprobada" : "Ocultada";
+}
+
+function sentimentClasses(sentimiento?: string | null) {
+  if (sentimiento === "Positivo") return "bg-emerald-100 text-emerald-700";
+  if (sentimiento === "Negativo") return "bg-rose-100 text-rose-700";
+  return "bg-slate-100 text-slate-600";
+}
+
+function AiAnalysis({ review }: { review: Review }) {
+  const categorias = (review.categorias || "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  if (!review.sentimiento && categorias.length === 0 && !review.resumen_ia) {
+    return null;
+  }
+
+  return (
+    <div className="mb-4 rounded-xl border border-teal-100 bg-teal-50/50 p-4">
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-teal-700">
+        <Sparkles size={14} />
+        Análisis de IA
+        {review.analisis_modo && (
+          <span className="ml-1 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+            {review.analisis_modo}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {review.sentimiento && (
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${sentimentClasses(
+              review.sentimiento
+            )}`}
+          >
+            {review.sentimiento}
+          </span>
+        )}
+        {categorias.map((cat) => (
+          <span
+            key={cat}
+            className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+          >
+            <Tag size={11} />
+            {cat}
+          </span>
+        ))}
+      </div>
+
+      {review.resumen_ia && (
+        <p className="mt-2 text-xs italic text-slate-600">"{review.resumen_ia}"</p>
+      )}
+    </div>
+  );
 }
 
 function DetailItem({
@@ -270,7 +326,9 @@ export default function ReviewManagement() {
                     </div>
                   </div>
 
-                  <p className="mb-5 text-gray-700">{review.comentario}</p>
+                  <p className="mb-4 text-gray-700">{review.comentario}</p>
+
+                  <AiAnalysis review={review} />
 
                   <div className="flex flex-wrap gap-3">
                     <button
@@ -357,6 +415,8 @@ export default function ReviewManagement() {
             <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
               {selectedReview.comentario}
             </p>
+
+            <AiAnalysis review={selectedReview} />
 
             <div className="grid gap-4 md:grid-cols-2">
               <DetailItem label="Solicitud" value={selectedReview.solicitud_id_solicitud} />
