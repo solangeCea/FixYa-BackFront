@@ -10,6 +10,12 @@ vi.mock("../../services/dashboardService", () => ({
   getAdminDashboard: vi.fn(),
 }))
 
+// La analítica se renderiza como componente hijo autónomo; se mockea para
+// aislar las pruebas del dashboard y evitar llamadas de red reales.
+vi.mock("../../services/analyticsService", () => ({
+  getAdminAnalytics: vi.fn().mockRejectedValue(new Error("no-data")),
+}))
+
 const mockGetAdminDashboard = vi.mocked(getAdminDashboard)
 
 const dashboardData: AdminDashboardData = {

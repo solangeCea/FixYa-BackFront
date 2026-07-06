@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   Users,
   UserCheck,
@@ -18,6 +18,12 @@ import PageHeader from "../../components/ui/PageHeader";
 import StatCard from "../../components/ui/StatCard";
 import SectionCard from "../../components/ui/SectionCard";
 import LoadingState from "../../components/ui/LoadingState";
+
+// La analítica (incluye la librería de gráficos) se carga de forma diferida
+// para no penalizar el bundle inicial del resto de la aplicación.
+const PlatformAnalytics = lazy(
+  () => import("../../components/analytics/PlatformAnalytics")
+);
 
 function AdminDashboard() {
   const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
@@ -146,7 +152,7 @@ function AdminDashboard() {
         />
       </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="mt-8">
         <SectionCard
           title="Estado del sistema"
           description="Distribución actual de solicitudes y contenido."
@@ -164,34 +170,6 @@ function AdminDashboard() {
                 <p className="text-sm font-semibold text-slate-500">{label}</p>
                 <p className={`mt-2 text-3xl font-bold ${color}`}>{value}</p>
               </div>
-            ))}
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Acciones rápidas" description="Atajos administrativos">
-          <div className="space-y-3">
-            {quickActions.map((action) => (
-              <Link
-                key={action.title}
-                to={action.link}
-                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-teal-200 hover:bg-teal-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-teal-100 p-3 text-teal-700">
-                    <action.icon size={20} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-950">{action.title}</p>
-                    <p className="text-sm text-slate-500">{action.description}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-900 ring-1 ring-slate-200">
-                    {action.count}
-                  </span>
-                  <ArrowRight className="h-5 w-5 text-slate-400" />
-                </div>
-              </Link>
             ))}
           </div>
         </SectionCard>
@@ -219,6 +197,48 @@ function AdminDashboard() {
           icon={FileText}
           tone="purple"
         />
+      </div>
+
+      {/* Análisis de la plataforma (analítica basada en datos existentes) */}
+      <Suspense
+        fallback={
+          <div className="mt-12">
+            <LoadingState label="Cargando análisis de la plataforma..." />
+          </div>
+        }
+      >
+        <PlatformAnalytics />
+      </Suspense>
+
+      {/* Acciones rápidas al final para priorizar la información analítica */}
+      <div className="mt-8">
+        <SectionCard title="Acciones rápidas" description="Atajos administrativos">
+          <div className="grid gap-3 md:grid-cols-2">
+            {quickActions.map((action) => (
+              <Link
+                key={action.title}
+                to={action.link}
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-teal-200 hover:bg-teal-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-teal-100 p-3 text-teal-700">
+                    <action.icon size={20} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-950">{action.title}</p>
+                    <p className="text-sm text-slate-500">{action.description}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-900 ring-1 ring-slate-200">
+                    {action.count}
+                  </span>
+                  <ArrowRight className="h-5 w-5 text-slate-400" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </SectionCard>
       </div>
     </div>
   );
