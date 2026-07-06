@@ -1,6 +1,7 @@
 export interface LoginResponse {
   access_token: string;
   token_type: string;
+  roles?: string[];
 }
 
 export interface Usuario {
@@ -9,6 +10,7 @@ export interface Usuario {
   correo: string;
   telefono: string;
   tipo_usuario: string;
+  roles?: string[];
   comuna_id_comuna: number;
   estado_usuario: boolean;
   direccion?: string | null;

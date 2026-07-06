@@ -180,13 +180,19 @@ Fallido inicialmente, corregido y aprobado.
 
 | Caso | Resultado esperado | Resultado obtenido | Estado |
 | --- | --- | --- | --- |
-| CP-SOL-001 Renderizado del formulario | Se muestran los campos principales y el botón para enviar la solicitud. | Se renderizó el formulario dentro de `ClienteDashboard` con servicio, comuna, título, descripción, urgencia, dirección, tipo de problema, referencia y botón `Solicitar servicio`. | Aprobado |
-| CP-SOL-002 Campos obligatorios | Al enviar sin completar datos, no llama al backend y muestra errores de validación. | No se llamó `createSolicitud`; se mostraron errores para título, descripción, dirección, tipo de problema y referencia de ubicación. | Aprobado |
-| CP-SOL-003 Carga de servicios | Al cargar catálogos mockeados, se muestran servicios activos para seleccionar. | Se mostraron `Gasfiteria` y `Electricidad`; el servicio inactivo no apareció en el select. | Aprobado |
-| CP-SOL-004 Creación exitosa de solicitud | Al completar el formulario con datos válidos, llama a `createSolicitud` con el payload esperado y muestra confirmación. | Se llamó `createSolicitud` una vez con usuario, servicio, comuna, título, descripción, urgencia, dirección, tipo de problema y referencia; se mostró el mensaje de solicitud enviada correctamente. | Aprobado |
-| CP-SOL-005 Tipo de problema dinámico | Al cambiar el servicio seleccionado, las opciones de tipo de problema se actualizan y no mantienen una selección anterior inválida. | Al seleccionar Electricidad se mostraron opciones como `Enchufe`, `Cables` e `Iluminación`; al cambiar a Gasfitería se mostraron `Fuga de agua`, `Cañería` y `Baño`, se removió `Enchufe` y el valor seleccionado quedó limpio. | Aprobado |
-| CP-SOL-006 Error del backend al crear solicitud | Si el backend falla al crear la solicitud, la pantalla no se rompe, no queda en carga infinita, no muestra éxito y conserva los datos ingresados. | Se mockeó `createSolicitud` con rechazo `Error 500`; se mostró el mensaje de error, el botón volvió a quedar habilitado, no se mostró mensaje de éxito y el formulario mantuvo los datos completados. | Aprobado |
-
+| CP-SOL-001 Renderizado del formulario | Se muestran los campos principales, el selector de tipo de inmueble y el boton para enviar la solicitud. | Se renderizo el formulario dentro de `ClienteDashboard` con servicio, comuna, titulo, descripcion, urgencia, direccion, tipo de problema, referencia, selector de inmueble y boton `Solicitar servicio`. | Aprobado |
+| CP-SOL-002 Campos obligatorios | Al enviar sin completar datos, no llama al backend y muestra errores de validacion. | No se llamo `createSolicitud`; se mostraron errores para datos base, referencia y tipo de inmueble. | Aprobado |
+| CP-SOL-003 Carga de servicios | Al cargar catalogos mockeados, se muestran servicios activos para seleccionar. | Se mostraron `Gasfiteria` y `Electricidad`; el servicio inactivo no aparecio en el select. | Aprobado |
+| CP-SOL-004 Crear solicitud para casa | Al completar casa con estacionamiento, mascotas, acceso y disponibilidad, llama a `createSolicitud` con payload extendido y muestra confirmacion. | Se llamo `createSolicitud` una vez con contexto de casa, condiciones, instrucciones, disponibilidad y booleans de estacionamiento/mascotas. | Aprobado |
+| CP-SOL-005 Tipo de problema dinamico | Al cambiar el servicio seleccionado, las opciones de tipo de problema se actualizan y no mantienen una seleccion anterior invalida. | Al seleccionar Electricidad se mostraron opciones como `Enchufe`, `Cables` e `Iluminacion`; al cambiar a Gasfiteria se limpio el valor incompatible. | Aprobado |
+| CP-SOL-006 Error del backend al crear solicitud | Si el backend falla al crear la solicitud, la pantalla no se rompe, no queda en carga infinita, no muestra exito y conserva los datos ingresados. | Se mockeo `createSolicitud` con rechazo `Error 500`; se mostro el mensaje de error, el boton volvio a quedar habilitado y el formulario mantuvo los datos. | Aprobado |
+| CP-SOL-007 Crear solicitud para departamento | Al completar departamento, envia numero, piso, conserjeria, autorizacion, horario, condiciones e instrucciones. | `createSolicitud` recibio contexto de departamento con nuevos campos y disponibilidad. | Aprobado |
+| CP-SOL-008 Crear solicitud para edificio | Al completar edificio, envia oficina/departamento, piso, conserjeria, autorizacion requerida y horario permitido. | `createSolicitud` recibio contexto de edificio con autorizacion requerida y horario permitido. | Aprobado |
+| CP-SOL-009 Crear solicitud para local comercial | Al completar local comercial, envia horario de atencion, fuera de horario, contacto, telefono y funcionamiento. | `createSolicitud` recibio contexto comercial, contacto, telefono, horario y condiciones de acceso. | Aprobado |
+| CP-SOL-010 Espacio publico con advertencia | Al seleccionar espacio publico, muestra advertencia y permite enviar solicitud con contexto minimo. | Se mostro advertencia por permisos municipales/factibilidad y el payload incluyo condicion de autorizacion previa. | Aprobado |
+| CP-SOL-011 Disponibilidad del cliente | Si falta disponibilidad, bloquea el envio y muestra error junto al campo. | No se llamo `createSolicitud` y se mostro `Selecciona la disponibilidad del cliente`. | Aprobado |
+| CP-SOL-012 Condiciones de acceso | Si faltan condiciones e instrucciones de acceso, bloquea el envio y muestra errores cerca de ambos campos. | No se llamo `createSolicitud`; se mostraron mensajes para condiciones e instrucciones de acceso. | Aprobado |
+| CP-SOL-013 Payload con nuevos campos | El payload enviado a `createSolicitud` debe incluir tipo de inmueble, horario, condiciones, instrucciones y campos dinamicos. | Se valido payload completo para departamento con los nuevos campos preparados en backend. | Aprobado |
 **Comando usado:**  
 ```powershell
 npm.cmd run test:run
@@ -204,7 +210,7 @@ Se agregó `htmlFor` en los labels y `id` correspondiente en los controles de se
 CP-SOL-004: Creación exitosa de solicitud.
 
 **Resultado de pruebas:**  
-La suite completa quedó aprobada con 53 pruebas.
+La suite completa quedó aprobada con 60 pruebas.
 
 **Comando usado:**  
 ```powershell
@@ -226,7 +232,7 @@ El cliente recibe alternativas más claras y contextualizadas, reduce errores al
 CP-SOL-005: Tipo de problema cambia según servicio seleccionado.
 
 **Resultado de pruebas:**  
-La suite completa quedó aprobada con 53 pruebas.
+La suite completa quedó aprobada con 60 pruebas.
 
 **Comando usado:**  
 ```powershell
@@ -264,7 +270,7 @@ Durante la ejecución completa de la suite, Vitest podía agotar memoria al leva
 Se configuró `fileParallelism: false` en `vite.config.ts` para ejecutar los archivos de prueba de forma secuencial y estabilizar el comando estándar `npm.cmd run test:run`.
 
 **Impacto:**  
-La suite completa puede ejecutarse de forma consistente con 12 archivos de prueba y 53 pruebas aprobadas.
+La suite completa puede ejecutarse de forma consistente con 12 archivos de prueba y 60 pruebas aprobadas.
 
 **Comando usado:**  
 ```powershell

@@ -3,70 +3,135 @@ import {
   AlertCircle,
   Briefcase,
   CheckCircle,
+  Clock,
   ClipboardList,
+  Flag,
   MapPin,
   PlayCircle,
   RefreshCw,
   Send,
+  Trash2,
   Wrench,
 } from "lucide-react";
 
 import Navbar from "../../components/Navbar";
 import EmptyState from "../../components/ui/EmptyState";
+import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 import {
-  asignarTecnico,
+  descartarSolicitud,
   finalizarSolicitud,
-  getSolicitudes,
+  getSolicitudesDisponiblesTecnico,
   getSolicitudesTecnico,
   iniciarSolicitud,
+  reportarSolicitud,
 } from "../../services/solicitudService";
-
 import type { Solicitud } from "../../services/solicitudService";
 import { getServicios } from "../../services/catalogService";
 import type { Servicio } from "../../services/catalogService";
 import { createCotizacion } from "../../services/cotizacionService";
 import {
+  getMyTechnicianProfile,
   getTechnicianDashboard,
+  type Tecnico,
   type TecnicoDashboardMetrics,
 } from "../../services/technicianService";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
 
 function getEstadoStyle(estado: string) {
-  if (estado === "INICIADO") {
-    return "bg-blue-100 text-blue-700";
-  }
-
-  if (estado === "ASIGNADO") {
-    return "bg-yellow-100 text-yellow-700";
-  }
-
-  if (estado === "EN_PROCESO") {
-    return "bg-purple-100 text-purple-700";
-  }
-
-  if (estado === "FINALIZADO") {
-    return "bg-green-100 text-green-700";
-  }
-
-  if (estado === "CANCELADO") {
-    return "bg-red-100 text-red-700";
-  }
-
+  if (estado === "INICIADO") return "bg-blue-100 text-blue-700";
+  if (estado === "ASIGNADO") return "bg-yellow-100 text-yellow-700";
+  if (estado === "EN_PROCESO") return "bg-purple-100 text-purple-700";
+  if (estado === "FINALIZADO") return "bg-green-100 text-green-700";
+  if (estado === "CANCELADO") return "bg-red-100 text-red-700";
   return "bg-gray-100 text-gray-700";
+}
+
+const disponibilidadDayLabels: Record<string, string> = {
+  LUNES: "Lunes",
+  MARTES: "Martes",
+  MIERCOLES: "Miercoles",
+  JUEVES: "Jueves",
+  VIERNES: "Viernes",
+  SABADO: "Sabado",
+  DOMINGO: "Domingo",
+};
+
+const reportReasons = [
+  ["SOSPECHA_ESTAFA", "Sospecho que es una estafa."],
+  ["SUPLANTACION", "Sospecho que alguien esta suplantando a otra persona."],
+  ["INFORMACION_FALSA", "La informacion de la solicitud parece falsa."],
+  ["SOLICITUD_DUPLICADA", "La solicitud esta duplicada."],
+  ["CONTENIDO_INAPROPIADO", "Contiene contenido o lenguaje inapropiado."],
+  ["SERVICIO_INCORRECTO", "No corresponde al servicio seleccionado."],
+  ["CONTACTO_SOSPECHOSO", "Los datos de contacto parecen sospechosos."],
+  ["UBICACION_SOSPECHOSA", "La direccion o ubicacion parece sospechosa."],
+  ["RIESGO_SEGURIDAD", "Podria representar un riesgo para mi seguridad."],
+  ["PAGO_FUERA_FIXYA", "Intenta pagos o acuerdos fuera de FixYa."],
+  ["OTRO_MOTIVO", "Otro motivo."],
+] as const;
+
+function getVerificationLabel(state?: string) {
+  if (state === "APROBADO") return "Aprobado";
+  if (state === "EN_REVISION") return "En revision";
+  if (state === "OBSERVADO") return "Observado";
+  if (state === "RECHAZADO") return "Rechazado";
+  if (state === "SUSPENDIDO") return "Suspendido";
+  return "Pendiente";
+}
+
+type ReportForm = {
+  motivo: string;
+  descripcion_otro: string;
+  comentario: string;
+};
+
+function AvailabilitySummary({ solicitud }: { solicitud: Solicitud }) {
+  const items = solicitud.disponibilidad_horaria || [];
+
+  if (items.length === 0 && !solicitud.horario_disponible) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-950">
+      <h5 className="mb-3 flex items-center gap-2 font-bold">
+        <Clock className="h-4 w-4 text-teal-700" />
+        Disponibilidad del cliente
+      </h5>
+
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <span
+              key={`${solicitud.id_solicitud}-${item.dia}`}
+              className="rounded-full bg-white px-3 py-2 font-semibold text-teal-900 ring-1 ring-teal-200"
+            >
+              {disponibilidadDayLabels[item.dia] || item.dia}:{" "}
+              {item.hora_inicio} a {item.hora_fin}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p>{solicitud.horario_disponible}</p>
+      )}
+    </div>
+  );
 }
 
 function TecnicoDashboard() {
   const { usuario } = useAuth();
-
   const [solicitudesDisponibles, setSolicitudesDisponibles] = useState<
     Solicitud[]
   >([]);
   const [misSolicitudes, setMisSolicitudes] = useState<Solicitud[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [metrics, setMetrics] = useState<TecnicoDashboardMetrics | null>(null);
+  const [technicianProfile, setTechnicianProfile] = useState<Tecnico | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
-  const [accionLoading, setAccionLoading] = useState<number | null>(null);
+  const [accionLoading, setAccionLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [costosFinales, setCostosFinales] = useState<Record<number, string>>(
@@ -75,6 +140,14 @@ function TecnicoDashboard() {
   const [cotizaciones, setCotizaciones] = useState<
     Record<number, { monto: string; detalle: string; vigencia: string }>
   >({});
+  const [reportSolicitud, setReportSolicitud] = useState<Solicitud | null>(
+    null
+  );
+  const [reportForm, setReportForm] = useState<ReportForm>({
+    motivo: reportReasons[0][0],
+    descripcion_otro: "",
+    comentario: "",
+  });
 
   const cargarDatos = useCallback(async () => {
     if (!usuario?.rut) {
@@ -86,25 +159,45 @@ function TecnicoDashboard() {
       setLoading(true);
       setError("");
 
-      const [todas, asignadas, serviciosData, metricasData] = await Promise.all([
-        getSolicitudes(),
-        getSolicitudesTecnico(usuario.rut),
-        getServicios(),
-        getTechnicianDashboard(usuario.rut),
-      ]);
+      const profile = await getMyTechnicianProfile();
+      setTechnicianProfile(profile);
 
-      const disponibles = todas.filter(
-        (solicitud) =>
-          solicitud.estado_trabajo === "INICIADO" &&
-          solicitud.tecnico_usuario_rut === null
-      );
+      const verificationState =
+        profile.estado_verificacion ||
+        (profile.tecnico_verificado ? "APROBADO" : "PENDIENTE");
+
+      if (verificationState !== "APROBADO" || !profile.tecnico_verificado) {
+        const [asignadas, serviciosData, metricasData] = await Promise.all([
+          getSolicitudesTecnico(usuario.rut),
+          getServicios(),
+          getTechnicianDashboard(usuario.rut),
+        ]);
+
+        setSolicitudesDisponibles([]);
+        setMisSolicitudes(asignadas);
+        setServicios(serviciosData);
+        setMetrics(metricasData);
+        return;
+      }
+
+      const [disponibles, asignadas, serviciosData, metricasData] =
+        await Promise.all([
+          getSolicitudesDisponiblesTecnico(),
+          getSolicitudesTecnico(usuario.rut),
+          getServicios(),
+          getTechnicianDashboard(usuario.rut),
+        ]);
 
       setSolicitudesDisponibles(disponibles);
       setMisSolicitudes(asignadas);
       setServicios(serviciosData);
       setMetrics(metricasData);
-    } catch {
-      setError("No pudimos cargar tus trabajos y solicitudes disponibles. Intenta actualizar el panel.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos cargar tus trabajos y solicitudes disponibles."
+      );
     } finally {
       setLoading(false);
     }
@@ -137,40 +230,24 @@ function TecnicoDashboard() {
     );
   }, [servicios]);
 
-  async function handleIniciar(idSolicitud: number) {
-    try {
-      setAccionLoading(idSolicitud);
-      setError("");
-      setSuccess("");
-
-      await iniciarSolicitud(idSolicitud);
-
-      setSuccess("Trabajo iniciado. El cliente verá la solicitud en proceso.");
-      await cargarDatos();
-    } catch {
-      setError("No pudimos iniciar este trabajo. Intenta nuevamente.");
-    } finally {
-      setAccionLoading(null);
-    }
+  function resetMessages() {
+    setError("");
+    setSuccess("");
   }
 
-  async function handleAceptarTrabajo(idSolicitud: number) {
-    if (!usuario?.rut) {
-      setError("Necesitamos reconocer tu sesión de técnico. Inicia sesión nuevamente.");
-      return;
-    }
-
+  async function handleIniciar(idSolicitud: number) {
     try {
-      setAccionLoading(idSolicitud);
-      setError("");
-      setSuccess("");
-
-      await asignarTecnico(idSolicitud, usuario.rut);
-
-      setSuccess("Trabajo aceptado. Ahora puedes coordinar y enviar cotización.");
+      setAccionLoading(`start-${idSolicitud}`);
+      resetMessages();
+      await iniciarSolicitud(idSolicitud);
+      setSuccess("Trabajo iniciado. El cliente vera la solicitud en proceso.");
       await cargarDatos();
-    } catch {
-      setError("No pudimos aceptar este trabajo. Puede que ya no esté disponible.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos iniciar este trabajo. Intenta nuevamente."
+      );
     } finally {
       setAccionLoading(null);
     }
@@ -180,70 +257,141 @@ function TecnicoDashboard() {
     const costo = Number(costosFinales[idSolicitud]);
 
     if (!costo || costo <= 0) {
-      setError("Debes ingresar un costo final válido.");
+      setError("Debes ingresar un costo final valido.");
       return;
     }
 
     try {
-      setAccionLoading(idSolicitud);
-      setError("");
-      setSuccess("");
-
+      setAccionLoading(`finish-${idSolicitud}`);
+      resetMessages();
       await finalizarSolicitud(idSolicitud, costo);
-
-      setSuccess("Trabajo finalizado. El cliente podrá revisar y calificar el servicio.");
-      setCostosFinales((prev) => ({
-        ...prev,
-        [idSolicitud]: "",
-      }));
+      setSuccess("Trabajo finalizado. El cliente podra revisar y calificar.");
+      setCostosFinales((prev) => ({ ...prev, [idSolicitud]: "" }));
       await cargarDatos();
-    } catch {
-      setError("No pudimos finalizar el trabajo. Revisa el costo e intenta nuevamente.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos finalizar el trabajo. Intenta nuevamente."
+      );
     } finally {
       setAccionLoading(null);
     }
   }
 
   async function handleCrearCotizacion(idSolicitud: number) {
-    if (!usuario?.rut) {
-      setError("Necesitamos reconocer tu sesión de técnico. Inicia sesión nuevamente.");
-      return;
-    }
-
     const cotizacion = cotizaciones[idSolicitud];
     const monto = Number(cotizacion?.monto);
 
     if (!monto || monto <= 0 || !cotizacion?.detalle?.trim() || !cotizacion.vigencia) {
-      setError("Completa el monto, el detalle y la vigencia antes de enviar la cotización.");
+      setError("Completa monto, detalle y vigencia antes de cotizar.");
       return;
     }
 
     try {
-      setAccionLoading(idSolicitud);
-      setError("");
-      setSuccess("");
-
+      setAccionLoading(`quote-${idSolicitud}`);
+      resetMessages();
       await createCotizacion({
         solicitud_id_solicitud: idSolicitud,
-        tecnico_usuario_rut: usuario.rut,
         monto_estimado: monto,
         mensaje_cotizacion: cotizacion.detalle,
         fecha_vigencia: new Date(`${cotizacion.vigencia}T23:59:00`).toISOString(),
       });
 
-      setSuccess("Cotización enviada y PDF generado correctamente.");
+      setSuccess("Cotizacion enviada. El cliente podra revisarla antes de asignar.");
       setCotizaciones((prev) => ({
         ...prev,
         [idSolicitud]: { monto: "", detalle: "", vigencia: "" },
       }));
+      await cargarDatos();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "No pudimos enviar la cotización al cliente."
+        err instanceof Error
+          ? err.message
+          : "No pudimos enviar la cotizacion al cliente."
       );
     } finally {
       setAccionLoading(null);
     }
   }
+
+  async function handleDescartar(idSolicitud: number) {
+    const confirmed = window.confirm(
+      "Esta solicitud se ocultara solo para tu cuenta. Deseas continuar?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setAccionLoading(`discard-${idSolicitud}`);
+      resetMessages();
+      await descartarSolicitud(idSolicitud);
+      setSuccess("Solicitud descartada. No volvera a aparecer en tu listado.");
+      await cargarDatos();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos descartar la solicitud."
+      );
+    } finally {
+      setAccionLoading(null);
+    }
+  }
+
+  function openReportModal(solicitud: Solicitud) {
+    setReportSolicitud(solicitud);
+    setReportForm({
+      motivo: reportReasons[0][0],
+      descripcion_otro: "",
+      comentario: "",
+    });
+    resetMessages();
+  }
+
+  function closeReportModal() {
+    setReportSolicitud(null);
+  }
+
+  async function handleReportarSolicitud() {
+    if (!reportSolicitud) return;
+
+    if (
+      reportForm.motivo === "OTRO_MOTIVO" &&
+      !reportForm.descripcion_otro.trim()
+    ) {
+      setError("Describe el motivo para poder enviar el reporte.");
+      return;
+    }
+
+    try {
+      setAccionLoading(`report-${reportSolicitud.id_solicitud}`);
+      resetMessages();
+      await reportarSolicitud(reportSolicitud.id_solicitud, {
+        motivo: reportForm.motivo,
+        descripcion_otro: reportForm.descripcion_otro || null,
+        comentario: reportForm.comentario || null,
+      });
+      setSuccess("Reporte enviado. La solicitud quedo oculta para tu cuenta.");
+      closeReportModal();
+      await cargarDatos();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos reportar la solicitud."
+      );
+    } finally {
+      setAccionLoading(null);
+    }
+  }
+
+  const verificationState =
+    technicianProfile?.estado_verificacion ||
+    (technicianProfile?.tecnico_verificado ? "APROBADO" : "PENDIENTE");
+  const isTechnicianApproved =
+    Boolean(technicianProfile?.tecnico_verificado) &&
+    verificationState === "APROBADO";
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -252,61 +400,61 @@ function TecnicoDashboard() {
       <main className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900">
-            Panel de trabajos técnicos
+            Panel de trabajos tecnicos
           </h1>
           <p className="mt-2 text-gray-600">
-            Recibe solicitudes disponibles, envía cotizaciones y gestiona tus
-            trabajos asignados hasta finalizar el servicio.
+            Cotiza solicitudes compatibles y gestiona los trabajos asignados.
           </p>
         </div>
 
+        {!loading && technicianProfile && !isTechnicianApproved && (
+          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
+            <div className="flex items-start gap-3">
+              <Clock className="mt-1 h-6 w-6 text-amber-700" />
+              <div>
+                <p className="text-lg font-bold">
+                  Perfil tecnico {getVerificationLabel(verificationState).toLowerCase()}
+                </p>
+                <p className="mt-2 text-sm leading-6">
+                  Puedes revisar tu panel, pero aun no puedes cotizar,
+                  descartar, reportar ni tomar trabajos hasta que un
+                  administrador apruebe tu perfil tecnico.
+                </p>
+                {technicianProfile.observacion_admin && (
+                  <p className="mt-3 rounded-xl bg-white/70 p-3 text-sm font-medium">
+                    {technicianProfile.observacion_admin}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-8 grid gap-6 md:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <ClipboardList className="h-6 w-6 text-blue-700" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Solicitudes disponibles
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {solicitudesDisponibles.length}
-                </p>
-              </div>
-            </div>
+            <ClipboardList className="h-6 w-6 text-blue-700" />
+            <p className="mt-4 text-3xl font-bold text-gray-900">
+              {solicitudesDisponibles.length}
+            </p>
+            <p className="text-sm font-medium text-gray-500">
+              Solicitudes disponibles
+            </p>
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-100">
-                <Briefcase className="h-6 w-6 text-yellow-700" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Trabajos activos
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {solicitudesActivas.length}
-                </p>
-              </div>
-            </div>
+            <Briefcase className="h-6 w-6 text-yellow-700" />
+            <p className="mt-4 text-3xl font-bold text-gray-900">
+              {solicitudesActivas.length}
+            </p>
+            <p className="text-sm font-medium text-gray-500">Trabajos activos</p>
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
-                <CheckCircle className="h-6 w-6 text-green-700" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Finalizadas
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {solicitudesFinalizadas.length}
-                </p>
-              </div>
-            </div>
+            <CheckCircle className="h-6 w-6 text-green-700" />
+            <p className="mt-4 text-3xl font-bold text-gray-900">
+              {solicitudesFinalizadas.length}
+            </p>
+            <p className="text-sm font-medium text-gray-500">Finalizadas</p>
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -315,7 +463,7 @@ function TecnicoDashboard() {
               {metrics?.promedio_calificacion ?? 0}
             </p>
             <p className="text-xs text-gray-500">
-              {metrics?.total_resenas ?? 0} reseñas
+              {metrics?.total_resenas ?? 0} resenas
             </p>
           </div>
 
@@ -340,12 +488,13 @@ function TecnicoDashboard() {
               Solicitudes y trabajos
             </h2>
             <p className="text-sm text-gray-500">
-              Toma solicitudes disponibles, envía una cotización cuando
-              corresponda e informa el avance del trabajo.
+              Envia cotizaciones, descarta solicitudes que no te interesen o
+              reporta casos sospechosos.
             </p>
           </div>
 
           <button
+            type="button"
             onClick={cargarDatos}
             className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
           >
@@ -380,8 +529,8 @@ function TecnicoDashboard() {
 
               {solicitudesDisponibles.length === 0 ? (
                 <EmptyState
-                  title="Aún no hay solicitudes disponibles para tomar"
-                  description="Cuando un cliente cree una solicitud relacionada con tus servicios, aparecerá aquí para que puedas aceptarla."
+                  title="Aun no hay solicitudes disponibles para cotizar"
+                  description="Cuando exista una solicitud compatible con tus servicios y comunas, aparecera aqui."
                   icon={ClipboardList}
                 />
               ) : (
@@ -416,38 +565,117 @@ function TecnicoDashboard() {
                           {serviciosPorId.get(solicitud.servicio_id_servicio) ||
                             `Servicio ID ${solicitud.servicio_id_servicio}`}
                         </p>
-
                         <p className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-gray-400" />
                           {solicitud.direccion}
                         </p>
-
                         <p>
                           <strong>Urgencia:</strong> {solicitud.urgencia}
                         </p>
-
                         <p>
                           <strong>Referencia:</strong>{" "}
                           {solicitud.ubicacion_problema_referencia}
                         </p>
                       </div>
 
-                      <div className="mt-4 rounded-xl bg-yellow-50 p-3 text-sm text-yellow-700">
-                        Esta solicitud está disponible para ser aceptada.
+                      <AvailabilitySummary solicitud={solicitud} />
+
+                      <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                        <h5 className="mb-3 font-semibold text-gray-900">
+                          Realizar cotizacion
+                        </h5>
+                        <div className="grid gap-3">
+                          <input
+                            type="number"
+                            min="1"
+                            value={cotizaciones[solicitud.id_solicitud]?.monto || ""}
+                            onChange={(event) =>
+                              setCotizaciones((prev) => ({
+                                ...prev,
+                                [solicitud.id_solicitud]: {
+                                  monto: event.target.value,
+                                  detalle:
+                                    prev[solicitud.id_solicitud]?.detalle || "",
+                                  vigencia:
+                                    prev[solicitud.id_solicitud]?.vigencia || "",
+                                },
+                              }))
+                            }
+                            placeholder="Monto estimado de la cotizacion"
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          />
+                          <textarea
+                            value={cotizaciones[solicitud.id_solicitud]?.detalle || ""}
+                            onChange={(event) =>
+                              setCotizaciones((prev) => ({
+                                ...prev,
+                                [solicitud.id_solicitud]: {
+                                  monto: prev[solicitud.id_solicitud]?.monto || "",
+                                  detalle: event.target.value,
+                                  vigencia:
+                                    prev[solicitud.id_solicitud]?.vigencia || "",
+                                },
+                              }))
+                            }
+                            rows={3}
+                            placeholder="Detalle, alcance o condiciones"
+                            className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          />
+                          <input
+                            type="date"
+                            value={cotizaciones[solicitud.id_solicitud]?.vigencia || ""}
+                            onChange={(event) =>
+                              setCotizaciones((prev) => ({
+                                ...prev,
+                                [solicitud.id_solicitud]: {
+                                  monto: prev[solicitud.id_solicitud]?.monto || "",
+                                  detalle:
+                                    prev[solicitud.id_solicitud]?.detalle || "",
+                                  vigencia: event.target.value,
+                                },
+                              }))
+                            }
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCrearCotizacion(solicitud.id_solicitud)
+                            }
+                            disabled={
+                              accionLoading === `quote-${solicitud.id_solicitud}`
+                            }
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-indigo-300"
+                          >
+                            <Send className="h-5 w-5" />
+                            {accionLoading === `quote-${solicitud.id_solicitud}`
+                              ? "Enviando cotizacion..."
+                              : "Realizar cotizacion"}
+                          </button>
+                        </div>
                       </div>
 
-                      <button
-                        onClick={() =>
-                          handleAceptarTrabajo(solicitud.id_solicitud)
-                        }
-                        disabled={accionLoading === solicitud.id_solicitud}
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
-                      >
-                        <CheckCircle className="h-5 w-5" />
-                        {accionLoading === solicitud.id_solicitud
-                          ? "Aceptando trabajo..."
-                          : "Aceptar este trabajo"}
-                      </button>
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleDescartar(solicitud.id_solicitud)}
+                          disabled={
+                            accionLoading === `discard-${solicitud.id_solicitud}`
+                          }
+                          className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:text-slate-400"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          No me interesa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openReportModal(solicitud)}
+                          className="inline-flex items-center gap-2 text-sm font-semibold text-rose-700 hover:text-rose-800"
+                        >
+                          <Flag className="h-4 w-4" />
+                          Reportar solicitud
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -461,8 +689,8 @@ function TecnicoDashboard() {
 
               {misSolicitudes.length === 0 ? (
                 <EmptyState
-                  title="Aún no tienes trabajos asignados"
-                  description="Cuando aceptes una solicitud o se te asigne un servicio relacionado con tus especialidades, aparecerá aquí."
+                  title="Aun no tienes trabajos asignados"
+                  description="Cuando un cliente acepte una cotizacion tuya, el trabajo aparecera aqui."
                   icon={Briefcase}
                 />
               ) : (
@@ -481,7 +709,6 @@ function TecnicoDashboard() {
                             {solicitud.descripcion_problema}
                           </p>
                         </div>
-
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${getEstadoStyle(
                             solicitud.estado_trabajo
@@ -496,169 +723,63 @@ function TecnicoDashboard() {
                           <MapPin className="h-4 w-4 text-gray-400" />
                           {solicitud.direccion}
                         </p>
-
                         <p>
                           <strong>Urgencia:</strong> {solicitud.urgencia}
                         </p>
-
                         <p>
                           <strong>Referencia:</strong>{" "}
                           {solicitud.ubicacion_problema_referencia}
                         </p>
-
                         {solicitud.costo_final && (
                           <p>
-                            <strong>Costo final:</strong> $
-                            {solicitud.costo_final}
+                            <strong>Costo final:</strong> ${solicitud.costo_final}
                           </p>
                         )}
                       </div>
 
-                      {(solicitud.estado_trabajo === "ASIGNADO" ||
-                        solicitud.estado_trabajo === "EN_PROCESO") && (
-                        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                          <h5 className="mb-3 font-semibold text-gray-900">
-                            Preparar cotización
-                          </h5>
+                      <AvailabilitySummary solicitud={solicitud} />
 
-                          <div className="grid gap-3">
-                            <input
-                              type="number"
-                              min="1"
-                              value={
-                                cotizaciones[solicitud.id_solicitud]?.monto ||
-                                ""
-                              }
-                              onChange={(event) =>
-                                setCotizaciones((prev) => ({
-                                  ...prev,
-                                  [solicitud.id_solicitud]: {
-                                    monto: event.target.value,
-                                    detalle:
-                                      prev[solicitud.id_solicitud]?.detalle ||
-                                      "",
-                                    vigencia:
-                                      prev[solicitud.id_solicitud]?.vigencia ||
-                                      "",
-                                  },
-                                }))
-                              }
-                              placeholder="Monto estimado de la cotización"
-                              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                            />
-
-                            <textarea
-                              value={
-                                cotizaciones[solicitud.id_solicitud]
-                                  ?.detalle || ""
-                              }
-                              onChange={(event) =>
-                                setCotizaciones((prev) => ({
-                                  ...prev,
-                                  [solicitud.id_solicitud]: {
-                                    monto:
-                                      prev[solicitud.id_solicitud]?.monto ||
-                                      "",
-                                    detalle: event.target.value,
-                                    vigencia:
-                                      prev[solicitud.id_solicitud]?.vigencia ||
-                                      "",
-                                  },
-                                }))
-                              }
-                              rows={3}
-                              placeholder="Detalle, alcance o condiciones de la cotización"
-                              className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                            />
-
-                            <input
-                              type="date"
-                              value={
-                                cotizaciones[solicitud.id_solicitud]
-                                  ?.vigencia || ""
-                              }
-                              onChange={(event) =>
-                                setCotizaciones((prev) => ({
-                                  ...prev,
-                                  [solicitud.id_solicitud]: {
-                                    monto:
-                                      prev[solicitud.id_solicitud]?.monto ||
-                                      "",
-                                    detalle:
-                                      prev[solicitud.id_solicitud]?.detalle ||
-                                      "",
-                                    vigencia: event.target.value,
-                                  },
-                                }))
-                              }
-                              className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                            />
-
-                            <button
-                              onClick={() =>
-                                handleCrearCotizacion(
-                                  solicitud.id_solicitud
-                                )
-                              }
-                              disabled={
-                                accionLoading === solicitud.id_solicitud
-                              }
-                              className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:bg-indigo-300"
-                            >
-                              <Send className="h-5 w-5" />
-                              {accionLoading === solicitud.id_solicitud
-                                ? "Enviando cotización..."
-                                : "Enviar cotización al cliente"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {solicitud.estado_trabajo === "ASIGNADO" && (
+                      {isTechnicianApproved && solicitud.estado_trabajo === "ASIGNADO" && (
                         <button
-                          onClick={() =>
-                            handleIniciar(solicitud.id_solicitud)
+                          type="button"
+                          onClick={() => handleIniciar(solicitud.id_solicitud)}
+                          disabled={
+                            accionLoading === `start-${solicitud.id_solicitud}`
                           }
-                          disabled={accionLoading === solicitud.id_solicitud}
                           className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
                         >
                           <PlayCircle className="h-5 w-5" />
-                          {accionLoading === solicitud.id_solicitud
+                          {accionLoading === `start-${solicitud.id_solicitud}`
                             ? "Iniciando trabajo..."
                             : "Iniciar trabajo asignado"}
                         </button>
                       )}
 
-                      {solicitud.estado_trabajo === "EN_PROCESO" && (
+                      {isTechnicianApproved && solicitud.estado_trabajo === "EN_PROCESO" && (
                         <div className="mt-4 space-y-3">
                           <input
                             type="number"
                             min="1"
-                            value={
-                              costosFinales[solicitud.id_solicitud] || ""
-                            }
+                            value={costosFinales[solicitud.id_solicitud] || ""}
                             onChange={(event) =>
                               setCostosFinales((prev) => ({
                                 ...prev,
-                                [solicitud.id_solicitud]:
-                                  event.target.value,
+                                [solicitud.id_solicitud]: event.target.value,
                               }))
                             }
                             placeholder="Costo final"
                             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
                           />
-
                           <button
-                            onClick={() =>
-                              handleFinalizar(solicitud.id_solicitud)
-                            }
+                            type="button"
+                            onClick={() => handleFinalizar(solicitud.id_solicitud)}
                             disabled={
-                              accionLoading === solicitud.id_solicitud
+                              accionLoading === `finish-${solicitud.id_solicitud}`
                             }
                             className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:bg-green-300"
                           >
                             <CheckCircle className="h-5 w-5" />
-                            {accionLoading === solicitud.id_solicitud
+                            {accionLoading === `finish-${solicitud.id_solicitud}`
                               ? "Registrando cierre..."
                               : "Finalizar trabajo y registrar costo"}
                           </button>
@@ -672,6 +793,89 @@ function TecnicoDashboard() {
           </div>
         )}
       </main>
+
+      <Modal
+        open={Boolean(reportSolicitud)}
+        title="Reportar solicitud"
+        description={reportSolicitud?.titulo_solicitud}
+        onClose={closeReportModal}
+        maxWidth="lg"
+      >
+        <div className="space-y-4">
+          <label className="block text-sm font-semibold text-slate-700">
+            Motivo
+            <select
+              value={reportForm.motivo}
+              onChange={(event) =>
+                setReportForm((prev) => ({
+                  ...prev,
+                  motivo: event.target.value,
+                }))
+              }
+              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              {reportReasons.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {reportForm.motivo === "OTRO_MOTIVO" && (
+            <label className="block text-sm font-semibold text-slate-700">
+              Describe el motivo
+              <textarea
+                value={reportForm.descripcion_otro}
+                onChange={(event) =>
+                  setReportForm((prev) => ({
+                    ...prev,
+                    descripcion_otro: event.target.value,
+                  }))
+                }
+                rows={3}
+                className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+            </label>
+          )}
+
+          <label className="block text-sm font-semibold text-slate-700">
+            Comentario opcional
+            <textarea
+              value={reportForm.comentario}
+              onChange={(event) =>
+                setReportForm((prev) => ({
+                  ...prev,
+                  comentario: event.target.value,
+                }))
+              }
+              rows={3}
+              className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+            />
+          </label>
+
+          <div className="flex flex-wrap justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeReportModal}
+              className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleReportarSolicitud}
+              disabled={
+                Boolean(reportSolicitud) &&
+                accionLoading === `report-${reportSolicitud?.id_solicitud}`
+              }
+              className="rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700 disabled:bg-rose-300"
+            >
+              Enviar reporte
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -37,6 +37,12 @@ function getRoleLabel(role?: string) {
   return "";
 }
 
+function getUserRoles(usuario?: { tipo_usuario: string; roles?: string[] } | null) {
+  if (!usuario) return [];
+  const roles = usuario.roles?.length ? usuario.roles : [usuario.tipo_usuario];
+  return Array.from(new Set(roles));
+}
+
 function Navbar() {
   const { usuario, logout } = useAuth();
   const [open, setOpen] = useState(false);
@@ -75,8 +81,14 @@ function Navbar() {
     await cargarNotificaciones();
   }
 
+  const roles = getUserRoles(usuario);
   const links = usuario
-    ? roleLinks[usuario.tipo_usuario as keyof typeof roleLinks] ?? []
+    ? roles
+        .flatMap((role) => roleLinks[role as keyof typeof roleLinks] ?? [])
+        .filter(
+          (link, index, allLinks) =>
+            allLinks.findIndex((item) => item.to === link.to) === index
+        )
     : publicLinks;
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -97,7 +109,7 @@ function Navbar() {
           <span className="block text-2xl font-bold leading-none text-teal-700">FixYa</span>
           {usuario && (
             <p className="mt-1 text-xs font-semibold text-slate-500">
-              Flujo {getRoleLabel(usuario.tipo_usuario)}
+              Flujo {roles.map(getRoleLabel).join(" / ")}
             </p>
           )}
         </div>

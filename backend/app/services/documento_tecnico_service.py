@@ -6,6 +6,7 @@ from app.models.documento_tecnico import DocumentoTecnico
 from app.models.tecnico import Tecnico
 from app.models.usuario import Usuario
 from app.schemas.documento_tecnico_schema import DocumentoTecnicoCreate
+from app.dependencies import usuario_tiene_rol
 
 
 def crear_documento_tecnico(db: Session, documento: DocumentoTecnicoCreate):
@@ -52,12 +53,9 @@ def aprobar_documento_tecnico(db: Session, id_documento: int, usuario_rut: str):
     if not documento:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
 
-    admin = db.query(Usuario).filter(
-        Usuario.rut == usuario_rut,
-        Usuario.tipo_usuario == "ADMIN"
-    ).first()
+    admin = db.query(Usuario).filter(Usuario.rut == usuario_rut).first()
 
-    if not admin:
+    if not admin or not usuario_tiene_rol(db, usuario_rut, "ADMIN"):
         raise HTTPException(
             status_code=403,
             detail="Solo un administrador puede aprobar documentos"
@@ -86,12 +84,9 @@ def rechazar_documento_tecnico(db: Session, id_documento: int, usuario_rut: str)
     if not documento:
         raise HTTPException(status_code=404, detail="Documento no encontrado")
 
-    admin = db.query(Usuario).filter(
-        Usuario.rut == usuario_rut,
-        Usuario.tipo_usuario == "ADMIN"
-    ).first()
+    admin = db.query(Usuario).filter(Usuario.rut == usuario_rut).first()
 
-    if not admin:
+    if not admin or not usuario_tiene_rol(db, usuario_rut, "ADMIN"):
         raise HTTPException(
             status_code=403,
             detail="Solo un administrador puede rechazar documentos"
@@ -162,9 +157,11 @@ def verificar_tecnico_automaticamente(db: Session, tecnico_rut: str):
 
         if tecnico:
             tecnico.tecnico_verificado = True
+            tecnico.estado_verificacion = "APROBADO"
+            tecnico.fecha_revision = datetime.utcnow()
             db.commit()
             
 def listar_tecnicos_pendientes_verificacion(db: Session):
     return db.query(Tecnico).filter(
-        Tecnico.tecnico_verificado == False
+        Tecnico.estado_verificacion != "APROBADO"
     ).all()

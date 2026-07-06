@@ -15,6 +15,18 @@ function getHomeByRole(role: string) {
   return "/";
 }
 
+function getRoles(usuario: { tipo_usuario: string; roles?: string[] }) {
+  const roles = usuario.roles?.length ? usuario.roles : [usuario.tipo_usuario];
+  return Array.from(new Set(roles));
+}
+
+function getHomeByRoles(roles: string[]) {
+  if (roles.includes("ADMIN")) return getHomeByRole("ADMIN");
+  if (roles.includes("TECNICO")) return getHomeByRole("TECNICO");
+  if (roles.includes("CLIENTE")) return getHomeByRole("CLIENTE");
+  return "/";
+}
+
 function ProtectedRoute({
   children,
   allowedRoles,
@@ -35,11 +47,13 @@ function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
+  const roles = getRoles(usuario);
+
   if (
     allowedRoles &&
-    !allowedRoles.includes(usuario.tipo_usuario)
+    !roles.some((role) => allowedRoles.includes(role))
   ) {
-    return <Navigate to={getHomeByRole(usuario.tipo_usuario)} replace />;
+    return <Navigate to={getHomeByRoles(roles)} replace />;
   }
 
   return <>{children}</>;

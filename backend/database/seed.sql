@@ -101,8 +101,76 @@ ON CONFLICT (rut) DO UPDATE SET
   estado_usuario = EXCLUDED.estado_usuario,
   comuna_id_comuna = EXCLUDED.comuna_id_comuna;
 
--- USUARIO CLIENTE
--- Contraseña real: cliente123
+-- USUARIO CLIENTE PRUEBA
+-- Solo para QA/desarrollo. Contrasena real: cliente123
+INSERT INTO usuario (
+  rut,
+  nombre_completo,
+  fecha_nacimiento,
+  genero,
+  correo,
+  telefono,
+  contrasena,
+  estado_usuario,
+  comuna_id_comuna,
+  tipo_usuario
+)
+VALUES (
+  '12345678-5',
+  'Cliente Prueba FixYa',
+  '1998-05-10',
+  'Femenino',
+  'cliente.prueba@fixya.local',
+  '988888888',
+  '$2y$12$89AnaEY3u/onkdv1JG2zr.meugUfo2ZtkvyguDtE4u8rJk3Q8zP5.',
+  true,
+  19,
+  'CLIENTE'
+)
+ON CONFLICT (rut) DO UPDATE SET
+  nombre_completo = EXCLUDED.nombre_completo,
+  correo = EXCLUDED.correo,
+  contrasena = EXCLUDED.contrasena,
+  tipo_usuario = EXCLUDED.tipo_usuario,
+  estado_usuario = EXCLUDED.estado_usuario,
+  comuna_id_comuna = EXCLUDED.comuna_id_comuna;
+
+-- USUARIO TECNICO PRUEBA
+-- Solo para QA/desarrollo. Contrasena real: tecnico123
+INSERT INTO usuario (
+  rut,
+  nombre_completo,
+  fecha_nacimiento,
+  genero,
+  correo,
+  telefono,
+  contrasena,
+  estado_usuario,
+  comuna_id_comuna,
+  tipo_usuario
+)
+VALUES (
+  '87654321-4',
+  'Tecnico Prueba FixYa',
+  '1995-02-15',
+  'Masculino',
+  'tecnico.prueba@fixya.local',
+  '977777777',
+  '$2y$12$7MKIL5rQJ8sekD8SZrfQZ.zNnxsVRjkswP0G49986PzfB9dZl9CfG',
+  true,
+  19,
+  'TECNICO'
+)
+ON CONFLICT (rut) DO UPDATE SET
+  nombre_completo = EXCLUDED.nombre_completo,
+  correo = EXCLUDED.correo,
+  contrasena = EXCLUDED.contrasena,
+  tipo_usuario = EXCLUDED.tipo_usuario,
+  estado_usuario = EXCLUDED.estado_usuario,
+  comuna_id_comuna = EXCLUDED.comuna_id_comuna;
+
+-- USUARIO CLIENTE DEMO
+-- Contrasena real: cliente123
 INSERT INTO usuario (
   rut,
   nombre_completo,
@@ -128,14 +196,15 @@ VALUES (
   'CLIENTE'
 )
 ON CONFLICT (rut) DO UPDATE SET
+  nombre_completo = EXCLUDED.nombre_completo,
   correo = EXCLUDED.correo,
   contrasena = EXCLUDED.contrasena,
   tipo_usuario = EXCLUDED.tipo_usuario,
   estado_usuario = EXCLUDED.estado_usuario,
   comuna_id_comuna = EXCLUDED.comuna_id_comuna;
 
--- USUARIO TÉCNICO
--- Contraseña real: tecnico123
+-- USUARIO TECNICO DEMO
+-- Contrasena real: tecnico123
 INSERT INTO usuario (
   rut,
   nombre_completo,
@@ -150,7 +219,7 @@ INSERT INTO usuario (
 )
 VALUES (
   '12311111-1',
-  'Técnico Demo',
+  'Tecnico Demo',
   '1995-02-15',
   'Masculino',
   'tecnico@fixya.cl',
@@ -161,45 +230,97 @@ VALUES (
   'TECNICO'
 )
 ON CONFLICT (rut) DO UPDATE SET
+  nombre_completo = EXCLUDED.nombre_completo,
   correo = EXCLUDED.correo,
   contrasena = EXCLUDED.contrasena,
   tipo_usuario = EXCLUDED.tipo_usuario,
   estado_usuario = EXCLUDED.estado_usuario,
   comuna_id_comuna = EXCLUDED.comuna_id_comuna;
 
--- TÉCNICO
+-- ROLES BASE
+INSERT INTO usuario_rol (usuario_rut, rol, activo)
+VALUES
+  ('11111111-1', 'ADMIN', true),
+  ('12345678-5', 'CLIENTE', true),
+  ('87654321-4', 'TECNICO', true),
+  ('22222222-2', 'CLIENTE', true),
+  ('12311111-1', 'TECNICO', true)
+ON CONFLICT (usuario_rut, rol) DO UPDATE SET
+  activo = EXCLUDED.activo;
+
+-- TECNICO PRUEBA
 INSERT INTO tecnico (
   usuario_rut,
   descripcion_perfil,
   experiencia_anios,
   nivel_tecnico,
-  tecnico_verificado
+  tecnico_verificado,
+  estado_verificacion
 )
 VALUES (
-  '12311111-1',
-  'Especialista en instalaciones eléctricas',
+  '87654321-4',
+  'Tecnico de prueba para validacion de flujos FixYa',
   5,
-  'Senior',
-  true
+  'Avanzado',
+  true,
+  'APROBADO'
 )
 ON CONFLICT (usuario_rut) DO UPDATE SET
   descripcion_perfil = EXCLUDED.descripcion_perfil,
   experiencia_anios = EXCLUDED.experiencia_anios,
   nivel_tecnico = EXCLUDED.nivel_tecnico,
-  tecnico_verificado = EXCLUDED.tecnico_verificado;
+  tecnico_verificado = EXCLUDED.tecnico_verificado,
+  estado_verificacion = EXCLUDED.estado_verificacion;
 
--- TÉCNICO SERVICIO
+-- TECNICO DEMO
+INSERT INTO tecnico (
+  usuario_rut,
+  descripcion_perfil,
+  experiencia_anios,
+  nivel_tecnico,
+  tecnico_verificado,
+  estado_verificacion
+)
+VALUES (
+  '12311111-1',
+  'Especialista en instalaciones electricas',
+  5,
+  'Senior',
+  true,
+  'APROBADO'
+)
+ON CONFLICT (usuario_rut) DO UPDATE SET
+  descripcion_perfil = EXCLUDED.descripcion_perfil,
+  experiencia_anios = EXCLUDED.experiencia_anios,
+  nivel_tecnico = EXCLUDED.nivel_tecnico,
+  tecnico_verificado = EXCLUDED.tecnico_verificado,
+  estado_verificacion = EXCLUDED.estado_verificacion;
+
+-- SERVICIOS DEL TECNICO PRUEBA
 INSERT INTO tecnico_servicio (
   tecnico_usuario_rut,
   servicio_id_servicio
 )
+VALUES
+  ('87654321-4', 1),
+  ('87654321-4', 2),
+  ('87654321-4', 3),
+  ('87654321-4', 4),
+  ('12311111-1', 1)
+ON CONFLICT DO NOTHING;
+
+-- COMUNA DEL TECNICO PRUEBA
+INSERT INTO tecnico_comuna (
+  tecnico_usuario_rut,
+  comuna_id_comuna
+)
 VALUES (
-  '12311111-1',
-  1
+  '87654321-4',
+  19
 )
 ON CONFLICT DO NOTHING;
 
--- TÉCNICO COMUNA
+-- COMUNA DEL TECNICO DEMO
 INSERT INTO tecnico_comuna (
   tecnico_usuario_rut,
   comuna_id_comuna
@@ -209,7 +330,6 @@ VALUES (
   19
 )
 ON CONFLICT DO NOTHING;
-
 
 -- ==========================================================================
 -- DATOS DE PRUEBA: 10 TÉCNICOS (demo defensa de título)
@@ -255,6 +375,14 @@ VALUES
   ('17456219-1', 'Técnica en gasfitería y electricidad, orientada a mantención integral del hogar.', 9, 'Avanzado', true),
   ('18234905-6', 'Técnico eléctrico y en techumbres, con foco en soluciones para viviendas y locales comerciales.', 6, 'Intermedio', false)
 ON CONFLICT (usuario_rut) DO NOTHING;
+
+UPDATE tecnico
+SET estado_verificacion = CASE
+  WHEN tecnico_verificado = TRUE THEN 'APROBADO'
+  ELSE 'PENDIENTE'
+END
+WHERE estado_verificacion IS NULL
+   OR estado_verificacion = 'PENDIENTE';
 
 -- OFICIOS DE CADA TÉCNICO (tecnico_servicio)
 INSERT INTO tecnico_servicio (tecnico_usuario_rut, servicio_id_servicio)
@@ -309,6 +437,28 @@ VALUES
   ('19876543-1', 'Isidora Pizarro Fuentes', '2001-11-30', 'Femenino', 'isidora.pizarro@gmail.com', '971112225', '$2b$12$HAMRe1QsgYMptsqxshdRfuCH8sZBXjec6U8/rfusKBPFxYrWaf8OW', true, 5, 'CLIENTE', '2026-06-02'),
   ('13456789-5', 'Vicente Cortés Araya', '1984-03-22', 'Masculino', 'vicente.cortes@gmail.com', '971112226', '$2b$12$HAMRe1QsgYMptsqxshdRfuCH8sZBXjec6U8/rfusKBPFxYrWaf8OW', true, 12, 'CLIENTE', '2026-06-28')
 ON CONFLICT (rut) DO NOTHING;
+
+-- ROLES PARA DATOS DEMO
+INSERT INTO usuario_rol (usuario_rut, rol, activo)
+VALUES
+  ('16345201-8', 'TECNICO', true),
+  ('17890342-2', 'TECNICO', true),
+  ('15234876-7', 'TECNICO', true),
+  ('18765123-0', 'TECNICO', true),
+  ('14567890-6', 'TECNICO', true),
+  ('19345671-6', 'TECNICO', true),
+  ('20123456-3', 'TECNICO', true),
+  ('13876540-3', 'TECNICO', true),
+  ('17456219-1', 'TECNICO', true),
+  ('18234905-6', 'TECNICO', true),
+  ('15987654-8', 'CLIENTE', true),
+  ('16234098-4', 'CLIENTE', true),
+  ('17654321-6', 'CLIENTE', true),
+  ('14098765-K', 'CLIENTE', true),
+  ('19876543-1', 'CLIENTE', true),
+  ('13456789-5', 'CLIENTE', true)
+ON CONFLICT (usuario_rut, rol) DO UPDATE SET
+  activo = EXCLUDED.activo;
 
 
 -- ==========================================================================
@@ -429,3 +579,135 @@ VALUES
   (9012, 9012, '16234098-4', 3.0, 'El trabajo quedó bien pero llegó tarde y el cobro final fue mayor al presupuesto acordado.', '2026-06-11', 'S', 'S', 'El técnico reporta que la reseña no refleja el trabajo acordado', '2026-06-12', 'N', NULL, '13876540-3', NULL),
   (9013, 9013, '15987654-8', 4.5, 'Buena solución al problema del desagüe, profesional y amable. El precio me pareció justo.', '2026-05-23', 'S', 'N', NULL, NULL, NULL, NULL, NULL, NULL)
 ON CONFLICT (id_resena) DO NOTHING;
+-- SOLICITUDES DEL CLIENTE PRUEBA
+INSERT INTO solicitud (
+  id_solicitud,
+  usuario_rut,
+  servicio_id_servicio,
+  tecnico_usuario_rut,
+  comuna_id_comuna,
+  titulo_solicitud,
+  descripcion_problema,
+  urgencia,
+  direccion,
+  solicitud_activa,
+  estado_trabajo,
+  tipo_problema,
+  ubicacion_problema_referencia,
+  tipo_inmueble,
+  detalle_inmueble,
+  piso,
+  numero_departamento,
+  tiene_conserjeria,
+  requiere_autorizacion,
+  horario_disponible,
+  condiciones_acceso,
+  instrucciones_acceso,
+  persona_contacto,
+  telefono_contacto,
+  estacionamiento_disponible,
+  tiene_mascotas
+)
+VALUES
+  (
+    9101,
+    '12345678-5',
+    1,
+    NULL,
+    19,
+    'Reparacion electrica en cocina',
+    'El enchufe principal de la cocina dejo de funcionar y salta el automatico al conectar electrodomesticos.',
+    'MEDIA',
+    'Av. Prueba 123, Concepcion',
+    true,
+    'INICIADO',
+    'Falla electrica',
+    'Cocina junto al lavaplatos',
+    'Departamento',
+    'Edificio con acceso por conserjeria',
+    '5',
+    '502',
+    true,
+    true,
+    'Lunes 19:00 a 22:00, Miercoles 15:00 a 19:00',
+    'Avisar en conserjeria antes de subir',
+    'Llamar al contacto cuando llegue al edificio',
+    'Cliente Prueba FixYa',
+    '988888888',
+    true,
+    false
+  ),
+  (
+    9102,
+    '12345678-5',
+    2,
+    NULL,
+    19,
+    'Filtracion de agua en bano',
+    'Hay una filtracion bajo el lavamanos del bano principal y el mueble se moja constantemente.',
+    'ALTA',
+    'Av. Prueba 123, Concepcion',
+    true,
+    'INICIADO',
+    'Filtracion',
+    'Bano principal bajo el lavamanos',
+    'Departamento',
+    'Edificio con acceso por conserjeria',
+    '5',
+    '502',
+    true,
+    true,
+    'Martes 18:00 a 21:00, Jueves 19:00 a 22:00',
+    'Avisar en conserjeria antes de subir',
+    'Llamar al contacto cuando llegue al edificio',
+    'Cliente Prueba FixYa',
+    '988888888',
+    true,
+    false
+  )
+ON CONFLICT (id_solicitud) DO UPDATE SET
+  usuario_rut = EXCLUDED.usuario_rut,
+  servicio_id_servicio = EXCLUDED.servicio_id_servicio,
+  tecnico_usuario_rut = EXCLUDED.tecnico_usuario_rut,
+  comuna_id_comuna = EXCLUDED.comuna_id_comuna,
+  titulo_solicitud = EXCLUDED.titulo_solicitud,
+  descripcion_problema = EXCLUDED.descripcion_problema,
+  urgencia = EXCLUDED.urgencia,
+  direccion = EXCLUDED.direccion,
+  solicitud_activa = EXCLUDED.solicitud_activa,
+  estado_trabajo = EXCLUDED.estado_trabajo,
+  tipo_problema = EXCLUDED.tipo_problema,
+  ubicacion_problema_referencia = EXCLUDED.ubicacion_problema_referencia,
+  tipo_inmueble = EXCLUDED.tipo_inmueble,
+  detalle_inmueble = EXCLUDED.detalle_inmueble,
+  piso = EXCLUDED.piso,
+  numero_departamento = EXCLUDED.numero_departamento,
+  tiene_conserjeria = EXCLUDED.tiene_conserjeria,
+  requiere_autorizacion = EXCLUDED.requiere_autorizacion,
+  horario_disponible = EXCLUDED.horario_disponible,
+  condiciones_acceso = EXCLUDED.condiciones_acceso,
+  instrucciones_acceso = EXCLUDED.instrucciones_acceso,
+  persona_contacto = EXCLUDED.persona_contacto,
+  telefono_contacto = EXCLUDED.telefono_contacto,
+  estacionamiento_disponible = EXCLUDED.estacionamiento_disponible,
+  tiene_mascotas = EXCLUDED.tiene_mascotas;
+
+INSERT INTO solicitud_disponibilidad (
+  solicitud_id_solicitud,
+  dia,
+  hora_inicio,
+  hora_fin
+)
+VALUES
+  (9101, 'LUNES', '19:00', '22:00'),
+  (9101, 'MIERCOLES', '15:00', '19:00'),
+  (9102, 'MARTES', '18:00', '21:00'),
+  (9102, 'JUEVES', '19:00', '22:00')
+ON CONFLICT (solicitud_id_solicitud, dia) DO UPDATE SET
+  hora_inicio = EXCLUDED.hora_inicio,
+  hora_fin = EXCLUDED.hora_fin;
+
+SELECT setval(
+  pg_get_serial_sequence('solicitud', 'id_solicitud'),
+  GREATEST((SELECT MAX(id_solicitud) FROM solicitud), 1)
+);

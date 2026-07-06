@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.dependencies import solo_admin, solo_tecnico
+from app.dependencies import get_current_usuario, solo_admin, solo_tecnico, usuario_tiene_rol
 from app.database import get_db
 from app.services import documento_tecnico_service
 from app.services.archivo_service import guardar_archivo
@@ -27,6 +27,12 @@ def subir_documento_tecnico(
     current_user: dict = Depends(solo_tecnico),
     db: Session = Depends(get_db)
 ):
+    if current_user.get("rut") != tecnico_usuario_rut:
+        raise HTTPException(
+            status_code=403,
+            detail="No puedes subir documentos para otro tecnico"
+        )
+
     nombre_archivo, archivo_url = guardar_archivo(archivo, "documentos_tecnicos")
 
     return documento_tecnico_service.crear_documento_tecnico_archivo(
@@ -40,7 +46,10 @@ def subir_documento_tecnico(
 
 # LISTAR TODOS LOS DOCUMENTOS
 @router.get("/", response_model=List[DocumentoTecnicoResponse])
-def listar_documentos_tecnicos(db: Session = Depends(get_db)):
+def listar_documentos_tecnicos(
+    current_user: dict = Depends(solo_admin),
+    db: Session = Depends(get_db),
+):
     return documento_tecnico_service.listar_documentos_tecnicos(db)
 
 
@@ -60,8 +69,16 @@ def listar_tecnicos_pendientes_verificacion(
 @router.get("/tecnico/{rut}", response_model=List[DocumentoTecnicoResponse])
 def obtener_documentos_por_tecnico(
     rut: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_usuario),
 ):
+    es_admin = usuario_tiene_rol(db, usuario_actual.rut, "ADMIN")
+    if not es_admin and usuario_actual.rut != rut:
+        raise HTTPException(
+            status_code=403,
+            detail="No puedes ver documentos de otro tecnico"
+        )
+
     return documento_tecnico_service.obtener_documentos_por_tecnico(db, rut)
 
 
@@ -76,7 +93,7 @@ def aprobar_documento_tecnico(
     return documento_tecnico_service.aprobar_documento_tecnico(
         db,
         id_documento,
-        data.usuario_rut
+        current_user.get("rut")
     )
 
 
@@ -91,5 +108,5 @@ def rechazar_documento_tecnico(
     return documento_tecnico_service.rechazar_documento_tecnico(
         db,
         id_documento,
-        data.usuario_rut
+        current_user.get("rut")
     )

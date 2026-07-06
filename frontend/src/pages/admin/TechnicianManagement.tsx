@@ -30,7 +30,14 @@ import { useAuth } from "../../context/AuthContext";
 import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 
-type FilterType = "all" | "verified" | "pending";
+type FilterType =
+  | "all"
+  | "APROBADO"
+  | "PENDIENTE"
+  | "EN_REVISION"
+  | "OBSERVADO"
+  | "RECHAZADO"
+  | "SUSPENDIDO";
 
 interface TecnicoAdmin extends Tecnico {
   nombre_completo: string;
@@ -52,6 +59,29 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat("es-CL", {
     dateStyle: "medium",
   }).format(date);
+}
+
+function getVerificationState(tech: Tecnico) {
+  return tech.estado_verificacion || (tech.tecnico_verificado ? "APROBADO" : "PENDIENTE");
+}
+
+function getVerificationLabel(state: string) {
+  if (state === "APROBADO") return "Aprobado";
+  if (state === "EN_REVISION") return "En revision";
+  if (state === "OBSERVADO") return "Observado";
+  if (state === "RECHAZADO") return "Rechazado";
+  if (state === "SUSPENDIDO") return "Suspendido";
+  return "Pendiente";
+}
+
+function getVerificationClass(state: string) {
+  if (state === "APROBADO") return "bg-green-100 text-green-700";
+  if (state === "RECHAZADO" || state === "SUSPENDIDO") {
+    return "bg-red-100 text-red-700";
+  }
+  if (state === "OBSERVADO") return "bg-orange-100 text-orange-700";
+  if (state === "EN_REVISION") return "bg-blue-100 text-blue-700";
+  return "bg-yellow-100 text-yellow-700";
 }
 
 export default function TechnicianManagement() {
@@ -186,9 +216,7 @@ export default function TechnicianManagement() {
   const filteredTechnicians = useMemo(() => {
     return technicians.filter((tech) => {
       const matchesFilter =
-        filter === "all" ||
-        (filter === "verified" && tech.tecnico_verificado) ||
-        (filter === "pending" && !tech.tecnico_verificado);
+        filter === "all" || getVerificationState(tech) === filter;
 
       const search = searchTerm.toLowerCase();
 
@@ -203,11 +231,11 @@ export default function TechnicianManagement() {
   }, [technicians, filter, searchTerm]);
 
   const totalVerificados = technicians.filter(
-    (tech) => tech.tecnico_verificado
+    (tech) => getVerificationState(tech) === "APROBADO"
   ).length;
 
   const totalPendientes = technicians.filter(
-    (tech) => !tech.tecnico_verificado
+    (tech) => getVerificationState(tech) !== "APROBADO"
   ).length;
 
   return (
@@ -275,25 +303,69 @@ export default function TechnicianManagement() {
             </button>
 
             <button
-              onClick={() => setFilter("verified")}
+              onClick={() => setFilter("APROBADO")}
               className={`rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
-                filter === "verified"
+                filter === "APROBADO"
                   ? "bg-green-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              Verificados
+              Aprobados
             </button>
 
             <button
-              onClick={() => setFilter("pending")}
+              onClick={() => setFilter("PENDIENTE")}
               className={`rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
-                filter === "pending"
+                filter === "PENDIENTE"
                   ? "bg-yellow-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
               Pendientes
+            </button>
+
+            <button
+              onClick={() => setFilter("EN_REVISION")}
+              className={`rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                filter === "EN_REVISION"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              En revision
+            </button>
+
+            <button
+              onClick={() => setFilter("OBSERVADO")}
+              className={`rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                filter === "OBSERVADO"
+                  ? "bg-orange-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Observados
+            </button>
+
+            <button
+              onClick={() => setFilter("RECHAZADO")}
+              className={`rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                filter === "RECHAZADO"
+                  ? "bg-red-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Rechazados
+            </button>
+
+            <button
+              onClick={() => setFilter("SUSPENDIDO")}
+              className={`rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                filter === "SUSPENDIDO"
+                  ? "bg-red-700 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Suspendidos
             </button>
           </div>
         </div>
@@ -348,7 +420,10 @@ export default function TechnicianManagement() {
               </thead>
 
               <tbody className="divide-y divide-gray-100">
-                {filteredTechnicians.map((tech) => (
+                {filteredTechnicians.map((tech) => {
+                  const verificationState = getVerificationState(tech);
+
+                  return (
                   <tr
                     key={tech.usuario_rut}
                     className="hover:bg-gray-50"
@@ -400,15 +475,20 @@ export default function TechnicianManagement() {
                     </td>
 
                     <td className="px-6 py-4">
-                      {tech.tecnico_verificado ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                      {verificationState === "APROBADO" ? (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${getVerificationClass(verificationState)}`}>
                           <CheckCircle className="h-4 w-4" />
-                          Verificado
+                          {getVerificationLabel(verificationState)}
+                          <span className="hidden">
+                          </span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${getVerificationClass(verificationState)}`}>
                           <XCircle className="h-4 w-4" />
+                          {getVerificationLabel(verificationState)}
+                          <span className="hidden">
                           Pendiente de verificación
+                          </span>
                         </span>
                       )}
                     </td>
@@ -422,7 +502,7 @@ export default function TechnicianManagement() {
                           Ver perfil técnico
                         </button>
 
-                        {!tech.tecnico_verificado && (
+                        {verificationState !== "APROBADO" && (
                           <button
                             onClick={() => handleApprove(tech.usuario_rut)}
                             disabled={actionLoading === tech.usuario_rut}
@@ -436,7 +516,8 @@ export default function TechnicianManagement() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -517,9 +598,12 @@ export default function TechnicianManagement() {
                 </p>
                 <p className="mt-1 inline-flex items-center gap-2 font-semibold text-gray-900">
                   <ShieldCheck className="h-5 w-5 text-green-600" />
+                  {getVerificationLabel(getVerificationState(selectedTechnician))}
+                  <span className="hidden">
                   {selectedTechnician.tecnico_verificado
                     ? "Verificado"
                     : "Pendiente de verificación"}
+                  </span>
                 </p>
               </div>
             </div>

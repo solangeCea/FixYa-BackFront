@@ -106,9 +106,11 @@ function Login() {
       const usuario = await obtenerUsuarioActual(response.access_token);
 
       const selectedAuthRole = normalizeRole(selectedRole);
-      const userAuthRole = normalizeRole(usuario.tipo_usuario);
+      const userRoles = (usuario.roles?.length ? usuario.roles : [usuario.tipo_usuario])
+        .map(normalizeRole)
+        .filter(Boolean) as AuthRole[];
 
-      if (selectedAuthRole !== userAuthRole) {
+      if (!selectedAuthRole || !userRoles.includes(selectedAuthRole)) {
         removeToken();
         sessionStorage.clear();
         setUsuario(null);
@@ -121,12 +123,12 @@ function Login() {
       saveToken(response.access_token);
       setUsuario(usuario);
 
-      if (usuario.tipo_usuario === "CLIENTE" && isSafeClienteNext(nextPath)) {
+      if (selectedAuthRole === "CLIENTE" && isSafeClienteNext(nextPath)) {
         navigate(nextPath as string);
         return;
       }
 
-      navigate(getDashboardPath(usuario.tipo_usuario));
+      navigate(getDashboardPath(selectedAuthRole));
     } catch (error) {
       setError(
         "El correo o la contraseña no coinciden. Revisa los datos e inténtalo nuevamente."
