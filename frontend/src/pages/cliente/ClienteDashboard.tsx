@@ -1144,10 +1144,12 @@ function ClienteDashboard() {
                 name="descripcion_problema"
                 value={form.descripcion_problema}
                 onChange={handleChange}
+                maxLength={1000}
                 placeholder="Describe el problema con el mayor detalle posible"
                 rows={4}
                 className={`${fieldClass(fieldErrors.descripcion_problema)} resize-none`}
               />
+              <p className="mt-1 text-xs text-slate-400">Mínimo 20 caracteres.</p>
               <FieldError message={fieldErrors.descripcion_problema} />
               </div>
 
@@ -1301,6 +1303,7 @@ function ClienteDashboard() {
                 name="direccion"
                 value={form.direccion}
                 onChange={handleChange}
+                maxLength={200}
                 placeholder="Calle, número y comuna"
                 className={fieldClass(fieldErrors.direccion)}
               />
@@ -1319,6 +1322,7 @@ function ClienteDashboard() {
                   name="ubicacion_problema_referencia"
                   value={form.ubicacion_problema_referencia}
                   onChange={handleChange}
+                  maxLength={200}
                   placeholder="Ej: cocina, baño del segundo piso o habitación principal"
                   className={fieldClass(fieldErrors.ubicacion_problema_referencia)}
                 />
