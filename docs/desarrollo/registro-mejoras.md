@@ -630,3 +630,137 @@ encabezados y de metadatos.
 reemplazar por el dominio real en producción.
 
 ---
+
+## M-21 · 2026-07-06 — Revisión de UX: dependencia Región→Comuna, navegación y consistencia de formularios
+**Categoría:** Mejora de experiencia de usuario (UX)
+
+### Problema detectado
+1) En el formulario de solicitud del cliente, el selector de Comuna mostraba de
+inmediato las 25 comunas del país, sin relación con la región (mala experiencia y
+alto costo de búsqueda). 2) Las pantallas de Login y Registro no ofrecían una vía
+clara de regreso al Home; el usuario dependía del botón "Atrás" del navegador. 3)
+Inconsistencias visuales: el formulario del cliente y el registro usaban acentos
+azules frente a la identidad teal del sistema; Login presentaba doble `<h1>`;
+placeholders y campos obligatorios poco claros.
+
+### Causa
+El formulario del cliente cargaba y renderizaba `getComunas()` (todas) sin filtrar
+por región, pese a existir ya la relación `Comuna.region_id_region` y el patrón
+región→comuna en el registro. Las vistas de autenticación no incluían un enlace de
+retorno explícito y arrastraban estilos previos (azul) y marcado no semántico.
+
+### Solución implementada
+- **Dependencia Región→Comuna** en el formulario del cliente reutilizando la
+  arquitectura existente (`getRegiones` + `Comuna.region_id_region`, sin nuevas
+  tablas ni endpoints): el usuario elige primero la Región; la Comuna permanece
+  deshabilitada hasta que exista Región; al cambiar la Región la Comuna se limpia;
+  la carga es dinámica (filtrado en memoria). Se preservó el deep-link `?comuna=`
+  fijando también su región.
+- **Navegación consistente:** enlace "Volver al inicio" (con ícono) en Login y
+  Registro, y logos navegables al Home. Se corrigió el doble `<h1>` de Login
+  (logo degradado a `<span>`).
+- **Consistencia y microcopy:** unificación de acentos a teal en el formulario del
+  cliente y el registro; indicadores de campo obligatorio (`*`); placeholders más
+  descriptivos y sin pedir datos redundantes (la dirección ya no solicita la
+  comuna, que es un campo aparte).
+
+### Archivos modificados
+- `frontend/src/pages/cliente/ClienteDashboard.tsx`
+- `frontend/src/pages/auth/Login.tsx`, `frontend/src/pages/auth/Register.tsx`
+- `frontend/src/tests/solicitudes/SolicitudForm.test.tsx` (adaptación al nuevo flujo)
+
+### Impacto
+Selección de comuna acotada y guiada, navegación clara desde autenticación y mayor
+coherencia visual entre formularios. No se modificó la lógica de negocio, las rutas
+ni el backend; el payload de creación de solicitud permanece igual.
+
+### Verificación
+`tsc -b` sin errores, `vite build` correcto y suite Vitest **57/57** en verde
+(incluida la actualización de `SolicitudForm.test.tsx`). Verificación en vivo del
+frontend (HTTP 200).
+
+### Observaciones
+La dependencia Región→Comuna quedó consistente con el patrón ya usado en el
+registro, favoreciendo el mantenimiento.
+
+## M-22 · 2026-07-06 — Corrección de "Tipo de problema" para todos los oficios
+**Categoría:** Corrección de errores
+
+### Problema detectado
+En el formulario "Crear Solicitud de Servicio", al seleccionar ciertos oficios el
+campo "Tipo de problema" solo mostraba la opción "Otro" en lugar de las opciones
+correspondientes.
+
+### Causa
+Las opciones de tipo de problema se resuelven íntegramente en el frontend
+(`getProblemOptions` / `problemOptionsByService` en `ClienteDashboard.tsx`), no en
+el backend ni en el seed. El mapa solo cubría 4 oficios (Electricidad, Gasfitería,
+Carpintería, Cerrajería). Al incorporarse 4 oficios nuevos (Techumbre, Pintura,
+Albañilería, Jardinería), estos caían al valor por defecto `["Otro"]`.
+
+### Solución implementada
+Se extendió el mapa `problemOptionsByService` y la función `getProblemOptions` con
+opciones específicas para Techumbre, Pintura, Albañilería y Jardinería, reutilizando
+el mismo patrón de normalización (`normalizeServiceName`) ya existente. No se
+duplicó lógica ni se modificó el backend.
+
+### Archivos modificados
+- `frontend/src/pages/cliente/ClienteDashboard.tsx`
+
+### Impacto
+Los 8 oficios muestran ahora tipos de problema relevantes, mejorando la precisión
+de las solicitudes.
+
+### Verificación
+`tsc -b`, `vite build` y suite Vitest **57/57** en verde. Se validó que los 8
+nombres de servicio del catálogo resuelven a un conjunto de opciones (no a "Otro").
+
+### Observaciones
+Recomendación futura: mover este catálogo de tipos de problema a datos servidos
+por el backend para evitar acoplar el mapeo a la incorporación de nuevos oficios.
+
+## M-23 · 2026-07-06 — Carga de imagen del problema mediante selector de archivos
+**Categoría:** Mejora funcional
+
+### Problema detectado
+El campo "Foto del problema" solicitaba pegar el enlace (URL) de una imagen, un
+comportamiento poco intuitivo frente a la expectativa de adjuntar una fotografía
+desde el dispositivo.
+
+### Causa
+La creación de solicitud (JSON) almacena `foto_problema` como una URL
+(`String(300)`) y no existía un endpoint de carga de imágenes para solicitudes,
+pese a que la arquitectura ya soportaba la subida de archivos (documentos técnicos,
+PDF de cotizaciones) con almacenamiento en `uploads/` y servido estático `/uploads`.
+
+### Solución implementada
+Se implementó un **selector de archivos** reutilizando la arquitectura existente:
+- Backend: helper reutilizable `archivo_service.guardar_archivo(archivo, subcarpeta)`
+  que centraliza la lógica de subida; nuevo endpoint `POST /solicitudes/foto`
+  (autenticado) que valida el tipo de imagen (JPG/PNG/WEBP), guarda en
+  `uploads/solicitudes/` y devuelve la URL pública. Se refactorizó el router de
+  documentos técnicos para usar el mismo helper (elimina duplicación).
+- Frontend: servicio `uploadSolicitudFoto`; el campo pasó de input de URL a un área
+  de carga con vista previa, estado de subida, validación de tipo/tamaño (≤5 MB) y
+  opción de quitar la imagen. La URL resultante se envía en `foto_problema`, sin
+  cambiar el contrato de creación de solicitudes.
+
+### Archivos modificados
+- `backend/app/services/archivo_service.py` (nuevo)
+- `backend/app/routers/solicitud_router.py`, `backend/app/routers/documento_tecnico_router.py`
+- `frontend/src/services/solicitudService.ts`, `frontend/src/pages/cliente/ClienteDashboard.tsx`
+
+### Impacto
+Experiencia de adjunto de fotografías intuitiva y profesional, consistente con el
+resto de la plataforma; sin cambios en el modelo de datos ni en el contrato de la
+API de creación de solicitudes.
+
+### Verificación
+`tsc -b`, `vite build` y Vitest **57/57** en verde. Pruebas en vivo del endpoint:
+subida de imagen (HTTP 200 + URL), servido del archivo (HTTP 200) y rechazo de
+archivo no-imagen (HTTP 400). Se verificó además que la subida de documentos
+técnicos sigue funcionando tras el refactor (HTTP 200).
+
+### Observaciones
+Se validan tipo y tamaño tanto en frontend como en backend. Los archivos se sirven
+desde el mismo mount estático `/uploads` ya existente.

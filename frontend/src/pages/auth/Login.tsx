@@ -6,6 +6,7 @@ import {
   Shield,
   Briefcase,
   AlertCircle,
+  ArrowLeft,
   LogIn,
   Eye,
   EyeOff,
@@ -145,15 +146,19 @@ function Login() {
       >
         <section className="hidden bg-gradient-to-br from-slate-950 via-teal-800 to-cyan-700 p-10 text-white lg:flex lg:flex-col lg:justify-between">
           <div>
-            <div className="mb-8 flex items-center gap-3">
+            <Link
+              to="/"
+              className="mb-8 inline-flex items-center gap-3 transition hover:opacity-90"
+              aria-label="FixYa, volver al inicio"
+            >
               <div className="rounded-xl bg-white/15 p-3 backdrop-blur">
                 <Wrench className="h-7 w-7" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">FixYa</h1>
+                <span className="block text-2xl font-bold">FixYa</span>
                 <p className="text-sm text-cyan-100">Servicios para el hogar</p>
               </div>
-            </div>
+            </Link>
             <h2 className="text-4xl font-bold leading-tight">
               Todo lo que necesitas para seguir tus servicios en un solo lugar.
             </h2>
@@ -171,16 +176,26 @@ function Login() {
           </div>
         </section>
 
-        <section className="relative p-8 md:p-12">
-          <button
-            type="button"
-            onClick={() => setAdminModalOpen(true)}
-            title="Acceso administrativo"
-            aria-label="Acceso administrativo"
-            className="absolute right-5 top-5 rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-400 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
-          >
-            <Shield className="h-5 w-5" />
-          </button>
+        <section className="p-8 md:p-12">
+          <div className="mb-6 flex items-center justify-between">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-teal-700"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Volver al inicio
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setAdminModalOpen(true)}
+              title="Acceso administrativo"
+              aria-label="Acceso administrativo"
+              className="rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-400 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+            >
+              <Shield className="h-5 w-5" />
+            </button>
+          </div>
 
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-lg shadow-teal-700/25 lg:hidden">

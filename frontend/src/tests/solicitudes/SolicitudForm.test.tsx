@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useAuth } from "../../context/AuthContext"
 import ClienteDashboard from "../../pages/cliente/ClienteDashboard"
-import { getComunas, getServicios } from "../../services/catalogService"
+import { getComunas, getRegiones, getServicios } from "../../services/catalogService"
 import { getCotizacionesSolicitud } from "../../services/cotizacionService"
 import {
   createSolicitud,
@@ -22,6 +22,7 @@ vi.mock("../../context/AuthContext", () => ({
 
 vi.mock("../../services/catalogService", () => ({
   getComunas: vi.fn(),
+  getRegiones: vi.fn(),
   getServicios: vi.fn(),
 }))
 
@@ -42,6 +43,7 @@ vi.mock("../../services/reviewService", () => ({
 
 const mockUseAuth = vi.mocked(useAuth)
 const mockGetServicios = vi.mocked(getServicios)
+const mockGetRegiones = vi.mocked(getRegiones)
 const mockGetComunas = vi.mocked(getComunas)
 const mockCreateSolicitud = vi.mocked(createSolicitud)
 const mockGetSolicitudesCliente = vi.mocked(getSolicitudesCliente)
@@ -109,6 +111,12 @@ describe("SolicitudForm", () => {
         estado_servicio: false,
       },
     ])
+    mockGetRegiones.mockResolvedValue([
+      {
+        id_region: 1,
+        nombre_region: "Región Metropolitana",
+      },
+    ])
     mockGetComunas.mockResolvedValue([
       {
         id_comuna: 10,
@@ -154,9 +162,8 @@ describe("SolicitudForm", () => {
     expect(
       solicitudForm.getByLabelText(/servicio que necesitas/i)
     ).toBeInTheDocument()
-    expect(
-      solicitudForm.getByLabelText(/comuna del servicio/i)
-    ).toBeInTheDocument()
+    expect(solicitudForm.getByLabelText(/^regi.n/i)).toBeInTheDocument()
+    expect(solicitudForm.getByLabelText(/^comuna/i)).toBeInTheDocument()
     expect(solicitudForm.getByLabelText(/t.tulo breve/i)).toBeInTheDocument()
     expect(
       solicitudForm.getByLabelText(/describe qu. ocurre/i)
@@ -164,7 +171,7 @@ describe("SolicitudForm", () => {
     expect(solicitudForm.getByLabelText(/urgencia/i)).toBeInTheDocument()
     expect(solicitudForm.getByLabelText(/direcci.n/i)).toBeInTheDocument()
     expect(
-      solicitudForm.getByLabelText(/^tipo de problema$/i)
+      solicitudForm.getByLabelText(/^tipo de problema/i)
     ).toBeInTheDocument()
     expect(solicitudForm.getByLabelText(/foto del problema/i)).toBeInTheDocument()
     expect(
@@ -222,7 +229,10 @@ describe("SolicitudForm", () => {
     fireEvent.change(solicitudForm.getByLabelText(/servicio que necesitas/i), {
       target: { value: "100" },
     })
-    fireEvent.change(solicitudForm.getByLabelText(/comuna del servicio/i), {
+    fireEvent.change(solicitudForm.getByLabelText(/^regi.n/i), {
+      target: { value: "1" },
+    })
+    fireEvent.change(solicitudForm.getByLabelText(/^comuna/i), {
       target: { value: "10" },
     })
     fireEvent.change(solicitudForm.getByLabelText(/t.tulo breve/i), {
@@ -237,7 +247,7 @@ describe("SolicitudForm", () => {
     fireEvent.change(solicitudForm.getByLabelText(/direcci.n/i), {
       target: { value: "Av Siempre Viva 123" },
     })
-    fireEvent.change(solicitudForm.getByLabelText(/^tipo de problema$/i), {
+    fireEvent.change(solicitudForm.getByLabelText(/^tipo de problema/i), {
       target: { value: "Fuga de agua" },
     })
     fireEvent.change(solicitudForm.getByLabelText(/referencia de ubicaci.n/i), {
@@ -280,7 +290,7 @@ describe("SolicitudForm", () => {
       /servicio que necesitas/i
     ) as HTMLSelectElement
     const tipoProblemaSelect = solicitudForm.getByLabelText(
-      /^tipo de problema$/i
+      /^tipo de problema/i
     ) as HTMLSelectElement
 
     fireEvent.change(servicioSelect, { target: { value: "200" } })
@@ -323,7 +333,7 @@ describe("SolicitudForm", () => {
     const descripcionInput = solicitudForm.getByLabelText(/describe qu. ocurre/i)
     const direccionInput = solicitudForm.getByLabelText(/direcci.n/i)
     const tipoProblemaSelect = solicitudForm.getByLabelText(
-      /^tipo de problema$/i
+      /^tipo de problema/i
     )
     const referenciaInput = solicitudForm.getByLabelText(
       /referencia de ubicaci.n/i
@@ -332,7 +342,10 @@ describe("SolicitudForm", () => {
     fireEvent.change(solicitudForm.getByLabelText(/servicio que necesitas/i), {
       target: { value: "100" },
     })
-    fireEvent.change(solicitudForm.getByLabelText(/comuna del servicio/i), {
+    fireEvent.change(solicitudForm.getByLabelText(/^regi.n/i), {
+      target: { value: "1" },
+    })
+    fireEvent.change(solicitudForm.getByLabelText(/^comuna/i), {
       target: { value: "10" },
     })
     fireEvent.change(tituloInput, {

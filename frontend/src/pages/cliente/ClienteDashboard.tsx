@@ -5,12 +5,14 @@ import {
   CheckCircle2,
   ClipboardList,
   Download,
+  ImagePlus,
   MapPin,
   PlusCircle,
   Send,
   Star,
   TrendingUp,
   Wrench,
+  X,
 } from "lucide-react";
 
 import Navbar from "../../components/Navbar";
@@ -18,6 +20,7 @@ import { useAuth } from "../../context/AuthContext";
 import {
   createSolicitud,
   getSolicitudesCliente,
+  uploadSolicitudFoto,
 } from "../../services/solicitudService";
 
 import type {
@@ -26,8 +29,8 @@ import type {
 } from "../../services/solicitudService";
 
 import { createReview } from "../../services/reviewService";
-import { getComunas, getServicios } from "../../services/catalogService";
-import type { Comuna, Servicio } from "../../services/catalogService";
+import { getComunas, getRegiones, getServicios } from "../../services/catalogService";
+import type { Comuna, Region, Servicio } from "../../services/catalogService";
 import {
   acceptCotizacion,
   getCotizacionesSolicitud,
@@ -43,6 +46,7 @@ import { getSolicitudStatusLabel } from "../../utils/requestStatus";
 
 const initialForm = {
   servicio_id_servicio: 0,
+  region_id_region: 0,
   comuna_id_comuna: 0,
   titulo_solicitud: "",
   descripcion_problema: "",
@@ -86,6 +90,38 @@ const problemOptionsByService = {
     "Cambio de cilindro",
     "Otro",
   ],
+  techumbre: [
+    "Gotera",
+    "Filtración",
+    "Planchas de zinc",
+    "Canaletas",
+    "Aislación",
+    "Otro",
+  ],
+  pintura: [
+    "Pintura interior",
+    "Pintura exterior",
+    "Reparación de muro",
+    "Estuco",
+    "Humedad",
+    "Otro",
+  ],
+  albanileria: [
+    "Muro",
+    "Grietas",
+    "Radier",
+    "Estuco",
+    "Ampliación",
+    "Otro",
+  ],
+  jardineria: [
+    "Poda",
+    "Corte de pasto",
+    "Riego",
+    "Diseño de jardín",
+    "Mantención",
+    "Otro",
+  ],
 };
 
 function normalizeServiceName(value: string) {
@@ -116,6 +152,22 @@ function getProblemOptions(servicio?: Servicio) {
     return problemOptionsByService.cerrajeria;
   }
 
+  if (normalizedName.includes("techumbre")) {
+    return problemOptionsByService.techumbre;
+  }
+
+  if (normalizedName.includes("pintur")) {
+    return problemOptionsByService.pintura;
+  }
+
+  if (normalizedName.includes("albani")) {
+    return problemOptionsByService.albanileria;
+  }
+
+  if (normalizedName.includes("jardin")) {
+    return problemOptionsByService.jardineria;
+  }
+
   return ["Otro"];
 }
 
@@ -134,7 +186,7 @@ function fieldClass(error?: string) {
   return `w-full rounded-xl border px-4 py-3 transition focus:outline-none focus:ring-2 ${
     error
       ? "border-red-300 bg-red-50/40 focus:border-red-500 focus:ring-red-100"
-      : "border-slate-300 bg-white focus:border-blue-500 focus:ring-blue-100"
+      : "border-slate-300 bg-white focus:border-teal-600 focus:ring-teal-100"
   }`;
 }
 
@@ -146,6 +198,7 @@ function ClienteDashboard() {
 
   const [form, setForm] = useState(initialForm);
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [regiones, setRegiones] = useState<Region[]>([]);
   const [comunas, setComunas] = useState<Comuna[]>([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
@@ -154,6 +207,7 @@ function ClienteDashboard() {
   );
   const [loadingSolicitudes, setLoadingSolicitudes] = useState(true);
   const [creandoSolicitud, setCreandoSolicitud] = useState(false);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -178,13 +232,24 @@ function ClienteDashboard() {
     [selectedServicio]
   );
 
+  // La comuna depende de la región seleccionada: se reutiliza la relación
+  // existente Comuna.region_id_region sin nuevas tablas ni endpoints.
+  const comunasFiltradas = useMemo(
+    () =>
+      comunas.filter(
+        (comuna) => comuna.region_id_region === form.region_id_region
+      ),
+    [comunas, form.region_id_region]
+  );
+
   async function cargarCatalogos() {
     try {
       setLoadingCatalogos(true);
       setError("");
 
-      const [serviciosData, comunasData] = await Promise.all([
+      const [serviciosData, regionesData, comunasData] = await Promise.all([
         getServicios(),
+        getRegiones(),
         getComunas(),
       ]);
 
@@ -193,13 +258,14 @@ function ClienteDashboard() {
       );
 
       setServicios(serviciosActivos);
+      setRegiones(regionesData);
       setComunas(comunasData);
+      // La región y la comuna no se preseleccionan: el usuario elige primero
+      // la región y recién entonces se habilitan sus comunas.
       setForm((prev) => ({
         ...prev,
         servicio_id_servicio:
           prev.servicio_id_servicio || serviciosActivos[0]?.id_servicio || 0,
-        comuna_id_comuna:
-          prev.comuna_id_comuna || comunasData[0]?.id_comuna || 0,
       }));
     } catch {
       setError(
@@ -266,13 +332,20 @@ function ClienteDashboard() {
         ? requestedServicioId
         : prev.servicio_id_servicio;
 
+      // Si llega una comuna por parámetro, también fijamos su región para
+      // respetar la dependencia región -> comuna.
+      const requestedComuna = comunas.find(
+        (comuna) => comuna.id_comuna === requestedComunaId
+      );
+
       return {
         ...prev,
         servicio_id_servicio: nextServicioId,
-        comuna_id_comuna: comunas.some(
-          (comuna) => comuna.id_comuna === requestedComunaId
-        )
-          ? requestedComunaId
+        region_id_region: requestedComuna
+          ? requestedComuna.region_id_region
+          : prev.region_id_region,
+        comuna_id_comuna: requestedComuna
+          ? requestedComuna.id_comuna
           : prev.comuna_id_comuna,
         tipo_problema:
           nextServicioId !== prev.servicio_id_servicio
@@ -296,19 +369,75 @@ function ClienteDashboard() {
   ) {
     const { name, value } = event.target;
 
+    const numericFields = [
+      "servicio_id_servicio",
+      "region_id_region",
+      "comuna_id_comuna",
+    ];
+
     setForm((prev) => ({
       ...prev,
-      [name]:
-        name === "servicio_id_servicio" || name === "comuna_id_comuna"
-          ? Number(value)
-          : value,
+      [name]: numericFields.includes(name) ? Number(value) : value,
       ...(name === "servicio_id_servicio" ? { tipo_problema: "" } : {}),
+      // Al cambiar la región se limpia la comuna seleccionada.
+      ...(name === "region_id_region" ? { comuna_id_comuna: 0 } : {}),
     }));
     setFieldErrors((prev) => ({
       ...prev,
       [name]: "",
       ...(name === "servicio_id_servicio" ? { tipo_problema: "" } : {}),
+      ...(name === "region_id_region" ? { comuna_id_comuna: "" } : {}),
     }));
+  }
+
+  async function handleFotoChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+    // Permite reintentar con el mismo archivo si hubo error.
+    event.target.value = "";
+
+    if (!file) return;
+
+    const tiposPermitidos = ["image/jpeg", "image/png", "image/webp"];
+    if (!tiposPermitidos.includes(file.type)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        foto_problema: "La imagen debe ser JPG, PNG o WEBP.",
+      }));
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        foto_problema: "La imagen no debe superar los 5 MB.",
+      }));
+      return;
+    }
+
+    try {
+      setSubiendoFoto(true);
+      setFieldErrors((prev) => ({ ...prev, foto_problema: "" }));
+
+      const { archivo_url } = await uploadSolicitudFoto(file);
+      setForm((prev) => ({ ...prev, foto_problema: archivo_url }));
+    } catch (err) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        foto_problema:
+          err instanceof Error
+            ? err.message
+            : "No pudimos subir la imagen. Intenta nuevamente.",
+      }));
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
+
+  function handleRemoveFoto() {
+    setForm((prev) => ({ ...prev, foto_problema: "" }));
+    setFieldErrors((prev) => ({ ...prev, foto_problema: "" }));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -323,6 +452,7 @@ function ClienteDashboard() {
 
     const nextErrors: Record<string, string> = {};
     if (!form.servicio_id_servicio) nextErrors.servicio_id_servicio = "Selecciona un servicio.";
+    if (!form.region_id_region) nextErrors.region_id_region = "Selecciona una región.";
     if (!form.comuna_id_comuna) nextErrors.comuna_id_comuna = "Selecciona una comuna.";
     if (!form.titulo_solicitud.trim()) nextErrors.titulo_solicitud = "Escribe un título breve para tu solicitud.";
     if (!form.descripcion_problema.trim()) nextErrors.descripcion_problema = "Describe qué ocurre para orientar al técnico.";
@@ -366,6 +496,7 @@ function ClienteDashboard() {
       setForm((prev) => ({
         ...initialForm,
         servicio_id_servicio: prev.servicio_id_servicio,
+        region_id_region: prev.region_id_region,
         comuna_id_comuna: prev.comuna_id_comuna,
       }));
 
@@ -477,8 +608,8 @@ function ClienteDashboard() {
         <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-                <PlusCircle className="h-6 w-6 text-blue-700" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-100">
+                <PlusCircle className="h-6 w-6 text-teal-700" />
               </div>
 
               <div>
@@ -511,7 +642,7 @@ function ClienteDashboard() {
                   htmlFor="servicio_id_servicio"
                   className="mb-2 block text-sm font-bold text-slate-700"
                 >
-                  Servicio que necesitas
+                  Servicio que necesitas <span className="text-red-500">*</span>
                 </label>
                 <select
                   id="servicio_id_servicio"
@@ -536,31 +667,68 @@ function ClienteDashboard() {
                 <FieldError message={fieldErrors.servicio_id_servicio} />
               </div>
 
-              <div>
-                <label
-                  htmlFor="comuna_id_comuna"
-                  className="mb-2 block text-sm font-bold text-slate-700"
-                >
-                  Comuna del servicio
-                </label>
-                <select
-                  id="comuna_id_comuna"
-                  name="comuna_id_comuna"
-                  value={form.comuna_id_comuna}
-                  onChange={handleChange}
-                  disabled={loadingCatalogos || comunas.length === 0}
-                  className={fieldClass(fieldErrors.comuna_id_comuna)}
-                >
-                  {comunas.length === 0 && (
-                    <option value={0}>No hay comunas disponibles para seleccionar</option>
-                  )}
-                  {comunas.map((comuna) => (
-                    <option key={comuna.id_comuna} value={comuna.id_comuna}>
-                      {comuna.nombre_comuna}
-                    </option>
-                  ))}
-                </select>
-                <FieldError message={fieldErrors.comuna_id_comuna} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="region_id_region"
+                    className="mb-2 block text-sm font-bold text-slate-700"
+                  >
+                    Región <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="region_id_region"
+                    name="region_id_region"
+                    value={form.region_id_region}
+                    onChange={handleChange}
+                    disabled={loadingCatalogos || regiones.length === 0}
+                    className={fieldClass(fieldErrors.region_id_region)}
+                  >
+                    <option value={0}>Selecciona tu región</option>
+                    {regiones.map((region) => (
+                      <option key={region.id_region} value={region.id_region}>
+                        {region.nombre_region}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError message={fieldErrors.region_id_region} />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="comuna_id_comuna"
+                    className="mb-2 block text-sm font-bold text-slate-700"
+                  >
+                    Comuna <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="comuna_id_comuna"
+                    name="comuna_id_comuna"
+                    value={form.comuna_id_comuna}
+                    onChange={handleChange}
+                    disabled={
+                      loadingCatalogos ||
+                      !form.region_id_region ||
+                      comunasFiltradas.length === 0
+                    }
+                    className={fieldClass(fieldErrors.comuna_id_comuna)}
+                  >
+                    {!form.region_id_region ? (
+                      <option value={0}>Primero selecciona una región</option>
+                    ) : comunasFiltradas.length === 0 ? (
+                      <option value={0}>No hay comunas para esta región</option>
+                    ) : (
+                      <>
+                        <option value={0}>Selecciona tu comuna</option>
+                        {comunasFiltradas.map((comuna) => (
+                          <option key={comuna.id_comuna} value={comuna.id_comuna}>
+                            {comuna.nombre_comuna}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                  <FieldError message={fieldErrors.comuna_id_comuna} />
+                </div>
               </div>
 
               <div>
@@ -568,7 +736,7 @@ function ClienteDashboard() {
                   htmlFor="titulo_solicitud"
                   className="mb-2 block text-sm font-bold text-slate-700"
                 >
-                  Título breve
+                  Título breve <span className="text-red-500">*</span>
                 </label>
               <input
                 id="titulo_solicitud"
@@ -586,7 +754,7 @@ function ClienteDashboard() {
                   htmlFor="descripcion_problema"
                   className="mb-2 block text-sm font-bold text-slate-700"
                 >
-                  Describe qué ocurre
+                  Describe qué ocurre <span className="text-red-500">*</span>
                 </label>
               <textarea
                 id="descripcion_problema"
@@ -625,14 +793,14 @@ function ClienteDashboard() {
                   htmlFor="direccion"
                   className="mb-2 block text-sm font-bold text-slate-700"
                 >
-                  Dirección
+                  Dirección <span className="text-red-500">*</span>
                 </label>
               <input
                 id="direccion"
                 name="direccion"
                 value={form.direccion}
                 onChange={handleChange}
-                placeholder="Calle, número y comuna"
+                placeholder="Ej: Av. Providencia 1234, depto 45"
                 className={fieldClass(fieldErrors.direccion)}
               />
               <FieldError message={fieldErrors.direccion} />
@@ -643,7 +811,7 @@ function ClienteDashboard() {
                   htmlFor="tipo_problema"
                   className="mb-2 block text-sm font-bold text-slate-700"
                 >
-                  Tipo de problema
+                  Tipo de problema <span className="text-red-500">*</span>
                 </label>
                 <select
                   id="tipo_problema"
@@ -684,16 +852,57 @@ function ClienteDashboard() {
                   htmlFor="foto_problema"
                   className="mb-2 block text-sm font-bold text-slate-700"
                 >
-                  Foto del problema
+                  Foto del problema <span className="text-xs font-normal text-slate-400">(opcional)</span>
                 </label>
-                <input
-                  id="foto_problema"
-                  name="foto_problema"
-                  value={form.foto_problema}
-                  onChange={handleChange}
-                  placeholder="URL de imagen opcional"
-                  className={fieldClass()}
-                />
+
+                {form.foto_problema ? (
+                  <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <img
+                      src={`${API_URL}${form.foto_problema}`}
+                      alt="Vista previa de la foto del problema"
+                      className="h-20 w-20 rounded-lg object-cover"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-slate-700">
+                        Imagen adjunta
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRemoveFoto}
+                        className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-rose-600 transition hover:text-rose-700"
+                      >
+                        <X className="h-4 w-4" />
+                        Quitar imagen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="foto_problema"
+                    className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:border-teal-300 hover:bg-teal-50"
+                  >
+                    <ImagePlus className="h-6 w-6 text-slate-400" />
+                    <span className="text-sm font-semibold text-slate-700">
+                      {subiendoFoto
+                        ? "Subiendo imagen..."
+                        : "Adjuntar una foto desde tu dispositivo"}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      JPG, PNG o WEBP · hasta 5 MB
+                    </span>
+                    <input
+                      id="foto_problema"
+                      name="foto_problema"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleFotoChange}
+                      disabled={subiendoFoto}
+                      className="sr-only"
+                    />
+                  </label>
+                )}
+
+                <FieldError message={fieldErrors.foto_problema} />
                 <p className="mt-2 text-xs text-slate-500">
                   Opcional. Ayuda al técnico a entender el problema antes de responder.
                 </p>
@@ -704,14 +913,14 @@ function ClienteDashboard() {
                   htmlFor="ubicacion_problema_referencia"
                   className="mb-2 block text-sm font-bold text-slate-700"
                 >
-                  Referencia de ubicación
+                  Referencia de ubicación <span className="text-red-500">*</span>
                 </label>
               <input
                 id="ubicacion_problema_referencia"
                 name="ubicacion_problema_referencia"
                 value={form.ubicacion_problema_referencia}
                 onChange={handleChange}
-                placeholder="Referencia de ubicación"
+                placeholder="Ej: Cocina, segundo piso, portón negro"
                 className={fieldClass(fieldErrors.ubicacion_problema_referencia)}
               />
               <FieldError message={fieldErrors.ubicacion_problema_referencia} />
@@ -721,11 +930,12 @@ function ClienteDashboard() {
                 type="submit"
                 disabled={
                   creandoSolicitud ||
+                  subiendoFoto ||
                   loadingCatalogos ||
                   servicios.length === 0 ||
                   comunas.length === 0
                 }
-                className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
+                className="fixya-btn-primary w-full px-4 py-3 disabled:cursor-not-allowed"
               >
                 {creandoSolicitud ? "Enviando solicitud..." : "Solicitar servicio"}
               </button>

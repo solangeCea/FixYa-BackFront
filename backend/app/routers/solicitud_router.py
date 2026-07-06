@@ -1,12 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
 
-from app.dependencies import solo_admin, solo_tecnico, solo_cliente
+from app.dependencies import (
+    solo_admin,
+    solo_tecnico,
+    solo_cliente,
+    get_current_user,
+)
 
 from app.database import get_db
 from app.services import solicitud_service
+from app.services.archivo_service import guardar_archivo
 
 from app.models.solicitud import Solicitud
 from app.models.historial_solicitud import HistorialSolicitud
@@ -27,6 +33,9 @@ router = APIRouter(
 )
 
 
+IMAGENES_PERMITIDAS = {"image/jpeg", "image/png", "image/webp"}
+
+
 @router.post("/", response_model=SolicitudResponse)
 def crear_solicitud(
     solicitud: SolicitudCreate,
@@ -34,6 +43,21 @@ def crear_solicitud(
     usuario_actual: dict = Depends(solo_cliente)
 ):
     return solicitud_service.crear_solicitud(db, solicitud)
+
+
+@router.post("/foto")
+def subir_foto_solicitud(
+    archivo: UploadFile = File(...),
+    usuario_actual: dict = Depends(get_current_user)
+):
+    if archivo.content_type not in IMAGENES_PERMITIDAS:
+        raise HTTPException(
+            status_code=400,
+            detail="La imagen debe ser JPG, PNG o WEBP"
+        )
+
+    _, archivo_url = guardar_archivo(archivo, "solicitudes")
+    return {"archivo_url": archivo_url}
 
 @router.get("/", response_model=List[SolicitudResponse])
 def listar_solicitudes(db: Session = Depends(get_db)):

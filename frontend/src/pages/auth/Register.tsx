@@ -6,6 +6,7 @@ import {
   User,
   Briefcase,
   AlertCircle,
+  ArrowLeft,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -76,7 +77,7 @@ function fieldClass(error?: string) {
   return `w-full rounded-xl border px-4 py-3 transition focus:outline-none focus:ring-2 ${
     error
       ? "border-red-300 bg-red-50/40 focus:border-red-500 focus:ring-red-100"
-      : "border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-100"
+      : "border-gray-300 bg-white focus:border-teal-600 focus:ring-teal-100"
   }`;
 }
 
@@ -536,16 +537,24 @@ function Register() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="border-b border-gray-200 bg-white py-6">
-        <div className="mx-auto max-w-4xl px-6">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-6">
           <Link
             to="/"
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+            className="flex items-center gap-2 text-teal-700 hover:text-teal-800"
           >
-            <div className="rounded-lg bg-blue-600 p-2">
+            <div className="rounded-lg bg-teal-700 p-2">
               <Wrench className="text-white" size={20} />
             </div>
 
             <span className="text-xl font-bold">FixYa</span>
+          </Link>
+
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-teal-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver al inicio
           </Link>
         </div>
       </div>
@@ -572,14 +581,14 @@ function Register() {
               onClick={() => handleUserTypeChange("cliente")}
               className={`rounded-xl border-2 p-4 transition-all ${
                 userType === "cliente"
-                  ? "border-blue-600 bg-blue-50"
+                  ? "border-teal-600 bg-teal-50"
                   : "border-gray-200 hover:border-gray-300"
               }`}
             >
               <div
                 className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg ${
                   userType === "cliente"
-                    ? "bg-blue-100 text-blue-600"
+                    ? "bg-teal-100 text-teal-600"
                     : "bg-gray-100 text-gray-600"
                 }`}
               >
@@ -600,7 +609,7 @@ function Register() {
               onClick={() => handleUserTypeChange("tecnico")}
               className={`rounded-xl border-2 p-4 transition-all ${
                 userType === "tecnico"
-                  ? "border-blue-600 bg-blue-50"
+                  ? "border-teal-600 bg-teal-50"
                   : "border-gray-200 hover:border-gray-300"
               }`}
             >
@@ -725,7 +734,7 @@ function Register() {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   required
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-600"
                 >
                   <option value="Femenino">Femenino</option>
                   <option value="Masculino">Masculino</option>
@@ -887,7 +896,7 @@ function Register() {
                       value={form.nivel_tecnico}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-600"
                     >
                       <option value="Inicial">Inicial</option>
                       <option value="Intermedio">Intermedio</option>
@@ -1031,7 +1040,7 @@ function Register() {
             <button
               type="submit"
               disabled={loading || loadingComunas || comunasFiltradas.length === 0}
-              className="w-full rounded-xl bg-blue-600 py-4 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              className="fixya-btn-primary w-full py-4 disabled:cursor-not-allowed"
             >
               {loading
                 ? "Creando cuenta..."
@@ -1044,7 +1053,7 @@ function Register() {
               ¿Ya tienes cuenta?{" "}
               <Link
                 to="/login"
-                className="font-semibold text-blue-600 hover:text-blue-700"
+                className="font-semibold text-teal-700 hover:text-teal-800"
               >
                 Inicia sesión
               </Link>

@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List
-import os
-import shutil
-from datetime import datetime
 
 from app.dependencies import solo_admin, solo_tecnico
 from app.database import get_db
 from app.services import documento_tecnico_service
+from app.services.archivo_service import guardar_archivo
 from app.schemas.documento_tecnico_schema import (
     DocumentoTecnicoResponse,
     DocumentoTecnicoAprobacion,
@@ -29,17 +27,7 @@ def subir_documento_tecnico(
     current_user: dict = Depends(solo_tecnico),
     db: Session = Depends(get_db)
 ):
-    carpeta_destino = "uploads/documentos_tecnicos"
-    os.makedirs(carpeta_destino, exist_ok=True)
-
-    fecha = datetime.now().strftime("%Y%m%d%H%M%S")
-    nombre_archivo = f"{fecha}_{archivo.filename}"
-    ruta_archivo = os.path.join(carpeta_destino, nombre_archivo)
-
-    with open(ruta_archivo, "wb") as buffer:
-        shutil.copyfileobj(archivo.file, buffer)
-
-    archivo_url = f"/uploads/documentos_tecnicos/{nombre_archivo}"
+    nombre_archivo, archivo_url = guardar_archivo(archivo, "documentos_tecnicos")
 
     return documento_tecnico_service.crear_documento_tecnico_archivo(
         db=db,

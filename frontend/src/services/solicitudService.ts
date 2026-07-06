@@ -43,6 +43,29 @@ function getAuthHeaders() {
   };
 }
 
+export async function uploadSolicitudFoto(
+  file: File
+): Promise<{ archivo_url: string }> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("archivo", file);
+
+  const response = await fetch(`${API_URL}/solicitudes/foto`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || "Error al subir la imagen");
+  }
+
+  return response.json();
+}
+
 export async function createSolicitud(
   data: SolicitudCreate
 ): Promise<Solicitud> {
