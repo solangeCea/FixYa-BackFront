@@ -26,6 +26,9 @@ backend/uploads/*
 !backend/uploads/cotizaciones/
 backend/uploads/cotizaciones/*
 !backend/uploads/cotizaciones/.gitkeep
+!backend/uploads/documentos_tecnicos/
+backend/uploads/documentos_tecnicos/*
+!backend/uploads/documentos_tecnicos/*.pdf
 *.log
 *.tmp
 
