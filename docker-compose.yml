@@ -27,9 +27,15 @@ services:
       RUN_SEED: ${RUN_SEED:-true}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_REVIEW_MODEL: ${OPENAI_REVIEW_MODEL:-gpt-5.4-mini}
+      # Polling para que uvicorn --reload detecte cambios en Windows+Docker
+      WATCHFILES_FORCE_POLLING: "true"
+    command:
+      ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
       - "8000:8000"
     volumes:
+      # Código montado en vivo: no hay que reconstruir la imagen ante cada cambio
+      - ./backend:/app
       - ./backend/uploads:/app/uploads
 
   frontend:
@@ -40,8 +46,14 @@ services:
       - backend
     environment:
       VITE_API_URL: http://localhost:8000
+      # Polling para que Vite detecte cambios de archivos en Windows+Docker
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "5173:5173"
+    volumes:
+      # Código montado en vivo; node_modules queda en el volumen de la imagen
+      - ./frontend:/app
+      - /app/node_modules
 
 volumes:
   fixya_postgres_data:
