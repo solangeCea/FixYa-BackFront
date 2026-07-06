@@ -1,4 +1,5 @@
 import re
+from typing import Optional
 from pydantic import BaseModel, field_validator, Field, EmailStr
 from datetime import date
 
@@ -93,3 +94,48 @@ class UsuarioCreate(BaseModel):
             raise ValueError("La contraseña debe contener al menos un número")
 
         return contrasena
+
+
+class UsuarioUpdate(BaseModel):
+    """Datos editables del perfil propio (rol técnico/cliente).
+
+    No incluye RUT (no editable), contraseña ni tipo de usuario. Reutiliza las
+    mismas reglas de validación de nombre, teléfono y correo que el registro.
+    """
+
+    nombre_completo: str = Field(min_length=3, max_length=100)
+    correo: EmailStr = Field(max_length=100)
+    telefono: str = Field(min_length=9, max_length=9)
+    comuna_id_comuna: int
+    direccion: Optional[str] = Field(default=None, max_length=200)
+
+    @field_validator("nombre_completo")
+    @classmethod
+    def validar_nombre_no_vacio(cls, valor: str):
+        if not valor or not valor.strip():
+            raise ValueError("El nombre no puede estar vacío")
+        return valor.strip()
+
+    @field_validator("telefono")
+    @classmethod
+    def validar_telefono_chileno(cls, telefono: str):
+        telefono = telefono.strip()
+
+        if not telefono.isdigit():
+            raise ValueError("El teléfono debe contener solo números")
+
+        if len(telefono) != 9:
+            raise ValueError("El teléfono debe tener 9 dígitos")
+
+        if not telefono.startswith("9"):
+            raise ValueError("El teléfono debe comenzar con 9")
+
+        return telefono
+
+    @field_validator("direccion")
+    @classmethod
+    def normalizar_direccion(cls, direccion: Optional[str]):
+        if direccion is None:
+            return None
+        direccion = direccion.strip()
+        return direccion or None

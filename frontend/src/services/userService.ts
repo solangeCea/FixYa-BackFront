@@ -1,5 +1,6 @@
 import API_URL from "./api";
 import { getToken } from "./token";
+import type { Usuario } from "../types/auth";
 
 export interface UsuarioAdmin {
   rut: string;
@@ -35,6 +36,47 @@ export async function getUsers(): Promise<UsuarioAdmin[]> {
 
   if (!response.ok) {
     throw new Error("Error al obtener usuarios");
+  }
+
+  return response.json();
+}
+
+export interface PerfilUpdate {
+  nombre_completo: string;
+  correo: string;
+  telefono: string;
+  comuna_id_comuna: number;
+  direccion?: string | null;
+}
+
+export interface PerfilUpdateResponse {
+  usuario: Usuario;
+  access_token: string;
+  token_type: string;
+}
+
+export async function updateMyProfile(
+  data: PerfilUpdate
+): Promise<PerfilUpdateResponse> {
+  const token = getToken();
+
+  const response = await fetch(`${API_URL}/usuarios/me`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+
+    throw new Error(
+      typeof errorData?.detail === "string"
+        ? errorData.detail
+        : "No pudimos actualizar tu perfil."
+    );
   }
 
   return response.json();

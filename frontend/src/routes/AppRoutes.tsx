@@ -7,6 +7,7 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 
 import TecnicoDashboard from "../pages/tecnico/TecnicoDashboard";
+import TecnicoPerfil from "../pages/tecnico/TecnicoPerfil";
 import ClienteDashboard from "../pages/cliente/ClienteDashboard";
 
 import AdminLayout from "../layouts/AdminLayout";
@@ -35,6 +36,15 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["TECNICO"]}>
               <TecnicoDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tecnico/perfil"
+          element={
+            <ProtectedRoute allowedRoles={["TECNICO"]}>
+              <TecnicoPerfil />
             </ProtectedRoute>
           }
         />

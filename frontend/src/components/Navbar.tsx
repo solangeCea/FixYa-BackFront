@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { Bell, Briefcase, ClipboardList, LayoutDashboard, Wrench } from "lucide-react";
+import { Bell, Briefcase, ClipboardList, LayoutDashboard, UserCog, Wrench } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 import {
@@ -17,6 +17,7 @@ const roleLinks = {
   ],
   TECNICO: [
     { to: "/tecnico/dashboard", label: "Trabajos técnicos", icon: Briefcase },
+    { to: "/tecnico/perfil", label: "Mi Perfil", icon: UserCog },
   ],
   ADMIN: [
     { to: "/admin/panel", label: "Administrar plataforma", icon: LayoutDashboard },

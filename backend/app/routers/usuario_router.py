@@ -6,7 +6,8 @@ from app.dependencies import get_db, get_current_user, solo_admin
 from app.models.usuario import Usuario
 from app.security import hash_password, verify_password
 from app.auth import crear_token
-from app.schemas.usuario_schema import UsuarioCreate
+from app.schemas.usuario_schema import UsuarioCreate, UsuarioUpdate
+from app.models.comuna import Comuna
 
 from app.dependencies import get_current_user
 from app.models.usuario import Usuario
@@ -182,9 +183,82 @@ def obtener_usuario_actual(
         "telefono": usuario.telefono,
         "tipo_usuario": usuario.tipo_usuario.value,
         "comuna_id_comuna": usuario.comuna_id_comuna,
+        "direccion": usuario.direccion,
         "estado_usuario": usuario.estado_usuario
     }
-    
+
+
+# ---------------------------------------------------
+# ACTUALIZAR MI PERFIL (PROTEGIDO)
+# ---------------------------------------------------
+@router.put("/me")
+def actualizar_mi_perfil(
+    datos: UsuarioUpdate,
+    db: Session = Depends(get_db),
+    usuario_actual: dict = Depends(get_current_user)
+):
+    usuario = db.query(Usuario).filter(
+        Usuario.correo == usuario_actual["correo"]
+    ).first()
+
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    comuna = db.query(Comuna).filter(
+        Comuna.id_comuna == datos.comuna_id_comuna
+    ).first()
+
+    if not comuna:
+        raise HTTPException(
+            status_code=404,
+            detail="La comuna seleccionada no existe"
+        )
+
+    # Si cambia el correo, validar que no esté tomado por otro usuario
+    if datos.correo != usuario.correo:
+        correo_existente = db.query(Usuario).filter(
+            Usuario.correo == datos.correo,
+            Usuario.rut != usuario.rut
+        ).first()
+
+        if correo_existente:
+            raise HTTPException(
+                status_code=409,
+                detail="El correo ya está registrado por otro usuario"
+            )
+
+    usuario.nombre_completo = datos.nombre_completo
+    usuario.correo = datos.correo
+    usuario.telefono = datos.telefono
+    usuario.comuna_id_comuna = datos.comuna_id_comuna
+    usuario.direccion = datos.direccion
+
+    db.commit()
+    db.refresh(usuario)
+
+    # El correo es el "sub" del token; si cambió, se reemite para no
+    # invalidar la sesión actual del usuario.
+    token = crear_token({
+        "sub": usuario.correo,
+        "tipo_usuario": usuario.tipo_usuario
+    })
+
+    return {
+        "usuario": {
+            "rut": usuario.rut,
+            "nombre_completo": usuario.nombre_completo,
+            "correo": usuario.correo,
+            "telefono": usuario.telefono,
+            "tipo_usuario": usuario.tipo_usuario.value,
+            "comuna_id_comuna": usuario.comuna_id_comuna,
+            "direccion": usuario.direccion,
+            "estado_usuario": usuario.estado_usuario
+        },
+        "access_token": token,
+        "token_type": "bearer"
+    }
+
+
 @router.get("/{rut}/dashboard")
 def obtener_dashboard_cliente(
     rut: str,

@@ -11,4 +11,5 @@ export interface Usuario {
   tipo_usuario: string;
   comuna_id_comuna: number;
   estado_usuario: boolean;
+  direccion?: string | null;
 }

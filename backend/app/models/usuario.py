@@ -57,6 +57,11 @@ class Usuario(Base):
         String(20)
     )
 
+    direccion = Column(
+        String(200),
+        nullable=True
+    )
+
     contrasena = Column(
         String,
         nullable=False

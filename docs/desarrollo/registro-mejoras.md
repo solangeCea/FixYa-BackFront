@@ -764,3 +764,50 @@ técnicos sigue funcionando tras el refactor (HTTP 200).
 ### Observaciones
 Se validan tipo y tamaño tanto en frontend como en backend. Los archivos se sirven
 desde el mismo mount estático `/uploads` ya existente.
+
+## M-25 · 2026-07-06 — Perfil editable del técnico ("Mi Perfil")
+**Categoría:** Mejora funcional
+
+### Problema detectado
+El rol Técnico no contaba con una sección para visualizar y actualizar su
+información personal (nombre, contacto, ubicación); tras iniciar sesión solo
+podía gestionar trabajos.
+
+### Causa
+No existía vista de perfil para el técnico ni endpoint de actualización del
+propio usuario; el modelo `Usuario` tampoco contemplaba una dirección personal.
+
+### Solución implementada
+- **Backend:** se agregó la columna `direccion` (nullable) al modelo `Usuario`;
+  DTO `UsuarioUpdate` con las mismas reglas de validación del registro (nombre,
+  teléfono chileno, correo `EmailStr`); y endpoint `PUT /usuarios/me` (autenticado)
+  que valida existencia de comuna y unicidad de correo, actualiza los datos y
+  **reemite el token JWT** (el correo es el `sub`, por lo que un cambio de correo
+  invalidaría la sesión). El `GET /usuarios/me` ahora incluye `direccion`.
+- **Frontend:** nueva página `TecnicoPerfil` en la ruta protegida
+  `/tecnico/perfil` con enlace en el Navbar del rol técnico. Formulario que
+  precarga los datos actuales, reutiliza la dependencia Región→Comuna, valida
+  todos los campos y exige **confirmar el correo dos veces** cuando cambia. Al
+  guardar, actualiza el token y el contexto de autenticación y muestra mensajes
+  de éxito/error. Servicio `updateMyProfile`.
+
+### Archivos modificados
+- `backend/app/models/usuario.py`, `backend/app/schemas/usuario_schema.py`, `backend/app/routers/usuario_router.py`
+- `frontend/src/types/auth.ts`, `frontend/src/services/userService.ts`
+- `frontend/src/pages/tecnico/TecnicoPerfil.tsx` (nuevo)
+- `frontend/src/routes/AppRoutes.tsx`, `frontend/src/components/Navbar.tsx`
+
+### Impacto
+El técnico administra de forma autónoma su información personal y de contacto,
+con validaciones y sin invalidar su sesión al cambiar el correo.
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` y Vitest **57/57** en verde. Pruebas en vivo
+del endpoint: actualización (HTTP 200) y persistencia; reemisión de token al
+cambiar correo; teléfono inválido (422); correo duplicado (409).
+
+### Observaciones
+Al agregarse una columna (`direccion`) y no existir migraciones (el proyecto usa
+`create_all`), en bases de datos existentes debe recrearse el volumen
+(`docker compose down -v && up --build`) o aplicarse `ALTER TABLE usuario ADD
+COLUMN direccion VARCHAR(200)`. En clones nuevos, `create_all` la crea sola.
