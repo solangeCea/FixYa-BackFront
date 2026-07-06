@@ -35,6 +35,8 @@ class UsuarioOut(BaseModel):
     correo: str
     telefono: str
     tipo_usuario: str
+    comuna_id_comuna: int
+    estado_usuario: bool
 
     class Config:
         from_attributes = True
