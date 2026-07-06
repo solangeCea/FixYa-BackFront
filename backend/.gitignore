@@ -10,5 +10,8 @@ uploads/*
 !uploads/cotizaciones/
 uploads/cotizaciones/*
 !uploads/cotizaciones/.gitkeep
+!uploads/documentos_tecnicos/
+uploads/documentos_tecnicos/*
+!uploads/documentos_tecnicos/*.pdf
 *.log
 *.tmp

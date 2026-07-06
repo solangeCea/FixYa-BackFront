@@ -15,6 +15,7 @@ import { motion } from "framer-motion";
 import { login, obtenerUsuarioActual } from "../../services/authService";
 import { removeToken, saveToken } from "../../services/token";
 import { useAuth } from "../../context/AuthContext";
+import AdminLoginModal from "../../components/auth/AdminLoginModal";
 
 type AuthRole = "CLIENTE" | "TECNICO" | "ADMIN";
 
@@ -51,8 +52,9 @@ function Login() {
   const nextPath = searchParams.get("next");
 
   const [selectedRole, setSelectedRole] = useState<
-    "cliente" | "tecnico" | "admin" | null
+    "cliente" | "tecnico" | null
   >(null);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -78,13 +80,6 @@ function Login() {
       description: "Gestiona trabajos y respuestas a clientes.",
       icon: Briefcase,
       color: "bg-emerald-50 text-emerald-700",
-    },
-    {
-      type: "admin" as const,
-      title: "Administrador",
-      description: "Administra usuarios, técnicos y solicitudes.",
-      icon: Shield,
-      color: "bg-teal-50 text-teal-700",
     },
   ];
 
@@ -176,7 +171,17 @@ function Login() {
           </div>
         </section>
 
-        <section className="p-8 md:p-12">
+        <section className="relative p-8 md:p-12">
+          <button
+            type="button"
+            onClick={() => setAdminModalOpen(true)}
+            title="Acceso administrativo"
+            aria-label="Acceso administrativo"
+            className="absolute right-5 top-5 rounded-xl border border-slate-200 bg-white/70 p-2 text-slate-400 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
+          >
+            <Shield className="h-5 w-5" />
+          </button>
+
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-lg shadow-teal-700/25 lg:hidden">
               <Wrench size={28} />
@@ -192,7 +197,7 @@ function Login() {
 
           <form onSubmit={handleLogin} noValidate className="space-y-6">
             <div>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2">
                 {roles.map((role) => (
                   <button
                     key={role.type}
@@ -321,6 +326,11 @@ function Login() {
           </form>
         </section>
       </motion.div>
+
+      <AdminLoginModal
+        open={adminModalOpen}
+        onClose={() => setAdminModalOpen(false)}
+      />
     </div>
   );
 }

@@ -88,12 +88,12 @@ function Navbar() {
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-6 py-4 shadow-sm backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <Link to="/" className="flex items-center gap-2">
+      <Link to="/" className="flex items-center gap-2" aria-label="FixYa, ir al inicio">
         <div className="rounded-lg bg-teal-700 p-2 text-white shadow-lg shadow-teal-700/20">
           <Wrench className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold leading-none text-teal-700">FixYa</h1>
+          <span className="block text-2xl font-bold leading-none text-teal-700">FixYa</span>
           {usuario && (
             <p className="mt-1 text-xs font-semibold text-slate-500">
               Flujo {getRoleLabel(usuario.tipo_usuario)}

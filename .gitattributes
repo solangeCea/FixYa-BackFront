@@ -1,0 +1,12 @@
+# Normaliza los saltos de línea del código fuente
+* text=auto
+
+# Trata los binarios como binarios (evita conversión LF/CRLF que los corrompe)
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.docx binary
+*.xlsx binary
