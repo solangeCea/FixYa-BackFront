@@ -274,12 +274,81 @@ def _analizar_con_gemini(comentario: str, calificacion):
 
 
 # ---------------------------------------------------------------------------
+# Modo IA (Groq - API gratuita, compatible con OpenAI)
+# ---------------------------------------------------------------------------
+
+def _construir_instruccion(comentario, calificacion) -> tuple[str, str]:
+    """Devuelve (system, user) reutilizable por cualquier proveedor LLM."""
+    system = (
+        "Eres un moderador y analista de reseñas para FixYa, una plataforma chilena "
+        "de servicios del hogar. Analizas la reseña que un cliente deja sobre un técnico. "
+        "Respondes solo con JSON válido con las claves: es_ofensiva (bool), motivo (string), "
+        "categorias (array), sentimiento (string), resumen (string)."
+    )
+    instruccion = {
+        "tarea": "Modera y clasifica la reseña del cliente.",
+        "categorias_posibles": CATEGORIAS_VALIDAS,
+        "reglas": [
+            "es_ofensiva=true SOLO si hay insultos, groserías, discriminación, "
+            "amenazas o acusaciones graves difamatorias hacia el técnico.",
+            "Una crítica negativa pero respetuosa NO es ofensiva.",
+            "categorias: elige únicamente de categorias_posibles las que realmente "
+            "aparezcan en el texto (entre 0 y 3).",
+            "sentimiento: exactamente 'Positivo', 'Neutral' o 'Negativo'.",
+            "resumen: una etiqueta muy corta (máximo 8 palabras) del punto principal.",
+            "motivo: si es_ofensiva=true, explica brevemente por qué; si no, deja vacío.",
+            "No inventes información que no esté en la reseña.",
+        ],
+        "calificacion_estrellas": calificacion,
+        "resena": comentario,
+    }
+    return system, json.dumps(instruccion, ensure_ascii=False)
+
+
+def _analizar_con_groq(comentario: str, calificacion):
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key or not (comentario or "").strip():
+        return None
+
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    system, user = _construir_instruccion(comentario, calificacion)
+
+    try:
+        response = httpx.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.2,
+            },
+            timeout=20,
+        )
+        response.raise_for_status()
+        texto = response.json()["choices"][0]["message"]["content"]
+        return _normalizar_resultado(json.loads(texto), "IA (Groq)")
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # API pública
 # ---------------------------------------------------------------------------
 
 def analizar_resena(comentario: str, calificacion=None) -> dict:
-    """Analiza una reseña: intenta Gemini y cae a análisis local si no hay clave."""
-    resultado = _analizar_con_gemini(comentario, calificacion)
-    if resultado is not None:
-        return resultado
+    """Analiza una reseña con IA. Orden de proveedores: Groq -> Gemini -> local.
+
+    Se usa el primero que tenga clave y responda bien; si ninguno está
+    disponible, cae al análisis local (siempre funciona, sin internet)."""
+    for proveedor in (_analizar_con_groq, _analizar_con_gemini):
+        resultado = proveedor(comentario, calificacion)
+        if resultado is not None:
+            return resultado
     return _analizar_local(comentario, calificacion)
