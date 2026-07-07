@@ -318,7 +318,7 @@ function Register() {
     currentDocumento: File | null = documento
   ) {
     const correoRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const telefonoRegex = /^\d{8,12}$/;
+    const telefonoRegex = /^9\d{8}$/;
     const nacimiento = new Date(`${values.fecha_nacimiento}T00:00:00`);
     const hoy = new Date();
     const edad =
@@ -363,7 +363,7 @@ function Register() {
     if (field === "telefono") {
       if (!values.telefono.trim()) return "Este campo es obligatorio.";
       if (!telefonoRegex.test(values.telefono)) {
-        return "Ingresa un teléfono válido, solo números entre 8 y 12 dígitos.";
+        return "El teléfono debe tener 9 dígitos y comenzar con 9.";
       }
     }
 

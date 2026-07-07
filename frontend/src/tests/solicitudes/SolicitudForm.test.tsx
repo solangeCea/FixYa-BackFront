@@ -14,6 +14,7 @@ import { getCotizacionesSolicitud } from "../../services/cotizacionService"
 import {
   createSolicitud,
   getSolicitudesCliente,
+  uploadSolicitudFoto,
 } from "../../services/solicitudService"
 
 vi.mock("../../components/Navbar", () => ({
@@ -33,6 +34,7 @@ vi.mock("../../services/catalogService", () => ({
 vi.mock("../../services/solicitudService", () => ({
   createSolicitud: vi.fn(),
   getSolicitudesCliente: vi.fn(),
+  uploadSolicitudFoto: vi.fn(),
 }))
 
 vi.mock("../../services/cotizacionService", () => ({
@@ -51,6 +53,7 @@ const mockGetRegiones = vi.mocked(getRegiones)
 const mockGetComunas = vi.mocked(getComunas)
 const mockCreateSolicitud = vi.mocked(createSolicitud)
 const mockGetSolicitudesCliente = vi.mocked(getSolicitudesCliente)
+const mockUploadSolicitudFoto = vi.mocked(uploadSolicitudFoto)
 const mockGetCotizacionesSolicitud = vi.mocked(getCotizacionesSolicitud)
 
 function renderSolicitudForm() {
@@ -480,6 +483,10 @@ describe("SolicitudForm", () => {
   })
 
   it("CP-SOL-003C permite adjuntar una foto valida sin usar URL", async () => {
+    mockUploadSolicitudFoto.mockResolvedValue({
+      archivo_url: "/uploads/solicitudes/filtracion.webp",
+    })
+
     renderSolicitudForm()
     await waitForSolicitudFormReady()
 
@@ -495,13 +502,18 @@ describe("SolicitudForm", () => {
     fireEvent.change(fotoInput, { target: { files: [file] } })
     expect(screen.getByText("filtracion.webp")).toBeInTheDocument()
 
+    // La imagen se sube al backend y se guarda la URL retornada (no el nombre).
+    await waitFor(() =>
+      expect(mockUploadSolicitudFoto).toHaveBeenCalledWith(file)
+    )
+
     fillRequiredSolicitudFields(solicitudForm)
     fillCasaContext(solicitudForm)
     await submitFormAndWaitForCreate(form)
 
     expect(mockCreateSolicitud).toHaveBeenCalledWith(
       expect.objectContaining({
-        foto_problema: "filtracion.webp",
+        foto_problema: "/uploads/solicitudes/filtracion.webp",
       })
     )
   })

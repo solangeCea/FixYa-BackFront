@@ -388,7 +388,9 @@ def actualizar_mi_perfil(
     # invalidar la sesión actual del usuario.
     token = crear_token({
         "sub": usuario.correo,
-        "tipo_usuario": usuario.tipo_usuario
+        "tipo_usuario": usuario.tipo_usuario.value,
+        "rut": usuario.rut,
+        "roles": obtener_roles_usuario(db, usuario.rut),
     })
 
     return {
@@ -522,7 +524,17 @@ def actualizar_mi_perfil_tecnico(
 def obtener_dashboard_cliente(
     rut: str,
     db: Session = Depends(get_db),
+    usuario_actual: dict = Depends(get_current_user),
 ):
+    # Solo el propio usuario o un administrador pueden ver estas métricas.
+    es_admin = "ADMIN" in (usuario_actual.get("roles") or []) or \
+        usuario_actual.get("tipo_usuario") == "ADMIN"
+    if usuario_actual.get("rut") != rut and not es_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="No puedes ver las métricas de otro usuario",
+        )
+
     solicitudes_activas = db.query(Solicitud).filter(
         Solicitud.usuario_rut == rut,
         Solicitud.solicitud_activa == True,

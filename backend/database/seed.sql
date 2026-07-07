@@ -285,7 +285,7 @@ VALUES (
   '12311111-1',
   'Especialista en instalaciones electricas',
   5,
-  'Senior',
+  'Avanzado',
   true,
   'APROBADO'
 )
@@ -369,8 +369,8 @@ VALUES
   ('15234876-7', 'Especialista en techumbres: reparación de goteras, cambio de planchas y hojalatería.', 5, 'Intermedio', true),
   ('18765123-0', 'Pintor profesional de interiores y exteriores, esmalte al agua y tratamiento de humedad.', 4, 'Intermedio', true),
   ('14567890-6', 'Maestra carpintera dedicada a muebles a medida, terminaciones y reparación de estructuras de madera.', 15, 'Avanzado', true),
-  ('19345671-6', 'Albañil enfocado en construcción de muros, radieres y reparaciones menores de obra gruesa.', 3, 'Inicial', false),
-  ('20123456-3', 'Jardinera especializada en mantención de áreas verdes, poda y diseño de jardines.', 2, 'Inicial', true),
+  ('19345671-6', 'Albañil enfocado en construcción de muros, radieres y reparaciones menores de obra gruesa.', 3, 'Basico', false),
+  ('20123456-3', 'Jardinera especializada en mantención de áreas verdes, poda y diseño de jardines.', 2, 'Basico', true),
   ('13876540-3', 'Cerrajero de urgencias: apertura, cambio de cerraduras y sistemas de seguridad.', 18, 'Avanzado', true),
   ('17456219-1', 'Técnica en gasfitería y electricidad, orientada a mantención integral del hogar.', 9, 'Avanzado', true),
   ('18234905-6', 'Técnico eléctrico y en techumbres, con foco en soluciones para viviendas y locales comerciales.', 6, 'Intermedio', false)

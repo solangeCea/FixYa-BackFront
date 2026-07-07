@@ -444,11 +444,23 @@ def cancelar_solicitud(
 def obtener_solicitud(
     id_solicitud: int,
     db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_usuario),
 ):
     solicitud = solicitud_service.obtener_solicitud(db, id_solicitud)
 
     if not solicitud:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    # Solo el cliente dueño, el técnico asignado o un admin pueden verla.
+    es_admin = usuario_tiene_rol(db, usuario_actual.rut, "ADMIN")
+    es_dueno = solicitud.usuario_rut == usuario_actual.rut
+    es_tecnico_asignado = solicitud.tecnico_usuario_rut == usuario_actual.rut
+
+    if not (es_admin or es_dueno or es_tecnico_asignado):
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permiso para ver esta solicitud",
+        )
 
     return solicitud
 
@@ -458,6 +470,7 @@ def actualizar_solicitud(
     id_solicitud: int,
     solicitud: SolicitudUpdate,
     db: Session = Depends(get_db),
+    usuario_actual=Depends(solo_admin),
 ):
     solicitud_actualizada = solicitud_service.actualizar_solicitud(
         db,
@@ -475,6 +488,7 @@ def actualizar_solicitud(
 def eliminar_solicitud(
     id_solicitud: int,
     db: Session = Depends(get_db),
+    usuario_actual=Depends(solo_admin),
 ):
     solicitud_eliminada = solicitud_service.eliminar_solicitud(db, id_solicitud)
 

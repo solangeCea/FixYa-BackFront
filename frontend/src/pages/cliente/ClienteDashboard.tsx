@@ -18,6 +18,7 @@ import { useAuth } from "../../context/AuthContext";
 import {
   createSolicitud,
   getSolicitudesCliente,
+  uploadSolicitudFoto,
 } from "../../services/solicitudService";
 
 import type {
@@ -412,6 +413,7 @@ function ClienteDashboard() {
   const [reviewErrors, setReviewErrors] = useState<Record<number, string>>({});
   const [fotoPreviewUrl, setFotoPreviewUrl] = useState("");
   const [fotoFileName, setFotoFileName] = useState("");
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const fotoInputRef = useRef<HTMLInputElement>(null);
 
   const [reviewingId, setReviewingId] = useState<number | null>(null);
@@ -689,7 +691,7 @@ function ClienteDashboard() {
     }
   }
 
-  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -722,15 +724,34 @@ function ClienteDashboard() {
 
     setFotoFileName(file.name);
     setFotoPreviewUrl(previewUrl);
-    setForm((prev) => ({
-      ...prev,
-      foto_problema: file.name.slice(0, 300),
-    }));
     setFieldErrors((prev) => ({ ...prev, foto_problema: "" }));
+
+    // Subir la imagen al backend y guardar la URL real (no el nombre del archivo).
+    try {
+      setSubiendoFoto(true);
+      const { archivo_url } = await uploadSolicitudFoto(file);
+      setForm((prev) => ({ ...prev, foto_problema: archivo_url }));
+    } catch (err) {
+      setForm((prev) => ({ ...prev, foto_problema: "" }));
+      setFieldErrors((prev) => ({
+        ...prev,
+        foto_problema:
+          err instanceof Error
+            ? err.message
+            : "No pudimos subir la imagen. Intenta nuevamente.",
+      }));
+    } finally {
+      setSubiendoFoto(false);
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (subiendoFoto) {
+      setError("Espera a que termine de subir la imagen antes de enviar.");
+      return;
+    }
 
     if (!usuario?.rut) {
       setError(
@@ -1192,6 +1213,11 @@ function ClienteDashboard() {
                 <p className="mt-2 text-xs text-slate-500">
                   Opcional. JPG, JPEG, PNG o WEBP, hasta {maxImageSizeMb} MB.
                 </p>
+                {subiendoFoto && (
+                  <p className="mt-2 text-xs font-semibold text-teal-700">
+                    Subiendo imagen...
+                  </p>
+                )}
                 {fotoFileName && (
                   <div className="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center">
                     {fotoPreviewUrl && (
