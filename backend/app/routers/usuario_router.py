@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -304,17 +306,36 @@ def login(
     }
 
 
+def _demo_mode() -> bool:
+    return os.getenv("DEMO_MODE", "").strip().lower() in {"1", "true", "yes", "si"}
+
+
 @router.post("/password/recuperar")
 def recuperar_password(
     datos: RecuperarPassword,
     db: Session = Depends(get_db),
 ):
     # No revela si el correo existe (buena práctica de seguridad).
-    password_reset_service.solicitar_reset(db, datos.correo)
-    return {
+    resultado = password_reset_service.solicitar_reset(db, datos.correo)
+
+    respuesta = {
         "mensaje": "Si el correo está registrado, te enviamos un enlace para "
         "restablecer tu contraseña. Revisa tu bandeja de entrada.",
     }
+
+    # Modo demostración: devolvemos el enlace para completar el flujo en pantalla.
+    # Es necesario porque las cuentas de demo usan correos ficticios (no son
+    # buzones reales) y, sin SMTP, el correo solo se registra en el log.
+    # DEMO_MODE debe estar APAGADO en producción real: el enlace permite
+    # restablecer la contraseña de la cuenta sin pasar por el buzón.
+    if _demo_mode() and resultado and resultado.get("enlace"):
+        respuesta["enlace_demo"] = resultado["enlace"]
+        respuesta["mensaje"] = (
+            "Modo demostración: usa el enlace de abajo para restablecer tu "
+            "contraseña (en producción real llega por correo)."
+        )
+
+    return respuesta
 
 
 @router.post("/password/restablecer")

@@ -40,6 +40,9 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      # Modo demostración: sin SMTP, la API devuelve el enlace de recuperación
+      # para poder completar el flujo sin correo. Apagar en producción real.
+      DEMO_MODE: ${DEMO_MODE:-true}
       # Polling para que uvicorn --reload detecte cambios en Windows+Docker
       WATCHFILES_FORCE_POLLING: "true"
     command:

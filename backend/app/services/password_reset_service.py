@@ -19,17 +19,20 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def solicitar_reset(db: Session, correo: str) -> None:
+def solicitar_reset(db: Session, correo: str) -> dict | None:
     """Genera un token de recuperación y envía el enlace por correo.
 
-    Por seguridad no revela si el correo existe: si no hay usuario, no hace nada.
+    Por seguridad no revela si el correo existe: si no hay usuario, retorna None.
+    Cuando sí existe, retorna ``{"enlace": str, "enviado": bool}`` para que la
+    capa superior pueda, solo en modo demostración, mostrar el enlace cuando no
+    hay SMTP configurado.
     """
     usuario = db.query(Usuario).filter(
         func.lower(Usuario.correo) == correo.strip().lower()
     ).first()
 
     if not usuario or not usuario.estado_usuario:
-        return
+        return None
 
     # Invalida cualquier token previo sin usar del mismo usuario.
     db.query(PasswordResetToken).filter(
@@ -66,7 +69,8 @@ def solicitar_reset(db: Session, correo: str) -> None:
         "<p>Si no solicitaste este cambio, ignora este correo.</p>"
     )
 
-    enviar_email(usuario.correo, asunto, texto, html)
+    enviado = enviar_email(usuario.correo, asunto, texto, html)
+    return {"enlace": enlace, "enviado": enviado}
 
 
 def restablecer(db: Session, token: str, contrasena_nueva: str) -> None:

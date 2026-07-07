@@ -5,6 +5,7 @@ from datetime import date
 from typing import List
 
 from app.enums.usuario_enum import TipoUsuario
+from app.validators import validar_password_segura
 
 
 class UsuarioCreate(BaseModel):
@@ -85,16 +86,7 @@ class UsuarioCreate(BaseModel):
     @field_validator("contrasena")
     @classmethod
     def validar_contrasena_segura(cls, contrasena: str):
-        if not re.search(r"[A-Z]", contrasena):
-            raise ValueError("La contraseña debe contener al menos una letra mayúscula")
-
-        if not re.search(r"[a-z]", contrasena):
-            raise ValueError("La contraseña debe contener al menos una letra minúscula")
-
-        if not re.search(r"\d", contrasena):
-            raise ValueError("La contraseña debe contener al menos un número")
-
-        return contrasena
+        return validar_password_segura(contrasena)
 
 
 class UsuarioUpdate(BaseModel):
@@ -152,13 +144,7 @@ class CambioPassword(BaseModel):
     @field_validator("contrasena_nueva")
     @classmethod
     def validar_contrasena_segura(cls, contrasena: str):
-        if not re.search(r"[A-Z]", contrasena):
-            raise ValueError("La contraseña debe contener al menos una letra mayúscula")
-        if not re.search(r"[a-z]", contrasena):
-            raise ValueError("La contraseña debe contener al menos una letra minúscula")
-        if not re.search(r"\d", contrasena):
-            raise ValueError("La contraseña debe contener al menos un número")
-        return contrasena
+        return validar_password_segura(contrasena)
 
 
 class RecuperarPassword(BaseModel):
@@ -173,13 +159,7 @@ class RestablecerPassword(BaseModel):
     @field_validator("contrasena_nueva")
     @classmethod
     def validar_contrasena_segura(cls, contrasena: str):
-        if not re.search(r"[A-Z]", contrasena):
-            raise ValueError("La contraseña debe contener al menos una letra mayúscula")
-        if not re.search(r"[a-z]", contrasena):
-            raise ValueError("La contraseña debe contener al menos una letra minúscula")
-        if not re.search(r"\d", contrasena):
-            raise ValueError("La contraseña debe contener al menos un número")
-        return contrasena
+        return validar_password_segura(contrasena)
 
 
 class UsuarioRolResponse(BaseModel):
