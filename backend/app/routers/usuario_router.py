@@ -141,6 +141,10 @@ def _crear_perfil_tecnico(db: Session, rut: str, data: TecnicoCreate):
         estado_verificacion="PENDIENTE",
     )
     db.add(tecnico)
+    # El técnico (padre) debe existir antes de insertar sus servicios/comunas,
+    # que lo referencian por FK. Sin este flush, SQLAlchemy puede intentar
+    # insertar tecnico_servicio/tecnico_comuna primero y viola la FK.
+    db.flush()
 
     for servicio_id in data.servicios:
         db.add(TecnicoServicio(

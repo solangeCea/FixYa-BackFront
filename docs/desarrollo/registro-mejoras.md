@@ -1077,3 +1077,33 @@ su estado; (2) el admin no tenía forma de asignar un técnico a una solicitud d
 `py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
 En vivo: `GET /cotizaciones/mias` (200); asignación de técnico persiste y fija `ASIGNADO`;
 endpoints eliminados devuelven 404; `/admin/dashboard` sigue 200.
+
+## M-31 · 2026-07-06 — Corrección: el registro de técnico fallaba con error engañoso
+**Categoría:** Corrección
+
+### Problema detectado
+Al registrarse como técnico, el formulario mostraba "El RUT o correo ya está registrado"
+(HTTP 409) aunque el RUT/correo NO existieran. El registro era imposible.
+
+### Causa
+En `_crear_perfil_tecnico` (`usuario_router.py`) se agregaba el `Tecnico` y, sin hacer
+`flush`, se agregaban sus `TecnicoServicio`/`TecnicoComuna`. Como esos modelos se
+relacionan solo por columna FK (sin `relationship()` ORM), SQLAlchemy no garantizaba el
+orden de los INSERT e intentaba insertar `tecnico_comuna` antes que `tecnico`, violando la
+FK. El `except IntegrityError` del endpoint etiquetaba **cualquier** IntegrityError como
+"RUT o correo ya registrado", ocultando la causa real (el RUT/correo ya se validan antes).
+
+### Solución implementada
+Se agregó `db.flush()` inmediatamente después de `db.add(tecnico)` en
+`_crear_perfil_tecnico`, garantizando que la fila padre exista antes de insertar
+servicios/comunas. (El endpoint admin `crear_tecnico` no tenía el bug: commitea el técnico
+antes de los hijos.)
+
+### Archivos modificados
+- `backend/app/routers/usuario_router.py`
+
+### Verificación
+Reproducción del error real (FK `tecnico_comuna_tecnico_usuario_rut_fkey`) y confirmación
+del arreglo. Registro real vía API `POST /usuarios/registro-tecnico` → **201**, con usuario,
+técnico (PENDIENTE), servicio, comuna y rol TECNICO creados, y login del nuevo técnico → 200.
+Datos de prueba eliminados tras la verificación.
