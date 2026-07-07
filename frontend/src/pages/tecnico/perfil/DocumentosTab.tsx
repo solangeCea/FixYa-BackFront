@@ -22,10 +22,10 @@ import {
 import { formatDate, getUploadUrl } from "../../../utils/format";
 
 const TIPOS_DOCUMENTO = [
+  "CARNET_IDENTIDAD",
+  "ANTECEDENTES",
   "CERTIFICADO_TECNICO",
   "TITULO",
-  "ANTECEDENTES",
-  "CARNET_IDENTIDAD",
   "OTRO",
 ] as const;
 
@@ -36,6 +36,10 @@ const TIPO_LABELS: Record<string, string> = {
   CARNET_IDENTIDAD: "Cédula de identidad",
   OTRO: "Otro documento",
 };
+
+// Documentos mínimos para que un administrador valide el perfil (debe coincidir
+// con DOCUMENTOS_REQUERIDOS del backend).
+const DOCUMENTOS_REQUERIDOS = ["CARNET_IDENTIDAD", "ANTECEDENTES"] as const;
 
 function tipoLabel(tipo: string) {
   return TIPO_LABELS[tipo] ?? tipo.replaceAll("_", " ");
@@ -171,6 +175,89 @@ function DocumentosTab({ rut }: DocumentosTabProps) {
           {success}
         </div>
       )}
+
+      {!loading && (() => {
+        const estadoDe = (tipo: string) => {
+          const docs = documentos.filter((d) => d.tipo_documento === tipo);
+          if (docs.some((d) => d.estado_documento === "APROBADO")) return "APROBADO";
+          if (docs.some((d) => d.estado_documento === "RECHAZADO")) return "RECHAZADO";
+          if (docs.length > 0) return "PENDIENTE";
+          return "FALTA";
+        };
+
+        const todosAprobados = DOCUMENTOS_REQUERIDOS.every(
+          (t) => estadoDe(t) === "APROBADO"
+        );
+
+        return (
+          <div
+            className={`rounded-2xl border p-5 ${
+              todosAprobados
+                ? "border-emerald-200 bg-emerald-50"
+                : "border-amber-200 bg-amber-50"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              {todosAprobados ? (
+                <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" />
+              ) : (
+                <Clock className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" />
+              )}
+              <div className="flex-1">
+                <p
+                  className={`text-base font-bold ${
+                    todosAprobados ? "text-emerald-900" : "text-amber-900"
+                  }`}
+                >
+                  {todosAprobados
+                    ? "Documentación requerida completa"
+                    : "Perfil pendiente de validación"}
+                </p>
+                <p
+                  className={`mt-1 text-sm leading-6 ${
+                    todosAprobados ? "text-emerald-800" : "text-amber-800"
+                  }`}
+                >
+                  {todosAprobados
+                    ? "Un administrador revisará tu perfil. Podrás operar en cuanto quede aprobado."
+                    : "Para poder operar en FixYa y aparecer en el catálogo, sube y espera la aprobación de los documentos requeridos."}
+                </p>
+
+                <ul className="mt-3 space-y-2">
+                  {DOCUMENTOS_REQUERIDOS.map((tipo) => {
+                    const estado = estadoDe(tipo);
+                    const meta = {
+                      APROBADO: { txt: "Aprobado", cls: "text-emerald-700", Icon: CheckCircle2 },
+                      RECHAZADO: { txt: "Rechazado · vuelve a subirlo", cls: "text-rose-700", Icon: XCircle },
+                      PENDIENTE: { txt: "En revisión", cls: "text-amber-700", Icon: Clock },
+                      FALTA: { txt: "Falta subirlo", cls: "text-slate-500", Icon: AlertCircle },
+                    }[estado];
+                    const Icon = meta.Icon;
+                    return (
+                      <li
+                        key={tipo}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-white/70 px-3 py-2 text-sm"
+                      >
+                        <span className="font-semibold text-slate-800">
+                          {tipoLabel(tipo)}
+                        </span>
+                        <span className={`inline-flex items-center gap-1.5 font-semibold ${meta.cls}`}>
+                          <Icon className="h-4 w-4" />
+                          {meta.txt}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="mt-3 text-xs text-slate-500">
+                  Títulos y certificaciones técnicas son opcionales, pero suman a
+                  tu perfil.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <SectionCard
         title="Subir documento"

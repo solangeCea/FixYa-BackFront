@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   AlertCircle,
+  ArrowRight,
   Briefcase,
   CheckCircle,
   Clock,
   ClipboardList,
+  FileText,
   Flag,
   MapPin,
   MessageCircle,
@@ -644,11 +647,25 @@ function TecnicoDashboard() {
                   descartar, reportar ni tomar trabajos hasta que un
                   administrador apruebe tu perfil tecnico.
                 </p>
+                <p className="mt-2 text-sm leading-6">
+                  Para completar tu validacion, sube el resto de tu documentacion
+                  requerida (<span className="font-semibold">Certificado de
+                  antecedentes</span> y, si tienes, titulos o certificaciones) en
+                  la seccion <span className="font-semibold">Mis Documentos</span>.
+                </p>
                 {technicianProfile.observacion_admin && (
                   <p className="mt-3 rounded-xl bg-white/70 p-3 text-sm font-medium">
                     {technicianProfile.observacion_admin}
                   </p>
                 )}
+                <Link
+                  to="/tecnico/perfil?tab=documentos"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-amber-700"
+                >
+                  <FileText className="h-4 w-4" />
+                  Completar perfil · Mis Documentos
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
             </div>
           </div>

@@ -1763,3 +1763,48 @@ archivos de evidencia eliminados; semilla intacta. Trabajado en la rama
 
 ### Pendiente (fase siguiente acordada)
 E) QA final (seguridad, concurrencia, edge cases) sobre las Fases A–D.
+
+## M-45 · 2026-07-07 — Onboarding del técnico en dos etapas (Carnet primero)
+**Categoría:** Mejora funcional (UX de registro / validación de identidad)
+
+### Problema
+En el registro, el técnico subía un único "documento técnico" genérico
+(`CERTIFICADO_TECNICO`), lo que era confuso y no permitía validar bien el perfil. Además, la
+auto-verificación marcaba al técnico como APROBADO en cuanto **todos los documentos subidos**
+estaban aprobados: al aprobar su único documento quedaba verificado y **visible en el catálogo
+público con validación incompleta**.
+
+### Solución (flujo en 2 etapas)
+- **Etapa 1 — Registro (`Register.tsx`):** el único documento requerido es ahora el **Carnet de
+  Identidad** (label "Sube tu Carnet de Identidad (Obligatorio para iniciar)", ambos lados en un
+  archivo PDF/imagen). Se sube con `tipo_documento="CARNET_IDENTIDAD"`. Se añadió una **alerta
+  informativa** (Tailwind) avisando que el resto de la documentación se sube después desde
+  "Mis Documentos" y que el perfil queda **pendiente de validación** hasta la aprobación del
+  admin.
+- **Etapa 2 — Cuenta del técnico:** el dashboard (`TecnicoDashboard.tsx`) refuerza el banner de
+  "perfil pendiente" con un **CTA "Completar perfil · Mis Documentos"** (enlaza a
+  `/tecnico/perfil?tab=documentos`; `TecnicoPerfil.tsx` abre esa pestaña vía `?tab=`).
+  `DocumentosTab.tsx` muestra un **checklist de documentos requeridos** (Carnet + Antecedentes)
+  con su estado (falta / en revisión / aprobado / rechazado) y el aviso de validación pendiente;
+  títulos/certificaciones quedan opcionales.
+- **Lógica de validación (`documento_tecnico_service.py`):** `verificar_tecnico_automaticamente`
+  ahora exige el conjunto **`DOCUMENTOS_REQUERIDOS = {CARNET_IDENTIDAD, ANTECEDENTES}`** aprobado
+  (antes bastaba con "todos los subidos"). Además **no revive** perfiles que el admin dejó
+  `SUSPENDIDO`/`RECHAZADO`. Así el técnico permanece PENDIENTE y **fuera del catálogo público**
+  hasta que el admin apruebe los documentos requeridos.
+
+### Notas
+- El **catálogo público ya estaba protegido**: `/tecnicos/publicos/perfiles`, `/top-rating` y
+  `/buscar` filtran por `tecnico_verificado AND estado_verificacion=="APROBADO"`; `GET /tecnicos/`
+  es solo-admin. No requirió cambios.
+- El modelo `documento_tecnico` ya soportaba **N documentos por técnico** con estado por
+  documento: **sin migración**.
+- Técnicos antiguos con solo `CERTIFICADO_TECNICO` ya no auto-verifican con ese único documento;
+  el admin conserva la aprobación manual (`PUT /admin/tecnicos/{rut}/verificar`).
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo (Docker): al aprobar **solo el carnet** el técnico siguió **PENDIENTE**; al aprobar
+**carnet + antecedentes** pasó a **APROBADO / verificado**. Datos de prueba revertidos (técnico
+a PENDIENTE, documentos y archivos eliminados, `audit_log` truncada); semilla intacta. Trabajado
+en la rama `feature/auditoria-conflictos`.

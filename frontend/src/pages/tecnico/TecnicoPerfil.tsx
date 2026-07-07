@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Briefcase,
@@ -34,7 +34,16 @@ function TecnicoPerfil() {
 
   const { usuario, setUsuario } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<TabKey>("datos");
+  // Permite abrir directamente una pestaña vía ?tab= (ej. el CTA del dashboard
+  // "Completar perfil" enlaza a /tecnico/perfil?tab=documentos).
+  const [searchParams] = useSearchParams();
+  const tabInicial: TabKey = (["datos", "documentos", "valoraciones", "trabajos"] as const).includes(
+    searchParams.get("tab") as TabKey
+  )
+    ? (searchParams.get("tab") as TabKey)
+    : "datos";
+
+  const [activeTab, setActiveTab] = useState<TabKey>(tabInicial);
   const [perfilTecnico, setPerfilTecnico] = useState<Tecnico | null>(null);
 
   useEffect(() => {

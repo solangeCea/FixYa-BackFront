@@ -186,42 +186,57 @@ def crear_documento_tecnico_archivo(
 
     return nuevo_documento
 
-def verificar_tecnico_automaticamente(db: Session, tecnico_rut: str):
-    """Verifica al técnico automáticamente cuando tiene al menos un documento y
-    TODOS sus documentos están aprobados.
+# Documentos obligatorios para validar el perfil de un técnico (flujo en 2 etapas):
+# el Carnet de Identidad se sube en el registro y el Certificado de antecedentes
+# desde la cuenta. Títulos y certificaciones quedan como respaldo opcional.
+DOCUMENTOS_REQUERIDOS = {"CARNET_IDENTIDAD", "ANTECEDENTES"}
 
-    Antes exigía tipos fijos (CERTIFICADO_TECNICO y ANTECEDENTES), pero el registro
-    sube un único documento (CERTIFICADO_TECNICO), por lo que la verificación nunca
-    se disparaba al aprobar el documento. Ahora se basa en el estado real de los
-    documentos subidos.
+
+def verificar_tecnico_automaticamente(db: Session, tecnico_rut: str):
+    """Verifica al técnico automáticamente solo cuando los documentos
+    REQUERIDOS (Carnet + Antecedentes) están subidos y aprobados.
+
+    Antes bastaba con que "todos los documentos subidos" estuvieran aprobados,
+    lo que verificaba al técnico apenas se aprobaba su carnet (único documento
+    del registro), dejándolo visible en el catálogo con validación incompleta.
+    Ahora se exige el conjunto mínimo de documentos requeridos.
     """
+    tecnico = db.query(Tecnico).filter(
+        Tecnico.usuario_rut == tecnico_rut
+    ).first()
+
+    if not tecnico:
+        return
+
+    # No revivir un perfil que el admin dejó SUSPENDIDO o RECHAZADO: esa decisión
+    # es manual y no debe deshacerse por aprobar un documento.
+    if tecnico.estado_verificacion in {"SUSPENDIDO", "RECHAZADO"}:
+        return
+
     documentos = db.query(DocumentoTecnico).filter(
         DocumentoTecnico.tecnico_usuario_rut == tecnico_rut
     ).all()
 
-    total = len(documentos)
-    aprobados = sum(1 for doc in documentos if doc.documento_aprobado)
-    cumple_requisitos = total > 0 and aprobados == total
+    tipos_aprobados = {
+        doc.tipo_documento for doc in documentos if doc.documento_aprobado
+    }
+    cumple_requisitos = DOCUMENTOS_REQUERIDOS.issubset(tipos_aprobados)
 
     print(
         f"[verificar_tecnico_automaticamente] tecnico={tecnico_rut} "
-        f"documentos={total} aprobados={aprobados} -> verifica={cumple_requisitos}"
+        f"aprobados={sorted(tipos_aprobados)} requeridos={sorted(DOCUMENTOS_REQUERIDOS)} "
+        f"-> verifica={cumple_requisitos}"
     )
 
     if cumple_requisitos:
-        tecnico = db.query(Tecnico).filter(
-            Tecnico.usuario_rut == tecnico_rut
-        ).first()
-
-        if tecnico:
-            tecnico.tecnico_verificado = True
-            tecnico.estado_verificacion = "APROBADO"
-            tecnico.fecha_revision = datetime.utcnow()
-            db.commit()
-            print(
-                f"[verificar_tecnico_automaticamente] tecnico={tecnico_rut} "
-                f"marcado como APROBADO / verificado=True"
-            )
+        tecnico.tecnico_verificado = True
+        tecnico.estado_verificacion = "APROBADO"
+        tecnico.fecha_revision = datetime.utcnow()
+        db.commit()
+        print(
+            f"[verificar_tecnico_automaticamente] tecnico={tecnico_rut} "
+            f"marcado como APROBADO / verificado=True"
+        )
             
 def listar_tecnicos_pendientes_verificacion(db: Session):
     return db.query(Tecnico).filter(

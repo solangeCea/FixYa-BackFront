@@ -6,6 +6,7 @@ import {
   User,
   Briefcase,
   AlertCircle,
+  Info,
   ArrowLeft,
   Eye,
   EyeOff,
@@ -414,7 +415,7 @@ function Register() {
       if (field === "documento") {
         const tiposPermitidos = ["application/pdf", "image/jpeg", "image/png"];
 
-        if (!currentDocumento) return "Sube un documento técnico.";
+        if (!currentDocumento) return "Sube tu Carnet de Identidad para iniciar.";
         if (!tiposPermitidos.includes(currentDocumento.type)) {
           return "El documento debe ser PDF, JPG o PNG.";
         }
@@ -513,7 +514,7 @@ function Register() {
         if (documento) {
           await uploadTechnicianDocument({
             tecnico_usuario_rut: form.rut,
-            tipo_documento: "CERTIFICADO_TECNICO",
+            tipo_documento: "CARNET_IDENTIDAD",
             archivo: documento,
           });
         }
@@ -949,7 +950,8 @@ function Register() {
                     htmlFor="documento"
                     className="mb-2 block font-medium text-gray-700"
                   >
-                    Documento técnico
+                    Sube tu Carnet de Identidad{" "}
+                    <span className="text-rose-600">(Obligatorio para iniciar)</span>
                   </label>
                   <input
                     id="documento"
@@ -961,9 +963,27 @@ function Register() {
                     className={fieldClass(fieldErrors.documento)}
                   />
                   <FieldError message={fieldErrors.documento} />
-                  <p className="mt-2 text-xs text-yellow-800">
-                    Formatos permitidos: PDF, JPG o PNG.
+                  <p className="mt-2 text-xs text-gray-500">
+                    Ambos lados en un solo archivo (PDF, JPG o PNG).
                   </p>
+
+                  <div className="mt-3 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                    <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                    <div className="text-sm text-blue-900">
+                      <p className="font-semibold">
+                        Solo necesitas tu carnet para registrarte.
+                      </p>
+                      <p className="mt-1 leading-6 text-blue-800">
+                        El resto de la documentación (certificado de antecedentes,
+                        títulos y certificaciones técnicas) la subirás después
+                        desde tu cuenta, en la sección{" "}
+                        <span className="font-semibold">"Mis Documentos"</span>. Tu
+                        perfil quedará <span className="font-semibold">pendiente
+                        de validación</span> hasta que un administrador revise y
+                        apruebe tus documentos.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
