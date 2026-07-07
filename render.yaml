@@ -70,7 +70,7 @@ services:
   - type: web
     name: fixya-frontend
     runtime: static            # si Render se queja, cambia "runtime" por "env"
-    plan: free
+    # (los sitios estáticos NO llevan "plan": siempre son gratis/CDN)
     buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: frontend/dist
     autoDeploy: true
