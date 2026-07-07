@@ -122,6 +122,11 @@ const jornadaOptions: Array<{
   },
 ];
 
+// Bloques horarios fijos del calendario semanal (excluye el personalizado).
+const BLOQUES_HORARIOS = jornadaOptions.filter(
+  (option) => option.value !== "PERSONALIZADO"
+);
+
 const acceptedImageMimeTypes = ["image/jpeg", "image/png", "image/webp"];
 const acceptedImageExtensions = /\.(jpe?g|png|webp)$/i;
 const maxImageSizeMb = 5;
@@ -653,61 +658,54 @@ function ClienteDashboard() {
     });
   }
 
-  function addAvailabilityDay(day: DiaSemana) {
-    if (form.disponibilidad_horaria.some((item) => item.dia === day)) {
-      return;
-    }
-
-    const defaultOption = jornadaOptions[0];
-
-    setForm((prev) => ({
-      ...prev,
-      disponibilidad_horaria: [
-        ...prev.disponibilidad_horaria,
-        {
-          dia: day,
-          jornada: defaultOption.value,
-          hora_inicio: defaultOption.hora_inicio,
-          hora_fin: defaultOption.hora_fin,
-        },
-      ],
-    }));
-    clearAvailabilityError(day);
-  }
-
-  function removeAvailabilityDay(day: DiaSemana) {
-    setForm((prev) => ({
-      ...prev,
-      disponibilidad_horaria: prev.disponibilidad_horaria.filter(
-        (item) => item.dia !== day
-      ),
-    }));
-    clearAvailabilityError(day);
-  }
-
-  function updateAvailabilityDay(
-    day: DiaSemana,
-    updates: Partial<DisponibilidadDiaForm>
-  ) {
-    setForm((prev) => ({
-      ...prev,
-      disponibilidad_horaria: prev.disponibilidad_horaria.map((item) =>
-        item.dia === day ? { ...item, ...updates } : item
-      ),
-    }));
-    clearAvailabilityError(day);
-  }
-
-  function handleJornadaChange(day: DiaSemana, jornada: JornadaKey) {
+  // Calendario semanal: cada celda es un (día, bloque). Un clic selecciona el
+  // bloque de ese día; volver a hacer clic en el mismo bloque lo desmarca; y
+  // elegir otro bloque del mismo día lo reemplaza (una franja por día, acorde a
+  // la restricción única (solicitud, día) del backend). El resultado se mantiene
+  // ordenado por día para que el resumen y el payload sean deterministas.
+  function toggleAvailabilityBlock(day: DiaSemana, jornada: JornadaKey) {
     const option = jornadaOptions.find((item) => item.value === jornada);
-
     if (!option) return;
 
-    updateAvailabilityDay(day, {
-      jornada,
-      hora_inicio: option.hora_inicio,
-      hora_fin: option.hora_fin,
+    setForm((prev) => {
+      const existente = prev.disponibilidad_horaria.find(
+        (item) => item.dia === day
+      );
+
+      let siguiente: DisponibilidadDiaForm[];
+      if (existente && existente.jornada === jornada) {
+        siguiente = prev.disponibilidad_horaria.filter(
+          (item) => item.dia !== day
+        );
+      } else if (existente) {
+        siguiente = prev.disponibilidad_horaria.map((item) =>
+          item.dia === day
+            ? {
+                ...item,
+                jornada,
+                hora_inicio: option.hora_inicio,
+                hora_fin: option.hora_fin,
+              }
+            : item
+        );
+      } else {
+        siguiente = [
+          ...prev.disponibilidad_horaria,
+          {
+            dia: day,
+            jornada,
+            hora_inicio: option.hora_inicio,
+            hora_fin: option.hora_fin,
+          },
+        ];
+      }
+
+      const orden = diasSemana.map((d) => d.value);
+      siguiente.sort((a, b) => orden.indexOf(a.dia) - orden.indexOf(b.dia));
+
+      return { ...prev, disponibilidad_horaria: siguiente };
     });
+    clearAvailabilityError(day);
   }
 
   function clearPhotoSelection() {
@@ -1777,144 +1775,77 @@ function ClienteDashboard() {
 
                 <div>
                   <p className="mb-3 text-sm text-slate-600">
-                    Selecciona uno o varios días y ajusta el horario de visita para cada uno.
+                    Marca en el calendario los bloques en que puedes recibir al
+                    técnico. Haz clic para seleccionar y vuelve a hacer clic para
+                    quitar.
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {diasSemana.map((day) => {
-                      const isSelected = form.disponibilidad_horaria.some(
-                        (item) => item.dia === day.value
-                      );
 
-                      return (
-                        <button
-                          key={day.value}
-                          type="button"
-                          onClick={() => addAvailabilityDay(day.value)}
-                          disabled={isSelected}
-                          className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                            isSelected
-                              ? "border-blue-600 bg-blue-600 text-white"
-                              : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50"
-                          }`}
+                  {/* Calendario semanal: filas = días, columnas = bloques */}
+                  <div className="overflow-hidden rounded-2xl border border-slate-200">
+                    <div className="hidden grid-cols-[110px_repeat(3,1fr)] gap-px bg-slate-200 sm:grid">
+                      <div className="bg-slate-50 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Día
+                      </div>
+                      {BLOQUES_HORARIOS.map((bloque) => (
+                        <div
+                          key={bloque.value}
+                          className="bg-slate-50 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-slate-500"
                         >
-                          {day.label}
-                        </button>
-                      );
-                    })}
+                          {bloque.label}
+                          <span className="block text-[10px] font-medium normal-case text-slate-400">
+                            {bloque.hora_inicio}–{bloque.hora_fin}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="divide-y divide-slate-200">
+                      {diasSemana.map((day) => (
+                        <div
+                          key={day.value}
+                          className="grid grid-cols-2 items-stretch gap-2 p-2 sm:grid-cols-[110px_repeat(3,1fr)] sm:gap-px sm:p-0"
+                        >
+                          <span className="col-span-2 px-2 py-1 text-sm font-bold text-slate-800 sm:col-span-1 sm:flex sm:items-center sm:bg-white sm:px-3 sm:py-3">
+                            {day.label}
+                          </span>
+                          {BLOQUES_HORARIOS.map((bloque) => {
+                            const seleccionado = form.disponibilidad_horaria.some(
+                              (item) =>
+                                item.dia === day.value &&
+                                item.jornada === bloque.value
+                            );
+                            return (
+                              <button
+                                key={bloque.value}
+                                type="button"
+                                aria-pressed={seleccionado}
+                                aria-label={`${day.label} ${bloque.label}`}
+                                onClick={() =>
+                                  toggleAvailabilityBlock(day.value, bloque.value)
+                                }
+                                className={`flex flex-col items-center justify-center rounded-xl px-2 py-3 text-xs font-semibold transition sm:rounded-none ${
+                                  seleccionado
+                                    ? "bg-teal-600 text-white shadow-inner"
+                                    : "bg-white text-slate-600 hover:bg-teal-50 hover:text-teal-800"
+                                }`}
+                              >
+                                <span className="sm:hidden">{bloque.label}</span>
+                                <span
+                                  className={`text-[11px] ${
+                                    seleccionado ? "text-teal-50" : "text-slate-400"
+                                  }`}
+                                >
+                                  {bloque.hora_inicio}–{bloque.hora_fin}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <FieldError message={fieldErrors.disponibilidad_horaria} />
                 </div>
-
-                {form.disponibilidad_horaria.length > 0 && (
-                  <div className="space-y-3">
-                    {form.disponibilidad_horaria.map((item) => (
-                      <div
-                        key={item.dia}
-                        className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                      >
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <h4 className="font-bold text-slate-900">
-                            {getDayLabel(item.dia)}
-                          </h4>
-                          <button
-                            type="button"
-                            onClick={() => removeAvailabilityDay(item.dia)}
-                            className="self-start rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:self-auto"
-                          >
-                            Eliminar día
-                          </button>
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {jornadaOptions.map((option) => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() =>
-                                handleJornadaChange(item.dia, option.value)
-                              }
-                              className={`rounded-full border px-3 py-2 text-xs font-bold transition ${
-                                item.jornada === option.value
-                                  ? "border-teal-700 bg-teal-700 text-white"
-                                  : "border-slate-300 bg-white text-slate-700 hover:border-teal-400 hover:bg-teal-50"
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                          <div>
-                            <label
-                              htmlFor={`hora_inicio_${item.dia}`}
-                              className="mb-2 block text-sm font-bold text-slate-700"
-                            >
-                              Desde
-                            </label>
-                            <input
-                              id={`hora_inicio_${item.dia}`}
-                              aria-label={`Desde ${getDayLabel(item.dia)}`}
-                              type="time"
-                              value={item.hora_inicio}
-                              onChange={(event) =>
-                                updateAvailabilityDay(item.dia, {
-                                  jornada: "PERSONALIZADO",
-                                  hora_inicio: event.target.value,
-                                })
-                              }
-                              className={fieldClass(
-                                fieldErrors[
-                                  availabilityErrorKey(item.dia, "hora_inicio")
-                                ]
-                              )}
-                            />
-                            <FieldError
-                              message={
-                                fieldErrors[
-                                  availabilityErrorKey(item.dia, "hora_inicio")
-                                ]
-                              }
-                            />
-                          </div>
-
-                          <div>
-                            <label
-                              htmlFor={`hora_fin_${item.dia}`}
-                              className="mb-2 block text-sm font-bold text-slate-700"
-                            >
-                              Hasta
-                            </label>
-                            <input
-                              id={`hora_fin_${item.dia}`}
-                              aria-label={`Hasta ${getDayLabel(item.dia)}`}
-                              type="time"
-                              value={item.hora_fin}
-                              onChange={(event) =>
-                                updateAvailabilityDay(item.dia, {
-                                  jornada: "PERSONALIZADO",
-                                  hora_fin: event.target.value,
-                                })
-                              }
-                              className={fieldClass(
-                                fieldErrors[
-                                  availabilityErrorKey(item.dia, "hora_fin")
-                                ]
-                              )}
-                            />
-                            <FieldError
-                              message={
-                                fieldErrors[
-                                  availabilityErrorKey(item.dia, "hora_fin")
-                                ]
-                              }
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
                 <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
                   <strong>Disponibilidad seleccionada:</strong>{" "}

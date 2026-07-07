@@ -124,11 +124,13 @@ function fillRequiredSolicitudFields(solicitudForm: ReturnType<typeof within>) {
   )
 }
 
-function selectAvailabilityDay(
+// Calendario semanal: cada bloque es un boton con nombre accesible
+// "{Dia} {Bloque}" (p.ej. "Lunes Mañana"). Un clic selecciona ese bloque.
+function selectAvailabilityBlock(
   solicitudForm: ReturnType<typeof within>,
-  dayName: RegExp
+  blockName: RegExp
 ) {
-  fireEvent.click(solicitudForm.getByRole("button", { name: dayName }))
+  fireEvent.click(solicitudForm.getByRole("button", { name: blockName }))
 }
 
 function fillCasaContext(solicitudForm: ReturnType<typeof within>) {
@@ -153,7 +155,7 @@ function fillCasaContext(solicitudForm: ReturnType<typeof within>) {
   fireEvent.change(solicitudForm.getByLabelText(/instrucciones para ingresar/i), {
     target: { value: "Tocar timbre principal" },
   })
-  selectAvailabilityDay(solicitudForm, /lunes/i)
+  selectAvailabilityBlock(solicitudForm, /lunes ma.ana/i)
 }
 
 function fillDepartamentoContext(
@@ -211,8 +213,7 @@ function fillDepartamentoContext(
       },
     }
   )
-  selectAvailabilityDay(solicitudForm, /mi.rcoles/i)
-  fireEvent.click(solicitudForm.getByRole("button", { name: /tarde/i }))
+  selectAvailabilityBlock(solicitudForm, /mi.rcoles tarde/i)
 }
 
 function fillLocalComercialContext(solicitudForm: ReturnType<typeof within>) {
@@ -246,13 +247,7 @@ function fillLocalComercialContext(solicitudForm: ReturnType<typeof within>) {
       target: { value: "Coordinar apertura con administrador" },
     }
   )
-  selectAvailabilityDay(solicitudForm, /s.bado/i)
-  fireEvent.change(solicitudForm.getByLabelText(/desde s.bado/i), {
-    target: { value: "10:00" },
-  })
-  fireEvent.change(solicitudForm.getByLabelText(/hasta s.bado/i), {
-    target: { value: "14:00" },
-  })
+  selectAvailabilityBlock(solicitudForm, /s.bado ma.ana/i)
 }
 
 function submitFormAndWaitForCreate(form: HTMLFormElement) {
@@ -696,8 +691,10 @@ describe("SolicitudForm", () => {
     expect(direccionInput).toHaveValue("Av Siempre Viva 123")
     expect(tipoProblemaSelect).toHaveValue("Fuga de agua")
     expect(referenciaInput).toHaveValue("Cocina, bajo el lavaplatos")
-    expect(solicitudForm.getByLabelText(/desde lunes/i)).toHaveValue("09:00")
-    expect(solicitudForm.getByLabelText(/hasta lunes/i)).toHaveValue("13:00")
+    // El bloque Lunes Mañana queda seleccionado y el resumen lo refleja.
+    expect(
+      solicitudForm.getByRole("button", { name: /lunes ma.ana/i })
+    ).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByText(/lunes de 09:00 a 13:00/i)).toBeInTheDocument()
   })
 
@@ -778,14 +775,14 @@ describe("SolicitudForm", () => {
         persona_contacto: "Camila Perez",
         telefono_contacto: "+56912345678",
         disponibilidad_horaria: [
-          { dia: "SABADO", hora_inicio: "10:00", hora_fin: "14:00" },
+          { dia: "SABADO", hora_inicio: "09:00", hora_fin: "13:00" },
         ],
         condiciones_acceso: expect.stringContaining("Trabajo fuera de horario"),
         instrucciones_acceso: "Coordinar apertura con administrador",
       })
     )
     const localPayload = mockCreateSolicitud.mock.calls[0][0]
-    expect(localPayload.horario_disponible).toContain("sábado de 10:00 a 14:00")
+    expect(localPayload.horario_disponible).toContain("sábado de 09:00 a 13:00")
     expect(localPayload.horario_disponible).toContain("Horario de")
     expect(mockCreateSolicitud).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -828,7 +825,7 @@ describe("SolicitudForm", () => {
         target: { value: "Punto de encuentro en acceso norte" },
       }
     )
-    selectAvailabilityDay(solicitudForm, /lunes/i)
+    selectAvailabilityBlock(solicitudForm, /lunes ma.ana/i)
 
     await submitFormAndWaitForCreate(form)
 
@@ -908,7 +905,7 @@ describe("SolicitudForm", () => {
     fireEvent.change(solicitudForm.getByLabelText(/mascotas en el domicilio/i), {
       target: { value: "SI" },
     })
-    selectAvailabilityDay(solicitudForm, /domingo/i)
+    selectAvailabilityBlock(solicitudForm, /domingo ma.ana/i)
 
     fireEvent.submit(form)
 
@@ -925,25 +922,15 @@ describe("SolicitudForm", () => {
 
     fillRequiredSolicitudFields(solicitudForm)
     fillCasaContext(solicitudForm)
-    selectAvailabilityDay(solicitudForm, /mi.rcoles/i)
-    fireEvent.change(solicitudForm.getByLabelText(/desde mi.rcoles/i), {
-      target: { value: "15:00" },
-    })
-    fireEvent.change(solicitudForm.getByLabelText(/hasta mi.rcoles/i), {
-      target: { value: "19:00" },
-    })
-    selectAvailabilityDay(solicitudForm, /s.bado/i)
-    fireEvent.change(solicitudForm.getByLabelText(/desde s.bado/i), {
-      target: { value: "10:00" },
-    })
-    fireEvent.change(solicitudForm.getByLabelText(/hasta s.bado/i), {
-      target: { value: "14:00" },
-    })
+    selectAvailabilityBlock(solicitudForm, /mi.rcoles tarde/i)
+    selectAvailabilityBlock(solicitudForm, /s.bado ma.ana/i)
 
-    expect(solicitudForm.getByRole("button", { name: /lunes/i })).toBeDisabled()
+    expect(
+      solicitudForm.getByRole("button", { name: /lunes ma.ana/i })
+    ).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByText(/lunes de 09:00 a 13:00/i)).toBeInTheDocument()
     expect(screen.getByText(/mi.rcoles de 15:00 a 19:00/i)).toBeInTheDocument()
-    expect(screen.getByText(/s.bado de 10:00 a 14:00/i)).toBeInTheDocument()
+    expect(screen.getByText(/s.bado de 09:00 a 13:00/i)).toBeInTheDocument()
 
     await submitFormAndWaitForCreate(form)
 
@@ -952,13 +939,13 @@ describe("SolicitudForm", () => {
         disponibilidad_horaria: [
           { dia: "LUNES", hora_inicio: "09:00", hora_fin: "13:00" },
           { dia: "MIERCOLES", hora_inicio: "15:00", hora_fin: "19:00" },
-          { dia: "SABADO", hora_inicio: "10:00", hora_fin: "14:00" },
+          { dia: "SABADO", hora_inicio: "09:00", hora_fin: "13:00" },
         ],
       })
     )
   })
 
-  it("CP-SOL-014 valida que la hora de termino sea posterior al inicio", async () => {
+  it("CP-SOL-014 permite desmarcar un bloque de horario con un segundo clic", async () => {
     renderSolicitudForm()
     await waitForSolicitudFormReady()
 
@@ -967,18 +954,22 @@ describe("SolicitudForm", () => {
 
     fillRequiredSolicitudFields(solicitudForm)
     fillCasaContext(solicitudForm)
-    fireEvent.change(solicitudForm.getByLabelText(/hasta lunes/i), {
-      target: { value: "09:00" },
-    })
+
+    // Lunes Mañana quedó seleccionado por fillCasaContext.
+    expect(
+      solicitudForm.getByRole("button", { name: /lunes ma.ana/i })
+    ).toHaveAttribute("aria-pressed", "true")
+
+    // Un segundo clic lo desmarca y vuelve a exigir disponibilidad al enviar.
+    selectAvailabilityBlock(solicitudForm, /lunes ma.ana/i)
+    expect(
+      solicitudForm.getByRole("button", { name: /lunes ma.ana/i })
+    ).toHaveAttribute("aria-pressed", "false")
 
     fireEvent.submit(form)
 
     expect(mockCreateSolicitud).not.toHaveBeenCalled()
-    expect(
-      screen.getByText(/debe ser posterior a la hora de inicio/i)
-    ).toBeInTheDocument()
-    expect(solicitudForm.getByLabelText(/desde lunes/i)).toHaveValue("09:00")
-    expect(solicitudForm.getByLabelText(/hasta lunes/i)).toHaveValue("09:00")
+    expect(screen.getByText(/selecciona al menos un d.a/i)).toBeInTheDocument()
   })
 
   it("CP-SOL-015 valida que createSolicitud reciba el payload con los nuevos campos", async () => {
