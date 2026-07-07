@@ -214,6 +214,12 @@ def listar_por_solicitud_autorizado(db: Session, id_solicitud: int, usuario):
     )
 
 
+def listar_cotizaciones_tecnico(db: Session, tecnico_rut: str):
+    return db.query(Cotizacion).filter(
+        Cotizacion.tecnico_usuario_rut == tecnico_rut
+    ).order_by(Cotizacion.id_cotizacion.desc()).all()
+
+
 def actualizar_cotizacion(
     db: Session,
     id_cotizacion: int,

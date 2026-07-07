@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle, ClipboardList, Eye, Flag, RefreshCw } from "lucide-react";
 
 import {
+  asignarTecnico,
   getReportesSolicitudes,
   getSolicitudes,
   resolverReporteSolicitud,
@@ -9,6 +10,8 @@ import {
 import type { Solicitud, SolicitudReporte } from "../../services/solicitudService";
 import { getComunas, getServicios } from "../../services/catalogService";
 import type { Comuna, Servicio } from "../../services/catalogService";
+import { getPublicTechnicianProfiles } from "../../services/technicianService";
+import type { TecnicoPublicProfile } from "../../services/technicianService";
 import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
@@ -75,23 +78,35 @@ function RequestManagement() {
     solicitud_activa: "",
   });
   const [resolving, setResolving] = useState(false);
+  const [tecnicos, setTecnicos] = useState<TecnicoPublicProfile[]>([]);
+  const [tecnicoSeleccionado, setTecnicoSeleccionado] = useState("");
+  const [asignando, setAsignando] = useState(false);
+  const [success, setSuccess] = useState("");
 
   async function cargarDatos() {
     try {
       setLoading(true);
       setError("");
 
-      const [solicitudesData, serviciosData, comunasData, reportesData] = await Promise.all([
+      const [
+        solicitudesData,
+        serviciosData,
+        comunasData,
+        reportesData,
+        tecnicosData,
+      ] = await Promise.all([
         getSolicitudes(),
         getServicios(),
         getComunas(),
         getReportesSolicitudes(),
+        getPublicTechnicianProfiles(),
       ]);
 
       setSolicitudes(solicitudesData);
       setServicios(serviciosData);
       setComunas(comunasData);
       setReportes(reportesData);
+      setTecnicos(tecnicosData);
     } catch (error) {
       console.error(error);
       setError(
@@ -151,6 +166,29 @@ function RequestManagement() {
       observacion_admin: reporte.observacion_admin || "",
       solicitud_activa: "",
     });
+  }
+
+  async function handleAsignarTecnico() {
+    if (!selectedSolicitud || !tecnicoSeleccionado) return;
+
+    try {
+      setAsignando(true);
+      setError("");
+      setSuccess("");
+
+      await asignarTecnico(selectedSolicitud.id_solicitud, tecnicoSeleccionado);
+
+      setSuccess("Técnico asignado correctamente.");
+      setSelectedSolicitud(null);
+      setTecnicoSeleccionado("");
+      await cargarDatos();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No pudimos asignar el técnico."
+      );
+    } finally {
+      setAsignando(false);
+    }
   }
 
   async function handleResolverReporte() {
@@ -238,6 +276,12 @@ function RequestManagement() {
         <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
           <AlertCircle size={20} />
           <p>{error}</p>
+        </div>
+      )}
+
+      {success && (
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-4 font-medium text-green-700">
+          {success}
         </div>
       )}
 
@@ -392,7 +436,10 @@ function RequestManagement() {
             : "Detalle de solicitud"
         }
         description={selectedSolicitud?.titulo_solicitud}
-        onClose={() => setSelectedSolicitud(null)}
+        onClose={() => {
+          setSelectedSolicitud(null);
+          setTecnicoSeleccionado("");
+        }}
       >
         {selectedSolicitud && (
           <div className="space-y-5">
@@ -443,6 +490,46 @@ function RequestManagement() {
               <DetailItem label="Costo final" value={selectedSolicitud.costo_final} />
               <DetailItem label="Fecha real" value={selectedSolicitud.fecha_real} />
             </div>
+
+            {!selectedSolicitud.tecnico_usuario_rut &&
+              isSolicitudActiva(selectedSolicitud.estado_trabajo) && (
+                <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
+                  <p className="mb-2 text-sm font-bold text-teal-800">
+                    Asignar técnico manualmente
+                  </p>
+                  <p className="mb-3 text-xs text-slate-500">
+                    Solo se listan técnicos aprobados. Al asignar, la solicitud
+                    pasa a estado ASIGNADO.
+                  </p>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <select
+                      value={tecnicoSeleccionado}
+                      onChange={(event) =>
+                        setTecnicoSeleccionado(event.target.value)
+                      }
+                      className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    >
+                      <option value="">Selecciona un técnico aprobado</option>
+                      {tecnicos.map((tecnico) => (
+                        <option
+                          key={tecnico.usuario_rut}
+                          value={tecnico.usuario_rut}
+                        >
+                          {tecnico.nombre_completo} · {tecnico.usuario_rut}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleAsignarTecnico}
+                      disabled={!tecnicoSeleccionado || asignando}
+                      className="rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                    >
+                      {asignando ? "Asignando..." : "Asignar técnico"}
+                    </button>
+                  </div>
+                </div>
+              )}
           </div>
         )}
       </Modal>

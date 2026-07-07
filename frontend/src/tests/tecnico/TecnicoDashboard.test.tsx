@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useAuth } from "../../context/AuthContext"
 import TecnicoDashboard from "../../pages/tecnico/TecnicoDashboard"
 import { getServicios } from "../../services/catalogService"
-import { createCotizacion } from "../../services/cotizacionService"
+import { createCotizacion, getMisCotizaciones } from "../../services/cotizacionService"
 import {
   descartarSolicitud,
   getSolicitudesDisponiblesTecnico,
@@ -29,6 +29,7 @@ vi.mock("../../services/catalogService", () => ({
 
 vi.mock("../../services/cotizacionService", () => ({
   createCotizacion: vi.fn(),
+  getMisCotizaciones: vi.fn(),
 }))
 
 vi.mock("../../services/solicitudService", () => ({
@@ -47,6 +48,7 @@ vi.mock("../../services/technicianService", () => ({
 const mockUseAuth = vi.mocked(useAuth)
 const mockGetServicios = vi.mocked(getServicios)
 const mockCreateCotizacion = vi.mocked(createCotizacion)
+const mockGetMisCotizaciones = vi.mocked(getMisCotizaciones)
 const mockDescartarSolicitud = vi.mocked(descartarSolicitud)
 const mockGetSolicitudesDisponiblesTecnico = vi.mocked(
   getSolicitudesDisponiblesTecnico
@@ -172,6 +174,7 @@ describe("TecnicoDashboard", () => {
       },
     ])
     mockGetTechnicianDashboard.mockResolvedValue(metrics)
+    mockGetMisCotizaciones.mockResolvedValue([])
     mockCreateCotizacion.mockResolvedValue({
       id_cotizacion: 1,
       solicitud_id_solicitud: 501,

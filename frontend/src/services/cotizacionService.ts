@@ -69,6 +69,21 @@ export async function createCotizacion(
   return response.json();
 }
 
+export async function getMisCotizaciones(): Promise<Cotizacion[]> {
+  const response = await fetch(`${API_URL}/cotizaciones/mias`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, "Error al obtener tus cotizaciones")
+    );
+  }
+
+  return response.json();
+}
+
 export async function getCotizacionesSolicitud(
   idSolicitud: number
 ): Promise<Cotizacion[]> {

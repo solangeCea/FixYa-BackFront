@@ -55,6 +55,20 @@ def listar_por_solicitud(
     )
 
 
+@router.get("/mias", response_model=List[CotizacionResponse])
+def listar_mis_cotizaciones(
+    db: Session = Depends(get_db),
+    usuario=Depends(get_current_usuario),
+):
+    if not usuario_tiene_rol(db, usuario.rut, "TECNICO"):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo los técnicos tienen cotizaciones propias",
+        )
+
+    return cotizacion_service.listar_cotizaciones_tecnico(db, usuario.rut)
+
+
 @router.get("/{id_cotizacion}", response_model=CotizacionResponse)
 def obtener_cotizacion(
     id_cotizacion: int,

@@ -29,7 +29,8 @@ import {
 import type { Solicitud } from "../../services/solicitudService";
 import { getServicios } from "../../services/catalogService";
 import type { Servicio } from "../../services/catalogService";
-import { createCotizacion } from "../../services/cotizacionService";
+import { createCotizacion, getMisCotizaciones } from "../../services/cotizacionService";
+import type { Cotizacion } from "../../services/cotizacionService";
 import {
   getMyTechnicianProfile,
   getTechnicianDashboard,
@@ -140,6 +141,7 @@ function TecnicoDashboard() {
   const [cotizaciones, setCotizaciones] = useState<
     Record<number, { monto: string; detalle: string; vigencia: string }>
   >({});
+  const [misCotizaciones, setMisCotizaciones] = useState<Cotizacion[]>([]);
   const [reportSolicitud, setReportSolicitud] = useState<Solicitud | null>(
     null
   );
@@ -167,31 +169,36 @@ function TecnicoDashboard() {
         (profile.tecnico_verificado ? "APROBADO" : "PENDIENTE");
 
       if (verificationState !== "APROBADO" || !profile.tecnico_verificado) {
-        const [asignadas, serviciosData, metricasData] = await Promise.all([
-          getSolicitudesTecnico(usuario.rut),
-          getServicios(),
-          getTechnicianDashboard(usuario.rut),
-        ]);
+        const [asignadas, serviciosData, metricasData, cotizacionesData] =
+          await Promise.all([
+            getSolicitudesTecnico(usuario.rut),
+            getServicios(),
+            getTechnicianDashboard(usuario.rut),
+            getMisCotizaciones(),
+          ]);
 
         setSolicitudesDisponibles([]);
         setMisSolicitudes(asignadas);
         setServicios(serviciosData);
         setMetrics(metricasData);
+        setMisCotizaciones(cotizacionesData);
         return;
       }
 
-      const [disponibles, asignadas, serviciosData, metricasData] =
+      const [disponibles, asignadas, serviciosData, metricasData, cotizacionesData] =
         await Promise.all([
           getSolicitudesDisponiblesTecnico(),
           getSolicitudesTecnico(usuario.rut),
           getServicios(),
           getTechnicianDashboard(usuario.rut),
+          getMisCotizaciones(),
         ]);
 
       setSolicitudesDisponibles(disponibles);
       setMisSolicitudes(asignadas);
       setServicios(serviciosData);
       setMetrics(metricasData);
+      setMisCotizaciones(cotizacionesData);
     } catch (err) {
       setError(
         err instanceof Error
@@ -521,6 +528,7 @@ function TecnicoDashboard() {
             Cargando trabajos y solicitudes...
           </div>
         ) : (
+          <>
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="rounded-2xl bg-white p-6 shadow-sm">
               <h3 className="mb-4 text-xl font-bold text-gray-900">
@@ -791,6 +799,50 @@ function TecnicoDashboard() {
               )}
             </section>
           </div>
+
+          <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-xl font-bold text-gray-900">
+              Mis cotizaciones enviadas
+            </h3>
+            {misCotizaciones.length === 0 ? (
+              <EmptyState
+                title="Aun no has enviado cotizaciones"
+                description="Cuando cotices una solicitud disponible, podras seguir aqui su estado (pendiente, aceptada o rechazada)."
+                icon={ClipboardList}
+              />
+            ) : (
+              <div className="space-y-3">
+                {misCotizaciones.map((cot) => (
+                  <div
+                    key={cot.id_cotizacion}
+                    className="flex flex-col gap-2 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        Solicitud #{cot.solicitud_id_solicitud}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        Monto estimado: ${cot.monto_estimado}
+                      </p>
+                    </div>
+                    <span
+                      className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
+                        cot.estado_cotizacion === "ACEPTADA"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : cot.estado_cotizacion === "RECHAZADA" ||
+                            cot.estado_cotizacion === "ANULADA"
+                          ? "bg-rose-100 text-rose-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {cot.estado_cotizacion}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+          </>
         )}
       </main>
 

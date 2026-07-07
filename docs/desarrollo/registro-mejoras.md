@@ -1044,3 +1044,36 @@ y el rol Cliente no tenía pantalla para editar su perfil (solo el técnico la t
 `py_compile`, `tsc -b`, `vite build` OK; Vitest UserManagement 3/3 y suite 66/72
 (6 preexistentes de `TecnicoDashboard`). En vivo: desactivar/reactivar (200), auto-desactivación
 (400), sin token (401), y login de cuenta desactivada (403) → reactivada (200).
+
+## M-30 · 2026-07-06 — Cierre de pendientes: cotizaciones del técnico, asignación manual y limpieza
+**Categoría:** Mejora funcional / Limpieza
+
+### Problema detectado
+Pendientes de la revisión QA (M-28): (1) el técnico no veía sus cotizaciones enviadas ni
+su estado; (2) el admin no tenía forma de asignar un técnico a una solicitud desde la UI
+(el endpoint existía sin consumidor); (3) endpoints huérfanos duplicados en el backend.
+
+### Solución implementada
+- **Cotizaciones del técnico:** nuevo `GET /cotizaciones/mias` (`get_current_usuario`,
+  rol TECNICO) + `cotizacion_service.listar_cotizaciones_tecnico`. En `TecnicoDashboard`
+  se agregó la sección **"Mis cotizaciones enviadas"** con badge de estado (pendiente/
+  aceptada/rechazada). Servicio `getMisCotizaciones`.
+- **Asignación manual:** `RequestManagement` ahora carga técnicos aprobados
+  (`getPublicTechnicianProfiles`) y, en el detalle de una solicitud activa sin técnico,
+  muestra un selector + botón **"Asignar técnico"** (`asignarTecnico` →
+  `PUT /solicitudes/{id}/asignar-tecnico/{rut}`, que fija estado `ASIGNADO`), con recarga
+  inmediata.
+- **Limpieza:** se eliminó el router duplicado `dashboard_router` (`GET /dashboard/admin`,
+  duplicado obsoleto de `/admin/dashboard`) y el endpoint huérfano `GET /admin/estadisticas`.
+
+### Archivos modificados
+- `backend/app/routers/cotizacion_router.py`, `backend/app/services/cotizacion_service.py`
+- `backend/app/main.py`, `backend/app/routers/admin_router.py`
+- `backend/app/routers/dashboard_router.py` (eliminado)
+- `frontend/src/services/cotizacionService.ts`, `frontend/src/pages/tecnico/TecnicoDashboard.tsx`
+- `frontend/src/pages/admin/RequestManagement.tsx`, `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo: `GET /cotizaciones/mias` (200); asignación de técnico persiste y fija `ASIGNADO`;
+endpoints eliminados devuelven 404; `/admin/dashboard` sigue 200.

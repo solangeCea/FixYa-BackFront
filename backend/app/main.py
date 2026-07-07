@@ -19,7 +19,6 @@ from app.routers.tecnico_router import router as tecnico_router
 from app.routers.solicitud_router import router as solicitud_router
 from app.routers.cotizacion_router import router as cotizacion_router
 from app.routers.historial_solicitud_router import router as historial_solicitud_router
-from app.routers.dashboard_router import router as dashboard_router
 from app.routers import resena_router
 from app.routers import documento_tecnico_router
 from app.routers import admin_router
@@ -131,7 +130,6 @@ app.include_router(comuna_router.router)
 app.include_router(servicio_router.router)
 app.include_router(tecnico_servicio_router.router)
 app.include_router(tecnico_comuna_router.router)
-app.include_router(dashboard_router)
 app.include_router(notificacion_router.router)
 
 
