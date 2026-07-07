@@ -1,12 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models.resena import Resena
 from app.models.solicitud import Solicitud
 from app.models.usuario import Usuario
 from app.schemas.resena_schema import ResenaCreate, ResenaResponse
-from app.dependencies import get_current_user
+from app.dependencies import (
+    get_current_user,
+    get_current_usuario,
+    solo_admin,
+    usuario_tiene_rol,
+)
 from app.services.resena_service import (
     generar_resumen_reputacion,
     analizar_y_preparar_resena,
@@ -71,19 +77,33 @@ def crear_resena(
     )
 
     db.add(nueva_resena)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Carrera: otra reseña para la misma solicitud se insertó primero.
+        # La restricción UNIQUE la bloquea; devolvemos un 400 claro (no un 500).
+        db.rollback()
+        raise HTTPException(
+            status_code=400, detail="Esta solicitud ya tiene una reseña"
+        )
     db.refresh(nueva_resena)
 
     return nueva_resena
 
 @router.get("/", response_model=list[ResenaResponse])
-def listar_resenas_activas(db: Session = Depends(get_db)):
+def listar_resenas_activas(
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(solo_admin),
+):
     return db.query(Resena).filter(
         Resena.resena_activa == "S"
     ).all()
-    
+
 @router.get("/reportadas", response_model=list[ResenaResponse])
-def listar_resenas_reportadas(db: Session = Depends(get_db)):
+def listar_resenas_reportadas(
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(solo_admin),
+):
     return db.query(Resena).filter(
         Resena.resena_reportada == "S"
     ).all()
@@ -104,7 +124,8 @@ def resolver_reporte_resena(
     if not admin:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
-    if admin.tipo_usuario.value != "ADMIN":
+    # Consistente con el resto del sistema multi-rol (no solo tipo_usuario base).
+    if not usuario_tiene_rol(db, admin.rut, "ADMIN"):
         raise HTTPException(status_code=403, detail="Solo un administrador puede resolver reportes")
 
     resena = db.query(Resena).filter(
@@ -140,6 +161,26 @@ def listar_resenas_por_tecnico(
         Solicitud.id_solicitud == Resena.solicitud_id_solicitud
     ).filter(
         Solicitud.tecnico_usuario_rut == rut_tecnico,
+        Resena.resena_activa == "S"
+    ).all()
+
+
+@router.get("/cliente/{rut_cliente}", response_model=list[ResenaResponse])
+def listar_resenas_por_cliente(
+    rut_cliente: str,
+    db: Session = Depends(get_db),
+    usuario_actual=Depends(get_current_usuario),
+):
+    # Las calificaciones emitidas por un cliente son privadas: solo él o un admin.
+    es_admin = usuario_tiene_rol(db, usuario_actual.rut, "ADMIN")
+    if not es_admin and usuario_actual.rut != rut_cliente:
+        raise HTTPException(
+            status_code=403,
+            detail="No puedes ver las calificaciones de otro cliente"
+        )
+
+    return db.query(Resena).filter(
+        Resena.usuario_rut == rut_cliente,
         Resena.resena_activa == "S"
     ).all()
 

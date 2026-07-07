@@ -472,6 +472,7 @@ function Register() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return; // Evita registros duplicados por doble envío.
 
     const validationErrors = validarFormulario();
     if (Object.keys(validationErrors).length > 0) {

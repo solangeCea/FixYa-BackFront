@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Download,
   MapPin,
+  MessageCircle,
   PlusCircle,
   Send,
   Star,
@@ -28,7 +29,7 @@ import type {
   SolicitudDisponibilidad,
 } from "../../services/solicitudService";
 
-import { createReview } from "../../services/reviewService";
+import { createReview, getClientReviews } from "../../services/reviewService";
 import {
   getComunas,
   getRegiones,
@@ -37,15 +38,20 @@ import {
 import type { Comuna, Region, Servicio } from "../../services/catalogService";
 import {
   acceptCotizacion,
+  getCotizacionEstadoLabel,
   getCotizacionesSolicitud,
   rejectCotizacion,
 } from "../../services/cotizacionService";
+import { cancelarSolicitud } from "../../services/solicitudService";
 import type { Cotizacion } from "../../services/cotizacionService";
 import API_URL from "../../services/api";
 import EmptyState from "../../components/ui/EmptyState";
 import RequestProgress from "../../components/ui/RequestProgress";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
+import { formatCLP, formatDate } from "../../utils/format";
+import Modal from "../../components/ui/Modal";
+import ChatPanel from "../../components/chat/ChatPanel";
 
 
 function isSolicitudEnSeguimiento(estado: string) {
@@ -419,7 +425,17 @@ function ClienteDashboard() {
   const [reviewingId, setReviewingId] = useState<number | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+  // Cotización pendiente de confirmar aceptación (modal).
+  const [confirmAccept, setConfirmAccept] = useState<Cotizacion | null>(null);
+  const [aceptando, setAceptando] = useState(false);
+  // Solicitud cuyo chat está abierto (null = ninguno).
+  const [chatSolicitudId, setChatSolicitudId] = useState<number | null>(null);
   const [sendingReview, setSendingReview] = useState(false);
+  // Solicitud pendiente de confirmar cancelación (modal).
+  const [cancelTarget, setCancelTarget] = useState<Solicitud | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  // Ids de solicitudes que el cliente ya reseñó (para no permitir duplicados en la UI).
+  const [resenadas, setResenadas] = useState<Set<number>>(new Set());
 
   const selectedServicio = useMemo(
     () =>
@@ -498,6 +514,16 @@ function ClienteDashboard() {
 
       const data = await getSolicitudesCliente(usuario.rut);
       setSolicitudes(data);
+
+      // Marca qué solicitudes ya tienen reseña del cliente (para no duplicar).
+      try {
+        const misResenas = await getClientReviews(usuario.rut);
+        setResenadas(
+          new Set(misResenas.map((r) => r.solicitud_id_solicitud))
+        );
+      } catch {
+        // No es crítico: si falla, el backend igual bloquea duplicados.
+      }
 
       const cotizacionesData = await Promise.all(
         data.map(async (solicitud) => {
@@ -961,7 +987,10 @@ function ClienteDashboard() {
         comentario: reviewComment,
       });
 
-      setSuccess("Tu reseña fue publicada correctamente.");
+      // Marca la solicitud como reseñada: reemplaza el formulario por la
+      // confirmación inline (feedback claro y evita reintentos duplicados).
+      setResenadas((prev) => new Set(prev).add(idSolicitud));
+      setSuccess("¡Reseña publicada con éxito! Gracias por compartir tu experiencia.");
       setReviewErrors((prev) => ({ ...prev, [idSolicitud]: "" }));
       setReviewComment("");
       setReviewRating(5);
@@ -1003,6 +1032,46 @@ function ClienteDashboard() {
           : "No pudimos actualizar la cotizacion. Intenta nuevamente."
       );
     }
+  }
+
+  // Confirmación explícita antes de aceptar (la aceptación asigna al técnico).
+  async function confirmarAceptacion() {
+    if (!confirmAccept) return;
+    setAceptando(true);
+    try {
+      await handleCotizacionAction(confirmAccept.id_cotizacion, "accept");
+      setConfirmAccept(null);
+    } finally {
+      setAceptando(false);
+    }
+  }
+
+  async function confirmarCancelacion() {
+    if (!cancelTarget) return;
+    setCancelling(true);
+    setError("");
+    setSuccess("");
+    try {
+      await cancelarSolicitud(cancelTarget.id_solicitud);
+      setSuccess("Solicitud cancelada correctamente.");
+      setCancelTarget(null);
+      await cargarSolicitudes();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No pudimos cancelar la solicitud."
+      );
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  // Una cotización ENVIADA cuya vigencia ya pasó se considera expirada.
+  function cotizacionExpirada(cotizacion: Cotizacion) {
+    return (
+      cotizacion.estado_cotizacion === "ENVIADA" &&
+      Boolean(cotizacion.fecha_vigencia) &&
+      new Date(cotizacion.fecha_vigencia).getTime() < Date.now()
+    );
   }
 
   return (
@@ -1950,6 +2019,19 @@ function ClienteDashboard() {
                       <RequestProgress status={solicitud.estado_trabajo} />
                     </div>
 
+                    {solicitud.estado_trabajo !== "FINALIZADO" &&
+                      solicitud.estado_trabajo !== "CANCELADO" && (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setCancelTarget(solicitud)}
+                            className="text-sm font-semibold text-rose-600 underline-offset-2 hover:underline"
+                          >
+                            Cancelar solicitud
+                          </button>
+                        </div>
+                      )}
+
                     {(cotizaciones[solicitud.id_solicitud]?.length || 0) > 0 && (
                       <div className="mt-5 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-slate-50 p-4">
                         <h4 className="mb-3 flex items-center gap-2 font-bold text-gray-900">
@@ -1962,15 +2044,26 @@ function ClienteDashboard() {
                             (cotizacion) => (
                               <div
                                 key={cotizacion.id_cotizacion}
-                                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                                className={`rounded-2xl border bg-white p-5 shadow-sm ${
+                                  cotizacion.cotizacion_origen_id
+                                    ? "border-amber-300 ring-1 ring-amber-200"
+                                    : "border-slate-200"
+                                }`}
                               >
+                                {cotizacion.cotizacion_origen_id && (
+                                  <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                                    Nueva cotización por cambio de alcance
+                                    (reemplaza a la #
+                                    {cotizacion.cotizacion_origen_id})
+                                  </div>
+                                )}
                                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                   <div>
                                     <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
                                       Cotizacion #{cotizacion.id_cotizacion}
                                     </p>
                                     <p className="mt-1 text-3xl font-bold text-slate-950">
-                                      ${Number(cotizacion.monto_estimado).toLocaleString("es-CL")}
+                                      {formatCLP(cotizacion.monto_estimado)}
                                     </p>
                                     <p className="mt-1 text-sm text-gray-600">
                                       {cotizacion.mensaje_cotizacion}
@@ -1979,9 +2072,40 @@ function ClienteDashboard() {
                                       Técnico:{" "}
                                       {cotizacion.tecnico_usuario_rut}
                                     </p>
+                                    <p className="mt-1 text-xs text-gray-500">
+                                      Materiales:{" "}
+                                      {cotizacion.materiales_incluidos
+                                        ? "incluidos"
+                                        : "no incluidos"}
+                                      {cotizacion.plazo_estimado
+                                        ? ` · Plazo: ${cotizacion.plazo_estimado}`
+                                        : ""}
+                                      {" · "}
+                                      Vigente hasta{" "}
+                                      {formatDate(cotizacion.fecha_vigencia)}
+                                    </p>
+                                    {cotizacion.estado_cotizacion ===
+                                      "ANULADA_CAMBIO_ALCANCE" &&
+                                      cotizacion.motivo_anulacion && (
+                                        <p className="mt-1 text-xs font-semibold text-amber-700">
+                                          Motivo del cambio:{" "}
+                                          {cotizacion.motivo_anulacion}
+                                        </p>
+                                      )}
                                   </div>
 
-                                  <StatusBadge status={cotizacion.estado_cotizacion} />
+                                  {cotizacionExpirada(cotizacion) ? (
+                                    <span className="w-fit rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">
+                                      Expirada
+                                    </span>
+                                  ) : (
+                                    <StatusBadge
+                                      status={cotizacion.estado_cotizacion}
+                                      label={getCotizacionEstadoLabel(
+                                        cotizacion.estado_cotizacion
+                                      )}
+                                    />
+                                  )}
                                 </div>
 
                                 <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -1997,34 +2121,38 @@ function ClienteDashboard() {
                                     </a>
                                   )}
 
-                                  {cotizacion.estado_cotizacion ===
-                                    "ENVIADA" && (
-                                    <>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleCotizacionAction(
-                                          cotizacion.id_cotizacion,
-                                          "accept"
-                                        )
-                                      }
-                                      className="rounded-xl bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
-                                    >
-                                      Aceptar cotización
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleCotizacionAction(
-                                          cotizacion.id_cotizacion,
-                                          "reject"
-                                        )
-                                      }
-                                      className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                                    >
-                                      Rechazar cotización
-                                    </button>
-                                    </>
+                                  {cotizacion.estado_cotizacion === "ENVIADA" &&
+                                    !cotizacionExpirada(cotizacion) && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setConfirmAccept(cotizacion)
+                                          }
+                                          className="rounded-xl bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
+                                        >
+                                          Aceptar cotización
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleCotizacionAction(
+                                              cotizacion.id_cotizacion,
+                                              "reject"
+                                            )
+                                          }
+                                          className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                        >
+                                          Rechazar cotización
+                                        </button>
+                                      </>
+                                    )}
+
+                                  {cotizacionExpirada(cotizacion) && (
+                                    <span className="text-xs font-semibold text-slate-500">
+                                      Esta cotización venció y ya no puede
+                                      aceptarse.
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -2034,7 +2162,56 @@ function ClienteDashboard() {
                       </div>
                     )}
 
-                    {solicitud.estado_trabajo === "FINALIZADO" && (
+                    {solicitud.tecnico_usuario_rut &&
+                      solicitud.estado_trabajo !== "INICIADO" &&
+                      solicitud.estado_trabajo !== "CANCELADO" && (
+                        <div className="mt-5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setChatSolicitudId(
+                                chatSolicitudId === solicitud.id_solicitud
+                                  ? null
+                                  : solicitud.id_solicitud
+                              )
+                            }
+                            className="inline-flex items-center gap-2 rounded-xl bg-teal-50 px-4 py-2 text-sm font-bold text-teal-700 hover:bg-teal-100"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            {chatSolicitudId === solicitud.id_solicitud
+                              ? "Ocultar chat"
+                              : "Chat con el técnico"}
+                          </button>
+                          {chatSolicitudId === solicitud.id_solicitud &&
+                            usuario && (
+                              <div className="mt-3">
+                                <ChatPanel
+                                  idSolicitud={solicitud.id_solicitud}
+                                  miRut={usuario.rut}
+                                  nombreContraparte="Técnico asignado"
+                                />
+                              </div>
+                            )}
+                        </div>
+                      )}
+
+                    {solicitud.estado_trabajo === "FINALIZADO" &&
+                      resenadas.has(solicitud.id_solicitud) && (
+                        <div className="mt-5 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                          <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" />
+                          <div>
+                            <h4 className="font-bold text-emerald-900">
+                              ¡Reseña publicada con éxito!
+                            </h4>
+                            <p className="text-sm text-emerald-700">
+                              Gracias por compartir tu experiencia con el técnico.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                    {solicitud.estado_trabajo === "FINALIZADO" &&
+                      !resenadas.has(solicitud.id_solicitud) && (
                       <div className="mt-5 rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
                         <div className="mb-4 flex items-center justify-between gap-4">
                           <div>
@@ -2124,6 +2301,94 @@ function ClienteDashboard() {
           </section>
         </div>
       </main>
+
+      <Modal
+        open={Boolean(cancelTarget)}
+        onClose={() => (cancelling ? null : setCancelTarget(null))}
+        title="Cancelar solicitud"
+        description="La solicitud quedará cancelada y no seguirá avanzando. Esta acción no se puede deshacer."
+        maxWidth="md"
+      >
+        {cancelTarget && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              ¿Seguro que quieres cancelar{" "}
+              <span className="font-semibold text-slate-900">
+                {cancelTarget.titulo_solicitud}
+              </span>
+              ? Si hay una cotización aceptada, también se anulará y se avisará al
+              técnico.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setCancelTarget(null)}
+                disabled={cancelling}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={confirmarCancelacion}
+                disabled={cancelling}
+                className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:bg-rose-300"
+              >
+                {cancelling ? "Cancelando..." : "Sí, cancelar solicitud"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(confirmAccept)}
+        onClose={() => (aceptando ? null : setConfirmAccept(null))}
+        title="Confirmar aceptación"
+        description="Al aceptar, asignarás el trabajo a este técnico y se rechazarán las demás cotizaciones de esta solicitud."
+        maxWidth="md"
+      >
+        {confirmAccept && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm text-slate-500">
+                Cotización #{confirmAccept.id_cotizacion}
+              </p>
+              <p className="mt-1 text-2xl font-bold text-slate-950">
+                {formatCLP(confirmAccept.monto_estimado)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                Materiales:{" "}
+                {confirmAccept.materiales_incluidos
+                  ? "incluidos"
+                  : "no incluidos"}
+              </p>
+            </div>
+            <p className="text-sm text-slate-600">
+              Se registrará tu aceptación y el PDF quedará firmado por ambas
+              partes. ¿Deseas continuar?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmAccept(null)}
+                disabled={aceptando}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarAceptacion}
+                disabled={aceptando}
+                className="rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:bg-green-300"
+              >
+                {aceptando ? "Aceptando..." : "Aceptar cotización"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

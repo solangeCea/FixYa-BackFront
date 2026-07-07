@@ -21,6 +21,7 @@ ESTADOS_SOLICITUD_VALIDOS = {
     "INICIADO",
     "ASIGNADO",
     "EN_PROCESO",
+    "CAMBIO_ALCANCE",
     "FINALIZADO",
     "CANCELADO",
 }
@@ -394,6 +395,10 @@ def cambiar_estado_solicitud(db: Session, id_solicitud: int, data):
 
     if data.estado_trabajo in ESTADOS_SOLICITUD_TERMINALES:
         solicitud.solicitud_activa = False
+    else:
+        # Al salir de un estado terminal (reapertura por admin) se restaura la
+        # actividad para no dejar la solicitud invisible a las consultas.
+        solicitud.solicitud_activa = True
 
     historial = HistorialSolicitud(
         motivo=data.motivo,

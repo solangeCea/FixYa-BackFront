@@ -14,6 +14,7 @@ from app.models import solicitud, servicio, cotizacion
 from app.models import historial_solicitud, resena, Notificacion
 from app.models import password_reset
 from app.models import tecnico_solicitud_descartada, reporte_solicitud
+from app.models import chat
 
 from app.routers.usuario_router import router as usuario_router
 from app.routers.tecnico_router import router as tecnico_router
@@ -29,6 +30,7 @@ from app.routers import servicio_router
 from app.routers import tecnico_servicio_router
 from app.routers import tecnico_comuna_router
 from app.routers import notificacion_router
+from app.routers import chat_router
 
 app = FastAPI(
     title="FixYa API",
@@ -132,6 +134,7 @@ app.include_router(servicio_router.router)
 app.include_router(tecnico_servicio_router.router)
 app.include_router(tecnico_comuna_router.router)
 app.include_router(notificacion_router.router)
+app.include_router(chat_router.router)
 
 
 @app.get("/")

@@ -52,6 +52,7 @@ function AdminLoginModal({ open, onClose }: AdminLoginModalProps) {
 
   async function handleAdminLogin(event: React.FormEvent) {
     event.preventDefault();
+    if (loading) return; // Evita doble envío.
     setError("");
 
     const nextErrors: typeof fieldErrors = {};
@@ -84,9 +85,10 @@ function AdminLoginModal({ open, onClose }: AdminLoginModalProps) {
       navigate("/admin/panel");
     } catch (err) {
       setError(
-        "El correo o la contraseña no coinciden. Revisa los datos e inténtalo nuevamente."
+        err instanceof Error
+          ? err.message
+          : "No pudimos iniciar sesión. Revisa los datos e inténtalo nuevamente."
       );
-      console.error(err);
     } finally {
       setLoading(false);
     }

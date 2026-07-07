@@ -6,7 +6,8 @@ from datetime import datetime
 class ResenaCreate(BaseModel):
     id_solicitud: int
     calificacion: float = Field(..., ge=1, le=5)
-    comentario: str
+    # max_length = ancho de columna (String(1000)); min_length evita reseñas vacías.
+    comentario: str = Field(..., min_length=1, max_length=1000)
 
 
 class ResenaResponse(BaseModel):

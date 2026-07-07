@@ -14,6 +14,8 @@ export interface Tecnico {
   admin_revisor_rut?: string | null;
 }
 
+export type EstadoDocumento = "PENDIENTE" | "APROBADO" | "RECHAZADO";
+
 export interface DocumentoTecnico {
   id_documento: number;
   tecnico_usuario_rut: string;
@@ -22,6 +24,8 @@ export interface DocumentoTecnico {
   archivo_url: string;
   fecha_subida: string;
   documento_aprobado: boolean;
+  estado_documento: EstadoDocumento;
+  motivo_rechazo: string | null;
   fecha_aprobacion: string | null;
   usuario_rut: string | null;
 }
@@ -321,6 +325,55 @@ export async function approveTechnicianDocument(
   }
 
   return response.json();
+}
+
+export async function rejectTechnicianDocument(
+  idDocumento: number,
+  motivoRechazo: string
+): Promise<DocumentoTecnico> {
+  const token = getToken();
+
+  const response = await fetch(
+    `${API_URL}/documentos-tecnicos/${idDocumento}/rechazar`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        motivo_rechazo: motivoRechazo,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || "Error al rechazar documento tecnico");
+  }
+
+  return response.json();
+}
+
+export async function deleteTechnicianDocument(
+  idDocumento: number
+): Promise<void> {
+  const token = getToken();
+
+  const response = await fetch(
+    `${API_URL}/documentos-tecnicos/${idDocumento}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || "Error al eliminar documento");
+  }
 }
 
 export async function uploadTechnicianDocument(data: {

@@ -86,6 +86,7 @@ function Login() {
 
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault();
+    if (loading) return; // Evita doble envío en clics/Enter rápidos.
     setError("");
     const nextErrors: typeof fieldErrors = {};
 
@@ -130,10 +131,12 @@ function Login() {
 
       navigate(getDashboardPath(selectedAuthRole));
     } catch (error) {
+      // Relaya el mensaje real del backend (credenciales, cuenta desactivada, etc.).
       setError(
-        "El correo o la contraseña no coinciden. Revisa los datos e inténtalo nuevamente."
+        error instanceof Error
+          ? error.message
+          : "No pudimos iniciar sesión. Revisa los datos e inténtalo nuevamente."
       );
-      console.error(error);
     } finally {
       setLoading(false);
     }

@@ -203,6 +203,24 @@ export async function getSolicitudesCliente(
   return response.json();
 }
 
+export async function cancelarSolicitud(idSolicitud: number) {
+  const response = await fetch(
+    `${API_URL}/solicitudes/${idSolicitud}/cancelar`,
+    {
+      method: "PUT",
+      headers: getAuthHeaders(),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, "No pudimos cancelar la solicitud")
+    );
+  }
+
+  return response.json();
+}
+
 export async function getSolicitudes(): Promise<Solicitud[]> {
   const response = await fetch(`${API_URL}/solicitudes/`, {
     method: "GET",

@@ -13,7 +13,15 @@ from app.models.tecnico_comuna import TecnicoComuna
 from app.models.tecnico_servicio import TecnicoServicio
 from app.models.tecnico_solicitud_descartada import TecnicoSolicitudDescartada
 from app.pdf.cotizacion_pdf import generar_pdf_cotizacion
-from app.schemas.cotizacion_schema import CotizacionCreate, CotizacionUpdate
+from app.schemas.cotizacion_schema import (
+    CambioAlcanceCreate,
+    CotizacionCreate,
+    CotizacionUpdate,
+)
+from app.services.chat_service import (
+    agregar_mensaje_sistema,
+    crear_chat_para_cotizacion,
+)
 from app.dependencies import usuario_tiene_rol
 from app.services.solicitud_service import solicitud_permite_cotizaciones
 
@@ -124,6 +132,7 @@ def crear_cotizacion(
         solicitud_id_solicitud=data.solicitud_id_solicitud,
         tecnico_usuario_rut=tecnico_rut,
         monto_estimado=data.monto_estimado,
+        materiales_incluidos=bool(data.materiales_incluidos),
         mensaje_cotizacion=data.mensaje_cotizacion,
         fecha_vigencia=data.fecha_vigencia,
         estado_cotizacion="ENVIADA",
@@ -133,7 +142,7 @@ def crear_cotizacion(
         db.add(nueva)
         db.flush()
 
-        nueva.archivo_pdf_url = generar_pdf_cotizacion(nueva, solicitud)
+        nueva.archivo_pdf_url = generar_pdf_cotizacion(db, nueva, solicitud)
         db.add(
             Notificacion(
                 usuario_rut=solicitud.usuario_rut,
@@ -169,6 +178,12 @@ def listar_cotizaciones(db: Session):
 def obtener_cotizacion(db: Session, id_cotizacion: int):
     return db.query(Cotizacion).filter(
         Cotizacion.id_cotizacion == id_cotizacion
+    ).first()
+
+
+def obtener_solicitud_de_cotizacion(db: Session, cotizacion):
+    return db.query(Solicitud).filter(
+        Solicitud.id_solicitud == cotizacion.solicitud_id_solicitud
     ).first()
 
 
@@ -259,7 +274,17 @@ def aceptar_cotizacion(db: Session, id_cotizacion: int, cliente_rut: str):
             detail="Solo el cliente dueno de la solicitud puede aceptar cotizaciones"
         )
 
-    if not solicitud_permite_cotizaciones(solicitud):
+    # Las cotizaciones de cambio de alcance las emite el mismo técnico ya asignado,
+    # por lo que la solicitud no está "cotizable" (INICIADO); se permiten cuando la
+    # solicitud está en CAMBIO_ALCANCE. El resto exige que la solicitud sea cotizable.
+    es_cambio_alcance = cotizacion.cotizacion_origen_id is not None
+    if es_cambio_alcance:
+        if solicitud.estado_trabajo != "CAMBIO_ALCANCE":
+            raise HTTPException(
+                status_code=409,
+                detail="Esta cotizacion de cambio de alcance ya no puede aceptarse"
+            )
+    elif not solicitud_permite_cotizaciones(solicitud):
         raise HTTPException(
             status_code=409,
             detail="La solicitud ya no permite aceptar cotizaciones"
@@ -269,6 +294,15 @@ def aceptar_cotizacion(db: Session, id_cotizacion: int, cliente_rut: str):
         raise HTTPException(
             status_code=409,
             detail="Esta cotizacion ya no puede aceptarse"
+        )
+
+    # Una cotizacion cuya vigencia ya paso no puede aceptarse: se marca EXPIRADA.
+    if cotizacion.fecha_vigencia and datetime.utcnow() > cotizacion.fecha_vigencia:
+        cotizacion.estado_cotizacion = "EXPIRADA"
+        db.commit()
+        raise HTTPException(
+            status_code=409,
+            detail="Esta cotizacion expiro y ya no puede aceptarse"
         )
 
     cotizacion_aceptada = db.query(Cotizacion).filter(
@@ -301,6 +335,24 @@ def aceptar_cotizacion(db: Session, id_cotizacion: int, cliente_rut: str):
             item.estado_cotizacion = "RECHAZADA"
             item.motivo_anulacion = (
                 "Cerrada por aceptacion de otra cotizacion"
+            )
+
+        # Regenera el PDF ya con estado ACEPTADA y la firma del cliente.
+        cotizacion.archivo_pdf_url = generar_pdf_cotizacion(
+            db, cotizacion, solicitud
+        )
+
+        # Habilita el chat privado cliente-tecnico (solo al aceptar). Es único por
+        # solicitud, así que si venía de un cambio de alcance se reutiliza.
+        crear_chat_para_cotizacion(db, cotizacion, solicitud)
+
+        # Si es una cotización de cambio de alcance, deja constancia en el chat.
+        if es_cambio_alcance:
+            agregar_mensaje_sistema(
+                db,
+                solicitud.id_solicitud,
+                "El cliente acepto la nueva cotizacion por cambio de alcance. "
+                "El trabajo continua con las nuevas condiciones.",
             )
 
         db.add(
@@ -369,10 +421,161 @@ def rechazar_cotizacion(db: Session, id_cotizacion: int, cliente_rut: str):
 
     cotizacion.estado_cotizacion = "RECHAZADA"
     cotizacion.motivo_anulacion = "Rechazada por el cliente"
+    # Regenera el PDF para reflejar el estado Rechazada en el documento.
+    cotizacion.archivo_pdf_url = generar_pdf_cotizacion(db, cotizacion, solicitud)
+
+    # Si se rechaza una cotización de CAMBIO DE ALCANCE, el trabajo no puede
+    # continuar (la original ya fue anulada): la solicitud queda CANCELADA.
+    if cotizacion.cotizacion_origen_id is not None:
+        solicitud.estado_trabajo = "CANCELADO"
+        solicitud.solicitud_activa = False
+        db.add(
+            HistorialSolicitud(
+                solicitud_id_solicitud=solicitud.id_solicitud,
+                usuario_rut=cliente_rut,
+                estado="CANCELADO",
+                motivo="Nueva cotizacion por cambio de alcance rechazada",
+            )
+        )
+        db.add(
+            Notificacion(
+                usuario_rut=cotizacion.tecnico_usuario_rut,
+                titulo="Nueva cotizacion rechazada",
+                mensaje=(
+                    "El cliente rechazo la nueva cotizacion por cambio de alcance. "
+                    "El trabajo quedo cancelado."
+                ),
+                tipo="CAMBIO_ALCANCE",
+            )
+        )
+        agregar_mensaje_sistema(
+            db,
+            solicitud.id_solicitud,
+            "El cliente rechazo la nueva cotizacion por cambio de alcance. "
+            "El trabajo quedo cancelado.",
+        )
+    else:
+        # Cotización normal rechazada: avisar al técnico (antes no se enteraba).
+        db.add(
+            Notificacion(
+                usuario_rut=cotizacion.tecnico_usuario_rut,
+                titulo="Cotizacion rechazada",
+                mensaje=(
+                    f"El cliente rechazo tu cotizacion para: "
+                    f"{solicitud.titulo_solicitud}"
+                ),
+                tipo="COTIZACION_RECHAZADA",
+            )
+        )
 
     db.commit()
     db.refresh(cotizacion)
     return cotizacion
+
+
+def solicitar_cambio_alcance(
+    db: Session,
+    id_cotizacion: int,
+    tecnico_rut: str,
+    data: CambioAlcanceCreate,
+):
+    """El técnico, ya en terreno, detecta que el trabajo es mucho mayor que lo
+    cotizado. Anula la cotización aceptada (conservándola) y genera una nueva
+    cotización vinculada para que el cliente la revise. Trazabilidad completa."""
+    original = obtener_cotizacion(db, id_cotizacion)
+    if not original:
+        raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
+
+    if original.tecnico_usuario_rut != tecnico_rut:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el tecnico de la cotizacion puede solicitar el cambio"
+        )
+
+    if original.estado_cotizacion != "ACEPTADA":
+        raise HTTPException(
+            status_code=409,
+            detail="Solo puedes solicitar un cambio de alcance sobre una cotizacion aceptada"
+        )
+
+    solicitud = db.query(Solicitud).filter(
+        Solicitud.id_solicitud == original.solicitud_id_solicitud
+    ).first()
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    if solicitud.estado_trabajo not in ("ASIGNADO", "EN_PROCESO"):
+        raise HTTPException(
+            status_code=409,
+            detail="El trabajo no esta en una etapa que permita cambio de alcance"
+        )
+
+    motivo = (data.motivo or "").strip()
+    if not motivo:
+        raise HTTPException(status_code=400, detail="Debes indicar el motivo del cambio")
+
+    try:
+        # 1) Anula la cotización original (se conserva para trazabilidad).
+        original.estado_cotizacion = "ANULADA_CAMBIO_ALCANCE"
+        original.motivo_anulacion = motivo[:300]
+        original.archivo_pdf_url = generar_pdf_cotizacion(db, original, solicitud)
+
+        # 2) Nueva cotización vinculada, en estado ENVIADA.
+        nueva = Cotizacion(
+            solicitud_id_solicitud=solicitud.id_solicitud,
+            tecnico_usuario_rut=tecnico_rut,
+            monto_estimado=data.monto_estimado,
+            materiales_incluidos=bool(data.materiales_incluidos),
+            mensaje_cotizacion=data.mensaje_cotizacion,
+            plazo_estimado=data.plazo_estimado,
+            fecha_vigencia=data.fecha_vigencia,
+            estado_cotizacion="ENVIADA",
+            cotizacion_origen_id=original.id_cotizacion,
+        )
+        db.add(nueva)
+        db.flush()
+        nueva.archivo_pdf_url = generar_pdf_cotizacion(db, nueva, solicitud)
+
+        # 3) La solicitud pasa a CAMBIO_ALCANCE (a la espera del cliente).
+        solicitud.estado_trabajo = "CAMBIO_ALCANCE"
+
+        db.add(
+            HistorialSolicitud(
+                solicitud_id_solicitud=solicitud.id_solicitud,
+                usuario_rut=tecnico_rut,
+                estado="CAMBIO_ALCANCE",
+                motivo=f"Cambio de alcance: {motivo}",
+            )
+        )
+        db.add(
+            Notificacion(
+                usuario_rut=solicitud.usuario_rut,
+                titulo="Cambio de alcance del trabajo",
+                mensaje=(
+                    "El tecnico informo un cambio de alcance y envio una nueva "
+                    f"cotizacion. Motivo: {motivo[:120]}"
+                ),
+                tipo="CAMBIO_ALCANCE",
+            )
+        )
+        # 4) Aviso automatico dentro del chat (se conserva la conversacion).
+        agregar_mensaje_sistema(
+            db,
+            solicitud.id_solicitud,
+            "El tecnico ha informado que el alcance del trabajo cambio y ha "
+            "generado una nueva cotizacion para su revision.",
+        )
+
+        db.commit()
+        db.refresh(nueva)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+
+    return nueva
 
 
 def anular_cotizacion(db: Session, id_cotizacion: int, motivo: str):

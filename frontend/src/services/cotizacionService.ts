@@ -35,18 +35,44 @@ export interface Cotizacion {
   solicitud_id_solicitud: number;
   tecnico_usuario_rut: string;
   monto_estimado: string;
+  materiales_incluidos: boolean;
   mensaje_cotizacion?: string | null;
+  plazo_estimado?: string | null;
   fecha_cotizacion?: string | null;
   fecha_vigencia: string;
   fecha_aceptacion?: string | null;
   estado_cotizacion: string;
   motivo_anulacion?: string | null;
   archivo_pdf_url?: string | null;
+  cotizacion_origen_id?: number | null;
+}
+
+export interface CambioAlcanceData {
+  motivo: string;
+  monto_estimado: number;
+  materiales_incluidos: boolean;
+  mensaje_cotizacion: string;
+  plazo_estimado: string;
+  fecha_vigencia: string;
+}
+
+const COTIZACION_ESTADO_LABEL: Record<string, string> = {
+  ENVIADA: "Enviada",
+  ACEPTADA: "Aceptada",
+  RECHAZADA: "Rechazada",
+  ANULADA: "Anulada",
+  ANULADA_CAMBIO_ALCANCE: "Anulada por cambio de alcance",
+  EXPIRADA: "Expirada",
+};
+
+export function getCotizacionEstadoLabel(estado: string): string {
+  return COTIZACION_ESTADO_LABEL[estado] ?? estado.replaceAll("_", " ");
 }
 
 export interface CotizacionCreate {
   solicitud_id_solicitud: number;
   monto_estimado: number;
+  materiales_incluidos: boolean;
   mensaje_cotizacion: string;
   fecha_vigencia: string;
 }
@@ -116,6 +142,28 @@ export async function acceptCotizacion(idCotizacion: number) {
   if (!response.ok) {
     throw new Error(
       await getErrorMessage(response, "Error al aceptar cotizacion")
+    );
+  }
+
+  return response.json();
+}
+
+export async function solicitarCambioAlcance(
+  idCotizacion: number,
+  data: CambioAlcanceData
+): Promise<Cotizacion> {
+  const response = await fetch(
+    `${API_URL}/cotizaciones/${idCotizacion}/cambio-alcance`,
+    {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await getErrorMessage(response, "Error al solicitar el cambio de alcance")
     );
   }
 

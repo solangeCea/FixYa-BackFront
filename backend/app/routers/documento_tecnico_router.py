@@ -9,6 +9,7 @@ from app.services.archivo_service import guardar_archivo
 from app.schemas.documento_tecnico_schema import (
     DocumentoTecnicoResponse,
     DocumentoTecnicoAprobacion,
+    DocumentoTecnicoRechazo,
     TecnicoPendienteVerificacionResponse
 )
 
@@ -101,11 +102,26 @@ def aprobar_documento_tecnico(
 @router.put("/{id_documento}/rechazar", response_model=DocumentoTecnicoResponse)
 def rechazar_documento_tecnico(
     id_documento: int,
-    data: DocumentoTecnicoAprobacion,
+    data: DocumentoTecnicoRechazo,
     current_user: dict = Depends(solo_admin),
     db: Session = Depends(get_db)
 ):
     return documento_tecnico_service.rechazar_documento_tecnico(
+        db,
+        id_documento,
+        current_user.get("rut"),
+        data.motivo_rechazo
+    )
+
+
+# ELIMINAR DOCUMENTO - SOLO TÉCNICO DUEÑO (para reemplazar/reenviar)
+@router.delete("/{id_documento}")
+def eliminar_documento_tecnico(
+    id_documento: int,
+    current_user: dict = Depends(solo_tecnico),
+    db: Session = Depends(get_db)
+):
+    return documento_tecnico_service.eliminar_documento_tecnico(
         db,
         id_documento,
         current_user.get("rut")

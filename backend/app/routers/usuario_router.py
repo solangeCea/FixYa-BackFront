@@ -276,11 +276,11 @@ def login(
         func.lower(Usuario.correo) == _normalizar_correo(data.correo)
     ).first()
 
-    if not usuario:
-        raise HTTPException(status_code=401, detail="Correo incorrecto")
-
-    if not verify_password(data.contrasena, usuario.contrasena):
-        raise HTTPException(status_code=401, detail="Contrasena incorrecta")
+    # Mensaje genérico para no revelar si el correo existe (evita enumeración).
+    if not usuario or not verify_password(data.contrasena, usuario.contrasena):
+        raise HTTPException(
+            status_code=401, detail="Correo o contraseña incorrectos"
+        )
 
     if not usuario.estado_usuario:
         raise HTTPException(

@@ -180,6 +180,7 @@ describe("TecnicoDashboard", () => {
       solicitud_id_solicitud: 501,
       tecnico_usuario_rut: tecnicoRut,
       monto_estimado: "85000",
+      materiales_incluidos: true,
       mensaje_cotizacion: "Incluye materiales y mano de obra.",
       fecha_vigencia: "2026-07-01T23:59:00.000Z",
       estado_cotizacion: "ENVIADA",
@@ -281,12 +282,15 @@ describe("TecnicoDashboard", () => {
     await waitForPanelReady()
 
     fireEvent.change(
-      screen.getByPlaceholderText(/monto estimado de la cotizacion/i),
+      screen.getByPlaceholderText(/monto estimado/i),
       { target: { value: "85000" } }
     )
     fireEvent.change(
       screen.getByPlaceholderText(/detalle, alcance o condiciones/i),
       { target: { value: "Incluye materiales y mano de obra." } }
+    )
+    fireEvent.click(
+      screen.getByLabelText(/el monto incluye los materiales/i)
     )
     fireEvent.change(getCotizacionDateInput(), {
       target: { value: "2026-07-01" },
@@ -303,6 +307,7 @@ describe("TecnicoDashboard", () => {
     expect(mockCreateCotizacion).toHaveBeenCalledWith({
       solicitud_id_solicitud: 501,
       monto_estimado: 85000,
+      materiales_incluidos: true,
       mensaje_cotizacion: "Incluye materiales y mano de obra.",
       fecha_vigencia: new Date("2026-07-01T23:59:00").toISOString(),
     })

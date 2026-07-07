@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from datetime import datetime
@@ -24,6 +26,8 @@ def crear_documento_tecnico(db: Session, documento: DocumentoTecnicoCreate):
         archivo_url=documento.archivo_url,
         fecha_subida=datetime.utcnow(),
         documento_aprobado=False,
+        estado_documento="PENDIENTE",
+        motivo_rechazo=None,
         fecha_aprobacion=None,
         usuario_rut=None
     )
@@ -62,6 +66,8 @@ def aprobar_documento_tecnico(db: Session, id_documento: int, usuario_rut: str):
         )
 
     documento.documento_aprobado = True
+    documento.estado_documento = "APROBADO"
+    documento.motivo_rechazo = None
     documento.fecha_aprobacion = datetime.utcnow()
     documento.usuario_rut = usuario_rut
 
@@ -76,7 +82,12 @@ def aprobar_documento_tecnico(db: Session, id_documento: int, usuario_rut: str):
     return documento
 
 
-def rechazar_documento_tecnico(db: Session, id_documento: int, usuario_rut: str):
+def rechazar_documento_tecnico(
+    db: Session,
+    id_documento: int,
+    usuario_rut: str,
+    motivo_rechazo: str,
+):
     documento = db.query(DocumentoTecnico).filter(
         DocumentoTecnico.id_documento == id_documento
     ).first()
@@ -92,7 +103,16 @@ def rechazar_documento_tecnico(db: Session, id_documento: int, usuario_rut: str)
             detail="Solo un administrador puede rechazar documentos"
         )
 
+    motivo = (motivo_rechazo or "").strip()
+    if not motivo:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes indicar el motivo del rechazo"
+        )
+
     documento.documento_aprobado = False
+    documento.estado_documento = "RECHAZADO"
+    documento.motivo_rechazo = motivo[:500]
     documento.fecha_aprobacion = None
     documento.usuario_rut = usuario_rut
 
@@ -100,6 +120,47 @@ def rechazar_documento_tecnico(db: Session, id_documento: int, usuario_rut: str)
     db.refresh(documento)
 
     return documento
+
+
+def eliminar_documento_tecnico(db: Session, id_documento: int, tecnico_rut: str):
+    """El técnico dueño elimina uno de sus documentos (para reemplazarlo o
+    reenviarlo). No se permite borrar un documento ya APROBADO para no
+    romper la verificación del técnico."""
+    documento = db.query(DocumentoTecnico).filter(
+        DocumentoTecnico.id_documento == id_documento
+    ).first()
+
+    if not documento:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    if documento.tecnico_usuario_rut != tecnico_rut:
+        raise HTTPException(
+            status_code=403,
+            detail="No puedes eliminar documentos de otro tecnico"
+        )
+
+    if documento.estado_documento == "APROBADO" or documento.documento_aprobado:
+        raise HTTPException(
+            status_code=400,
+            detail="No puedes eliminar un documento ya aprobado"
+        )
+
+    # Borra el archivo físico (best-effort): la URL es /uploads/<sub>/<archivo>.
+    ruta_relativa = (documento.archivo_url or "").lstrip("/")
+    if ruta_relativa.startswith("uploads/"):
+        try:
+            if os.path.isfile(ruta_relativa):
+                os.remove(ruta_relativa)
+        except OSError:
+            # Si el archivo no existe o no se puede borrar, igual quitamos la fila.
+            pass
+
+    db.delete(documento)
+    db.commit()
+
+    return {"mensaje": "Documento eliminado correctamente"}
+
+
 def crear_documento_tecnico_archivo(
     db: Session,
     tecnico_usuario_rut: str,
@@ -121,6 +182,8 @@ def crear_documento_tecnico_archivo(
         archivo_url=archivo_url,
         fecha_subida=datetime.utcnow(),
         documento_aprobado=False,
+        estado_documento="PENDIENTE",
+        motivo_rechazo=None,
         fecha_aprobacion=None,
         usuario_rut=None
     )

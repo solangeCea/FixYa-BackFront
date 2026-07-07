@@ -295,7 +295,7 @@ describe("Login", () => {
       .spyOn(console, "error")
       .mockImplementation(() => undefined)
 
-    mockLogin.mockRejectedValue(new Error("Credenciales incorrectas"))
+    mockLogin.mockRejectedValue(new Error("Correo o contraseña incorrectos"))
 
     renderLogin()
 
@@ -314,8 +314,9 @@ describe("Login", () => {
 
     expect(mockObtenerUsuarioActual).not.toHaveBeenCalled()
     expect(mockNavigate).not.toHaveBeenCalled()
+    // Ahora el login relaya el mensaje real del backend (no un texto fijo).
     expect(
-      screen.getByText(/correo o la contrase.a no coinciden/i)
+      screen.getByText(/correo o contrase.a incorrectos/i)
     ).toBeInTheDocument()
     expect(screen.getByLabelText("session-status")).toHaveTextContent(
       "sesion-inactiva"

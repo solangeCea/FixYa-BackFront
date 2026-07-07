@@ -38,6 +38,7 @@ const statusLabels: Record<string, string> = {
   EN_PROCESO: "En proceso",
   FINALIZADO: "Finalizada",
   CANCELADO: "Cancelada",
+  CAMBIO_ALCANCE: "Cambio de alcance · nueva cotización pendiente",
 };
 
 const statusDescriptions: Record<string, string> = {
@@ -46,6 +47,8 @@ const statusDescriptions: Record<string, string> = {
   EN_PROCESO: "El servicio está avanzando. Mantente atento a las actualizaciones.",
   FINALIZADO: "El trabajo fue cerrado. Puedes dejar una reseña si corresponde.",
   CANCELADO: "La solicitud fue cancelada y no seguirá avanzando.",
+  CAMBIO_ALCANCE:
+    "El técnico informó un cambio de alcance. Revisa la nueva cotización para continuar.",
 };
 
 export function getSolicitudStatusLabel(status: string) {

@@ -25,10 +25,13 @@ function RequestProgress({ status }: RequestProgressProps) {
       ]
     : SOLICITUD_PROGRESS_STEPS;
 
-  const activeIndex = Math.max(
-    steps.findIndex((step) => step.status === normalized),
-    0
-  );
+  // CAMBIO_ALCANCE es un trabajo en marcha en pausa (esperando al cliente): se
+  // ubica en el paso "En proceso" en vez de resetear la barra al inicio.
+  const rawIndex =
+    normalized === "CAMBIO_ALCANCE"
+      ? steps.findIndex((step) => step.status === "EN_PROCESO")
+      : steps.findIndex((step) => step.status === normalized);
+  const activeIndex = Math.max(rawIndex, 0);
   const progress =
     steps.length === 1 ? 100 : Math.round((activeIndex / (steps.length - 1)) * 100);
 

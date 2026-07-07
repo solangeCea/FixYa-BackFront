@@ -19,6 +19,13 @@ class DocumentoTecnico(Base):
 
     documento_aprobado = Column(Boolean, default=False, nullable=False)
 
+    # Estado de revisión explícito: PENDIENTE / APROBADO / RECHAZADO.
+    # documento_aprobado se conserva por compatibilidad (True solo si APROBADO).
+    estado_documento = Column(String(20), default="PENDIENTE", nullable=False)
+
+    # Motivo del rechazo escrito por el admin (solo cuando estado = RECHAZADO).
+    motivo_rechazo = Column(String(500), nullable=True)
+
     fecha_aprobacion = Column(DateTime, nullable=True)
 
     usuario_rut = Column(String(12), ForeignKey("usuario.rut"), nullable=True)

@@ -197,6 +197,7 @@ function RequestManagement() {
     try {
       setResolving(true);
       setError("");
+      setSuccess("");
       await resolverReporteSolicitud(selectedReporte.id_reporte, {
         estado_reporte: resolverForm.estado_reporte,
         observacion_admin: resolverForm.observacion_admin || null,
@@ -206,6 +207,7 @@ function RequestManagement() {
             : resolverForm.solicitud_activa === "true",
       });
       setSelectedReporte(null);
+      setSuccess("Reporte resuelto correctamente.");
       await cargarDatos();
     } catch (err) {
       setError(
@@ -302,7 +304,7 @@ function RequestManagement() {
           </div>
 
           <div className="space-y-3">
-            {reportes.slice(0, 5).map((reporte) => (
+            {reportes.map((reporte) => (
               <div
                 key={reporte.id_reporte}
                 className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 md:flex-row md:items-center md:justify-between"

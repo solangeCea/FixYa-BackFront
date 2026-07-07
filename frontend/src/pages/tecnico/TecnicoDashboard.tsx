@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Flag,
   MapPin,
+  MessageCircle,
   PlayCircle,
   RefreshCw,
   Send,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 import Navbar from "../../components/Navbar";
+import ChatPanel from "../../components/chat/ChatPanel";
 import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
@@ -29,7 +31,12 @@ import {
 import type { Solicitud } from "../../services/solicitudService";
 import { getServicios } from "../../services/catalogService";
 import type { Servicio } from "../../services/catalogService";
-import { createCotizacion, getMisCotizaciones } from "../../services/cotizacionService";
+import {
+  createCotizacion,
+  getCotizacionEstadoLabel,
+  getMisCotizaciones,
+  solicitarCambioAlcance,
+} from "../../services/cotizacionService";
 import type { Cotizacion } from "../../services/cotizacionService";
 import {
   getMyTechnicianProfile,
@@ -38,11 +45,18 @@ import {
   type TecnicoDashboardMetrics,
 } from "../../services/technicianService";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
+import {
+  formatCLP,
+  formatMilesCL,
+  getUploadUrl,
+  soloDigitos,
+} from "../../utils/format";
 
 function getEstadoStyle(estado: string) {
   if (estado === "INICIADO") return "bg-blue-100 text-blue-700";
   if (estado === "ASIGNADO") return "bg-yellow-100 text-yellow-700";
   if (estado === "EN_PROCESO") return "bg-purple-100 text-purple-700";
+  if (estado === "CAMBIO_ALCANCE") return "bg-orange-100 text-orange-700";
   if (estado === "FINALIZADO") return "bg-green-100 text-green-700";
   if (estado === "CANCELADO") return "bg-red-100 text-red-700";
   return "bg-gray-100 text-gray-700";
@@ -57,6 +71,14 @@ const disponibilidadDayLabels: Record<string, string> = {
   SABADO: "Sabado",
   DOMINGO: "Domingo",
 };
+
+const motivosCambioAlcance = [
+  "El daño es mucho mayor al diagnosticado inicialmente.",
+  "Se requiere reemplazar más componentes de los previstos.",
+  "Se necesitan materiales adicionales no considerados.",
+  "El tiempo de trabajo aumenta considerablemente.",
+  "Otro motivo (lo detallo abajo).",
+];
 
 const reportReasons = [
   ["SOSPECHA_ESTAFA", "Sospecho que es una estafa."],
@@ -139,9 +161,125 @@ function TecnicoDashboard() {
     {}
   );
   const [cotizaciones, setCotizaciones] = useState<
-    Record<number, { monto: string; detalle: string; vigencia: string }>
+    Record<
+      number,
+      { monto: string; detalle: string; vigencia: string; materiales: boolean }
+    >
   >({});
   const [misCotizaciones, setMisCotizaciones] = useState<Cotizacion[]>([]);
+  // Solicitud cuyo chat está abierto (null = ninguno).
+  const [chatSolicitudId, setChatSolicitudId] = useState<number | null>(null);
+  // Solicitud para la que se está solicitando un cambio de alcance (modal).
+  const [cambioTarget, setCambioTarget] = useState<Solicitud | null>(null);
+  const [cambioForm, setCambioForm] = useState({
+    motivoOpcion: motivosCambioAlcance[0],
+    motivoDetalle: "",
+    monto: "",
+    detalle: "",
+    plazo: "",
+    vigencia: "",
+    materiales: false,
+  });
+  const [cambioLoading, setCambioLoading] = useState(false);
+
+  function abrirCambioAlcance(solicitud: Solicitud) {
+    resetMessages();
+    setCambioForm({
+      motivoOpcion: motivosCambioAlcance[0],
+      motivoDetalle: "",
+      monto: "",
+      detalle: "",
+      plazo: "",
+      vigencia: "",
+      materiales: false,
+    });
+    setCambioTarget(solicitud);
+  }
+
+  async function handleCambioAlcance() {
+    if (!cambioTarget) return;
+
+    const original = misCotizaciones.find(
+      (c) =>
+        c.solicitud_id_solicitud === cambioTarget.id_solicitud &&
+        c.estado_cotizacion === "ACEPTADA"
+    );
+    if (!original) {
+      setError("No encontramos la cotización aceptada de este trabajo.");
+      return;
+    }
+
+    const esOtro = cambioForm.motivoOpcion.startsWith("Otro");
+    const motivo = esOtro
+      ? cambioForm.motivoDetalle.trim()
+      : cambioForm.motivoOpcion;
+    const monto = Number(soloDigitos(cambioForm.monto));
+
+    if (!motivo) {
+      setError("Indica el motivo del cambio de alcance.");
+      return;
+    }
+    if (!monto || monto <= 0) {
+      setError("Ingresa el nuevo valor del trabajo.");
+      return;
+    }
+    if (!cambioForm.detalle.trim() || !cambioForm.vigencia) {
+      setError("Completa el nuevo diagnóstico y la vigencia.");
+      return;
+    }
+
+    try {
+      setCambioLoading(true);
+      resetMessages();
+      await solicitarCambioAlcance(original.id_cotizacion, {
+        motivo,
+        monto_estimado: monto,
+        materiales_incluidos: cambioForm.materiales,
+        mensaje_cotizacion: cambioForm.detalle.trim(),
+        plazo_estimado: cambioForm.plazo.trim(),
+        fecha_vigencia: new Date(
+          `${cambioForm.vigencia}T23:59:00`
+        ).toISOString(),
+      });
+      setSuccess(
+        "Nueva cotización enviada por cambio de alcance. El cliente será notificado."
+      );
+      setCambioTarget(null);
+      await cargarDatos();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos enviar el cambio de alcance."
+      );
+    } finally {
+      setCambioLoading(false);
+    }
+  }
+
+  // Actualiza un campo del borrador de cotización de una solicitud, preservando
+  // el resto de los campos (monto, detalle, vigencia, materiales).
+  function updateCotizacion(
+    idSolicitud: number,
+    patch: Partial<{
+      monto: string;
+      detalle: string;
+      vigencia: string;
+      materiales: boolean;
+    }>
+  ) {
+    setCotizaciones((prev) => ({
+      ...prev,
+      [idSolicitud]: {
+        monto: prev[idSolicitud]?.monto ?? "",
+        detalle: prev[idSolicitud]?.detalle ?? "",
+        vigencia: prev[idSolicitud]?.vigencia ?? "",
+        materiales: prev[idSolicitud]?.materiales ?? false,
+        ...patch,
+      },
+    }));
+  }
+
   const [reportSolicitud, setReportSolicitud] = useState<Solicitud | null>(
     null
   );
@@ -261,7 +399,8 @@ function TecnicoDashboard() {
   }
 
   async function handleFinalizar(idSolicitud: number) {
-    const costo = Number(costosFinales[idSolicitud]);
+    // Igual que el monto: se guardan solo dígitos (pesos) para no perder el valor.
+    const costo = Number(soloDigitos(costosFinales[idSolicitud] ?? ""));
 
     if (!costo || costo <= 0) {
       setError("Debes ingresar un costo final valido.");
@@ -288,7 +427,8 @@ function TecnicoDashboard() {
 
   async function handleCrearCotizacion(idSolicitud: number) {
     const cotizacion = cotizaciones[idSolicitud];
-    const monto = Number(cotizacion?.monto);
+    // El monto se guarda como dígitos en pesos (sin puntos); lo parseamos a entero.
+    const monto = Number(soloDigitos(cotizacion?.monto ?? ""));
 
     if (!monto || monto <= 0 || !cotizacion?.detalle?.trim() || !cotizacion.vigencia) {
       setError("Completa monto, detalle y vigencia antes de cotizar.");
@@ -301,6 +441,7 @@ function TecnicoDashboard() {
       await createCotizacion({
         solicitud_id_solicitud: idSolicitud,
         monto_estimado: monto,
+        materiales_incluidos: cotizacion.materiales ?? false,
         mensaje_cotizacion: cotizacion.detalle,
         fecha_vigencia: new Date(`${cotizacion.vigencia}T23:59:00`).toISOString(),
       });
@@ -308,7 +449,7 @@ function TecnicoDashboard() {
       setSuccess("Cotizacion enviada. El cliente podra revisarla antes de asignar.");
       setCotizaciones((prev) => ({
         ...prev,
-        [idSolicitud]: { monto: "", detalle: "", vigencia: "" },
+        [idSolicitud]: { monto: "", detalle: "", vigencia: "", materiales: false },
       }));
       await cargarDatos();
     } catch (err) {
@@ -593,55 +734,60 @@ function TecnicoDashboard() {
                           Realizar cotizacion
                         </h5>
                         <div className="grid gap-3">
-                          <input
-                            type="number"
-                            min="1"
-                            value={cotizaciones[solicitud.id_solicitud]?.monto || ""}
-                            onChange={(event) =>
-                              setCotizaciones((prev) => ({
-                                ...prev,
-                                [solicitud.id_solicitud]: {
-                                  monto: event.target.value,
-                                  detalle:
-                                    prev[solicitud.id_solicitud]?.detalle || "",
-                                  vigencia:
-                                    prev[solicitud.id_solicitud]?.vigencia || "",
-                                },
-                              }))
-                            }
-                            placeholder="Monto estimado de la cotizacion"
-                            className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                          />
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-gray-500">
+                              $
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={formatMilesCL(
+                                cotizaciones[solicitud.id_solicitud]?.monto || ""
+                              )}
+                              onChange={(event) =>
+                                // Guardamos solo dígitos (pesos), sin separadores.
+                                updateCotizacion(solicitud.id_solicitud, {
+                                  monto: soloDigitos(event.target.value),
+                                })
+                              }
+                              placeholder="Monto estimado (ej: 20.000)"
+                              className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
+                          </div>
                           <textarea
                             value={cotizaciones[solicitud.id_solicitud]?.detalle || ""}
                             onChange={(event) =>
-                              setCotizaciones((prev) => ({
-                                ...prev,
-                                [solicitud.id_solicitud]: {
-                                  monto: prev[solicitud.id_solicitud]?.monto || "",
-                                  detalle: event.target.value,
-                                  vigencia:
-                                    prev[solicitud.id_solicitud]?.vigencia || "",
-                                },
-                              }))
+                              updateCotizacion(solicitud.id_solicitud, {
+                                detalle: event.target.value,
+                              })
                             }
                             rows={3}
                             placeholder="Detalle, alcance o condiciones"
                             className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
                           />
+                          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={
+                                cotizaciones[solicitud.id_solicitud]?.materiales ??
+                                false
+                              }
+                              onChange={(event) =>
+                                updateCotizacion(solicitud.id_solicitud, {
+                                  materiales: event.target.checked,
+                                })
+                              }
+                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            El monto incluye los materiales
+                          </label>
                           <input
                             type="date"
                             value={cotizaciones[solicitud.id_solicitud]?.vigencia || ""}
                             onChange={(event) =>
-                              setCotizaciones((prev) => ({
-                                ...prev,
-                                [solicitud.id_solicitud]: {
-                                  monto: prev[solicitud.id_solicitud]?.monto || "",
-                                  detalle:
-                                    prev[solicitud.id_solicitud]?.detalle || "",
-                                  vigencia: event.target.value,
-                                },
-                              }))
+                              updateCotizacion(solicitud.id_solicitud, {
+                                vigencia: event.target.value,
+                              })
                             }
                             className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
                           />
@@ -740,12 +886,68 @@ function TecnicoDashboard() {
                         </p>
                         {solicitud.costo_final && (
                           <p>
-                            <strong>Costo final:</strong> ${solicitud.costo_final}
+                            <strong>Costo final:</strong>{" "}
+                            {formatCLP(solicitud.costo_final)}
                           </p>
                         )}
                       </div>
 
                       <AvailabilitySummary solicitud={solicitud} />
+
+                      {solicitud.estado_trabajo !== "CANCELADO" && (
+                        <div className="mt-4">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setChatSolicitudId(
+                                chatSolicitudId === solicitud.id_solicitud
+                                  ? null
+                                  : solicitud.id_solicitud
+                              )
+                            }
+                            className="inline-flex items-center gap-2 rounded-xl bg-teal-50 px-4 py-2 text-sm font-bold text-teal-700 hover:bg-teal-100"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            {chatSolicitudId === solicitud.id_solicitud
+                              ? "Ocultar chat"
+                              : "Chat con el cliente"}
+                          </button>
+                          {chatSolicitudId === solicitud.id_solicitud &&
+                            usuario && (
+                              <div className="mt-3">
+                                <ChatPanel
+                                  idSolicitud={solicitud.id_solicitud}
+                                  miRut={usuario.rut}
+                                  nombreContraparte="Cliente"
+                                />
+                              </div>
+                            )}
+                        </div>
+                      )}
+
+                      {isTechnicianApproved &&
+                        (solicitud.estado_trabajo === "ASIGNADO" ||
+                          solicitud.estado_trabajo === "EN_PROCESO") && (
+                          <button
+                            type="button"
+                            onClick={() => abrirCambioAlcance(solicitud)}
+                            className="mt-3 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100"
+                          >
+                            <Flag className="h-4 w-4" />
+                            Solicitar cambio de alcance
+                          </button>
+                        )}
+
+                      {solicitud.estado_trabajo === "CAMBIO_ALCANCE" && (
+                        <div className="mt-3 flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
+                          <Flag className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>
+                            Enviaste una nueva cotización por cambio de alcance.
+                            El trabajo continuará cuando el cliente la acepte, o
+                            se cancelará si la rechaza.
+                          </span>
+                        </div>
+                      )}
 
                       {isTechnicianApproved && solicitud.estado_trabajo === "ASIGNADO" && (
                         <button
@@ -765,19 +967,28 @@ function TecnicoDashboard() {
 
                       {isTechnicianApproved && solicitud.estado_trabajo === "EN_PROCESO" && (
                         <div className="mt-4 space-y-3">
-                          <input
-                            type="number"
-                            min="1"
-                            value={costosFinales[solicitud.id_solicitud] || ""}
-                            onChange={(event) =>
-                              setCostosFinales((prev) => ({
-                                ...prev,
-                                [solicitud.id_solicitud]: event.target.value,
-                              }))
-                            }
-                            placeholder="Costo final"
-                            className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                          />
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-gray-500">
+                              $
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={formatMilesCL(
+                                costosFinales[solicitud.id_solicitud] || ""
+                              )}
+                              onChange={(event) =>
+                                setCostosFinales((prev) => ({
+                                  ...prev,
+                                  [solicitud.id_solicitud]: soloDigitos(
+                                    event.target.value
+                                  ),
+                                }))
+                              }
+                              placeholder="Costo final (ej: 45.000)"
+                              className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
+                          </div>
                           <button
                             type="button"
                             onClick={() => handleFinalizar(solicitud.id_solicitud)}
@@ -812,7 +1023,13 @@ function TecnicoDashboard() {
               />
             ) : (
               <div className="space-y-3">
-                {misCotizaciones.map((cot) => (
+                {misCotizaciones.map((cot) => {
+                  // Una cotización ENVIADA con vigencia vencida se ve como Expirada
+                  // (mismo criterio que el cliente), aunque el backend aún no la marque.
+                  const cotExpirada =
+                    cot.estado_cotizacion === "ENVIADA" &&
+                    new Date(cot.fecha_vigencia).getTime() < Date.now();
+                  return (
                   <div
                     key={cot.id_cotizacion}
                     className="flex flex-col gap-2 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
@@ -822,23 +1039,43 @@ function TecnicoDashboard() {
                         Solicitud #{cot.solicitud_id_solicitud}
                       </p>
                       <p className="text-sm text-slate-500">
-                        Monto estimado: ${cot.monto_estimado}
+                        Monto estimado: {formatCLP(cot.monto_estimado)} ·{" "}
+                        {cot.materiales_incluidos
+                          ? "materiales incluidos"
+                          : "materiales no incluidos"}
                       </p>
                     </div>
-                    <span
-                      className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
-                        cot.estado_cotizacion === "ACEPTADA"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : cot.estado_cotizacion === "RECHAZADA" ||
-                            cot.estado_cotizacion === "ANULADA"
-                          ? "bg-rose-100 text-rose-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {cot.estado_cotizacion}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      {cot.archivo_pdf_url && (
+                        <a
+                          href={getUploadUrl(cot.archivo_pdf_url)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                        >
+                          Ver PDF
+                        </a>
+                      )}
+                      <span
+                        className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
+                          cotExpirada
+                            ? "bg-slate-200 text-slate-600"
+                            : cot.estado_cotizacion === "ACEPTADA"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : cot.estado_cotizacion.startsWith("RECHAZADA") ||
+                              cot.estado_cotizacion.startsWith("ANULADA")
+                            ? "bg-rose-100 text-rose-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {cotExpirada
+                          ? "Expirada"
+                          : getCotizacionEstadoLabel(cot.estado_cotizacion)}
+                      </span>
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -927,6 +1164,156 @@ function TecnicoDashboard() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(cambioTarget)}
+        onClose={() => (cambioLoading ? null : setCambioTarget(null))}
+        title="Solicitar cambio de alcance"
+        description="Se anulará la cotización aceptada (se conserva el historial) y se enviará una nueva al cliente para su aprobación."
+        maxWidth="xl"
+      >
+        {cambioTarget && (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">
+                Motivo del cambio
+              </label>
+              <select
+                value={cambioForm.motivoOpcion}
+                onChange={(e) =>
+                  setCambioForm((p) => ({ ...p, motivoOpcion: e.target.value }))
+                }
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                {motivosCambioAlcance.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              {cambioForm.motivoOpcion.startsWith("Otro") && (
+                <input
+                  value={cambioForm.motivoDetalle}
+                  onChange={(e) =>
+                    setCambioForm((p) => ({
+                      ...p,
+                      motivoDetalle: e.target.value,
+                    }))
+                  }
+                  placeholder="Escribe el motivo"
+                  className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">
+                Nuevo diagnóstico / descripción del trabajo
+              </label>
+              <textarea
+                value={cambioForm.detalle}
+                onChange={(e) =>
+                  setCambioForm((p) => ({ ...p, detalle: e.target.value }))
+                }
+                rows={3}
+                placeholder="Ej: El cableado interno de la cocina está quemado; se requiere cambiar el cableado de 3 habitaciones."
+                className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Nuevo valor
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-gray-500">
+                    $
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={formatMilesCL(cambioForm.monto)}
+                    onChange={(e) =>
+                      setCambioForm((p) => ({
+                        ...p,
+                        monto: soloDigitos(e.target.value),
+                      }))
+                    }
+                    placeholder="100.000"
+                    className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Nuevo plazo estimado
+                </label>
+                <input
+                  value={cambioForm.plazo}
+                  onChange={(e) =>
+                    setCambioForm((p) => ({ ...p, plazo: e.target.value }))
+                  }
+                  placeholder="Ej: 2 días"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={cambioForm.materiales}
+                  onChange={(e) =>
+                    setCambioForm((p) => ({
+                      ...p,
+                      materiales: e.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                />
+                El nuevo monto incluye los materiales
+              </label>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">
+                  Vigencia de la nueva cotización
+                </label>
+                <input
+                  type="date"
+                  value={cambioForm.vigencia}
+                  onChange={(e) =>
+                    setCambioForm((p) => ({ ...p, vigencia: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setCambioTarget(null)}
+                disabled={cambioLoading}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCambioAlcance}
+                disabled={cambioLoading}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:bg-amber-300"
+              >
+                <Flag className="h-4 w-4" />
+                {cambioLoading
+                  ? "Enviando..."
+                  : "Anular y enviar nueva cotización"}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

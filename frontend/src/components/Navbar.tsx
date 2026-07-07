@@ -59,13 +59,20 @@ function Navbar() {
       const data = await getNotifications();
       setNotifications(data);
     } catch {
-      setNotifications([]);
+      // Silencioso: mantiene las notificaciones previas si un sondeo falla.
     }
   }, [usuario]);
 
+  // Sondea periódicamente para reflejar eventos nuevos sin recargar la página.
   useEffect(() => {
+    if (!usuario) {
+      setNotifications([]);
+      return;
+    }
     cargarNotificaciones();
-  }, [cargarNotificaciones]);
+    const id = setInterval(cargarNotificaciones, 30000);
+    return () => clearInterval(id);
+  }, [usuario, cargarNotificaciones]);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.leida).length,

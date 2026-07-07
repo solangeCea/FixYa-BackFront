@@ -35,6 +35,7 @@ vi.mock("../../context/AuthContext", () => ({
 vi.mock("../../services/technicianService", () => ({
   approveTechnician: vi.fn(),
   approveTechnicianDocument: vi.fn(),
+  rejectTechnicianDocument: vi.fn(),
   getTechnicianDocuments: vi.fn(),
   getTechnicians: vi.fn(),
   reviewTechnician: vi.fn(),
@@ -81,6 +82,8 @@ const documentos: DocumentoTecnico[] = [
     archivo_url: "/uploads/documentos_tecnicos/certificado-sec.pdf",
     fecha_subida: "2026-06-10T10:00:00",
     documento_aprobado: false,
+    estado_documento: "PENDIENTE",
+    motivo_rechazo: null,
     fecha_aprobacion: null,
     usuario_rut: null,
   },
@@ -99,6 +102,7 @@ describe("TechnicianManagement", () => {
     mockApproveTechnicianDocument.mockResolvedValue({
       ...documentos[0],
       documento_aprobado: true,
+      estado_documento: "APROBADO",
       fecha_aprobacion: "2026-06-15T12:00:00",
       usuario_rut: "33.333.333-3",
     })
@@ -138,7 +142,7 @@ describe("TechnicianManagement", () => {
 
     await user.click(
       within(modal).getByRole("button", {
-        name: /aprobar documento tecnico/i,
+        name: /aprobar documento/i,
       })
     )
 

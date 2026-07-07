@@ -43,9 +43,10 @@ describe("authService", () => {
   it("CP-SERV-AUTH-002 lanza error controlado cuando login responde 401", async () => {
     mockJsonResponse({ detail: "Unauthorized" }, false)
 
+    // authService ahora relaya el detail del backend en vez de un texto fijo.
     await expect(
       login("cliente@fixya.cl", "clave-incorrecta")
-    ).rejects.toThrow("Credenciales incorrectas")
+    ).rejects.toThrow("Unauthorized")
   })
 
   it("CP-SERV-AUTH-003 obtiene usuario actual enviando Authorization Bearer", async () => {

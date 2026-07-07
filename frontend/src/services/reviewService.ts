@@ -31,6 +31,59 @@ export interface Review {
   analisis_modo?: string | null;
 }
 
+export interface ReputationSummary {
+  resumen: string;
+  sentimiento_general: string;
+  fortalezas: string[];
+  aspectos_a_mejorar: string[];
+  comentarios_analizados: number;
+  promedio_calificacion: number;
+  nivel_confianza: string;
+  modo_analisis: string;
+}
+
+// Reseñas activas de un técnico (endpoint público).
+export async function getTechnicianReviews(rut: string): Promise<Review[]> {
+  const response = await fetch(`${API_URL}/resenas/tecnico/${rut}`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener reseñas del técnico");
+  }
+
+  return response.json();
+}
+
+// Resumen de reputación (promedio, fortalezas, aspectos a mejorar) del técnico.
+export async function getTechnicianReviewSummary(
+  rut: string
+): Promise<ReputationSummary> {
+  const response = await fetch(`${API_URL}/resenas/tecnico/${rut}/resumen`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener el resumen de reputación");
+  }
+
+  return response.json();
+}
+
+// Calificaciones emitidas por un cliente (privado: dueño o admin).
+export async function getClientReviews(rut: string): Promise<Review[]> {
+  const response = await fetch(`${API_URL}/resenas/cliente/${rut}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al obtener tus calificaciones");
+  }
+
+  return response.json();
+}
+
 export async function getReviews(): Promise<Review[]> {
   const [activasResponse, reportadasResponse] = await Promise.all([
     fetch(`${API_URL}/resenas/`, {

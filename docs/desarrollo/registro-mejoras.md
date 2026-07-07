@@ -1225,3 +1225,364 @@ válido (200), login con la nueva (200), reuso del token (400), token inválido 
 Para enviar correos reales, configurar `SMTP_*` en el `.env` (Gmail requiere contraseña de
 aplicación). Sin SMTP, el enlace queda en `docker logs` del backend para pruebas. Pendiente
 por fases: perfiles enriquecidos de técnico y cliente (secciones 3 y 4).
+
+## M-35 · 2026-07-06 — Perfil enriquecido del técnico (validación, documentos, valoraciones y trabajos)
+**Categoría:** Mejora funcional / Gestión de perfiles (Fase 3, sección 3)
+
+### Problema detectado
+El perfil del técnico (`/tecnico/perfil`) era solo un formulario de edición de datos y
+cambio de contraseña. Faltaba lo que pide la sección 3 del requerimiento: ver el estado de
+validación, gestionar sus certificados/documentos (incluido rechazo con motivo y reenvío),
+ver sus valoraciones y su historial de trabajos.
+
+### Solución implementada
+Perfil reorganizado en **pestañas** (Datos y validación · Documentos · Valoraciones · Trabajos)
+y soporte de **estado por documento** en el backend:
+- **Estado por documento (BD):** nueva columna `estado_documento`
+  (`PENDIENTE`/`APROBADO`/`RECHAZADO`) y `motivo_rechazo` en `documento_tecnico`. Antes solo
+  existía el booleano `documento_aprobado`, que no distinguía "pendiente" de "rechazado" ni
+  guardaba el motivo. Migración idempotente con backfill (`documento_aprobado=TRUE` → `APROBADO`).
+- **`PUT /documentos-tecnicos/{id}/rechazar`** ahora exige `motivo_rechazo` (400 si viene
+  vacío) y fija estado `RECHAZADO`; **aprobar** fija `APROBADO`; subir fija `PENDIENTE`.
+- **`DELETE /documentos-tecnicos/{id}`** (nuevo, solo técnico dueño): elimina un documento
+  propio no aprobado (borra archivo físico + fila) para reemplazar/reenviar; 400 si ya está
+  aprobado, 403 si es de otro técnico.
+- **Panel del admin** (`TechnicianManagement`): badge de 3 estados, botón "Rechazar
+  documento" con modal de motivo (el técnico luego lo ve).
+- **Perfil del técnico** (pestañas):
+  - *Datos y validación:* tarjeta con estado de verificación, nivel/experiencia, fechas de
+    solicitud y revisión, observación del admin y estado de cuenta, más el formulario de
+    edición y el cambio de contraseña ya existentes.
+  - *Documentos:* subir (tipo + archivo), listar con estado por documento, ver el motivo del
+    rechazo, y eliminar/reenviar (con modal de confirmación).
+  - *Valoraciones:* promedio en estrellas, total, resumen de reputación (IA/local con
+    fortalezas y aspectos a mejorar) y lista de comentarios.
+  - *Trabajos:* contadores (completados/en curso/cancelados) e historial con estado y monto.
+- **Reutilización:** nuevos utils `format.ts` (fechas, montos, URL de uploads) y
+  `verificacion.ts` (etiquetas/colores de estado); se reutilizan `SectionCard`, `StatCard`,
+  `Modal`, `EmptyState`.
+
+### Archivos modificados
+- `backend/database/migrations/20260709_add_documento_estado_revision.sql` (nuevo)
+- `backend/app/models/documento_tecnico.py`, `backend/app/schemas/documento_tecnico_schema.py`,
+  `backend/app/services/documento_tecnico_service.py`, `backend/app/routers/documento_tecnico_router.py`
+- `frontend/src/services/technicianService.ts`, `frontend/src/services/reviewService.ts`
+- `frontend/src/utils/format.ts` (nuevo), `frontend/src/utils/verificacion.ts` (nuevo)
+- `frontend/src/pages/tecnico/TecnicoPerfil.tsx` (reescrito como shell con pestañas)
+- `frontend/src/pages/tecnico/perfil/DatosTab.tsx`, `DocumentosTab.tsx`, `ValoracionesTab.tsx`,
+  `TrabajosTab.tsx` (nuevos)
+- `frontend/src/pages/admin/TechnicianManagement.tsx`,
+  `frontend/src/tests/admin/TechnicianManagement.test.tsx`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo (Docker): migración aplicada (columnas `estado_documento`/`motivo_rechazo` con
+backfill), subir→`PENDIENTE` (200), eliminar aprobado→400, rechazar sin motivo→400, rechazar
+con motivo→`RECHAZADO`+motivo (200), eliminar rechazado→200; resumen de reputación y
+solicitudes del técnico responden con la forma esperada.
+
+### Observaciones
+"Reenviar" un documento rechazado = eliminarlo y subir la versión corregida (queda
+`PENDIENTE`). No se permite borrar documentos aprobados para no romper la verificación
+automática del técnico. Pendiente por fases: perfil enriquecido del cliente (sección 4).
+
+## M-36 · 2026-07-06 — Perfil enriquecido del cliente (solicitudes, calificaciones y comprobantes)
+**Categoría:** Mejora funcional / Gestión de perfiles (Fase 3, sección 4)
+
+### Problema detectado
+El perfil del cliente (`/cliente/perfil`) era solo un formulario de edición de datos y
+cambio de contraseña. Faltaba lo que pide la sección 4: historial de solicitudes con su
+estado y el técnico que atendió, las calificaciones que el cliente emitió y sus comprobantes.
+
+### Solución implementada
+Perfil reorganizado en **pestañas** (Mis datos · Solicitudes · Calificaciones · Comprobantes):
+- **Backend:** nuevo **`GET /resenas/cliente/{rut}`** (privado: dueño o admin) que lista las
+  reseñas emitidas por el cliente (`Resena.usuario_rut == rut`, activas). Antes solo existía
+  el listado por técnico.
+- **Mis datos:** tarjeta de cuenta (estado, correo, teléfono) + formulario de edición +
+  cambio de contraseña.
+- **Solicitudes:** historial completo con estado, servicio, **técnico que atendió** (nombre)
+  y monto de las finalizadas.
+- **Calificaciones:** reseñas emitidas cruzadas con la solicitud para mostrar técnico y
+  servicio de cada una.
+- **Comprobantes:** por cada solicitud finalizada con costo, un comprobante imprimible /
+  descargable como PDF (ventana de impresión con folio, cliente, técnico, servicio, fecha y
+  monto).
+- **Reutilización:** se extrajo el formulario de datos a un componente compartido
+  `PerfilDatosForm` usado por el perfil del técnico y del cliente (elimina la duplicación del
+  formulario). Los nombres de técnico se resuelven con `getPublicTechnicianProfiles` y los de
+  servicio con `getServicios`; se reutilizan los utils `format.ts` y `verificacion.ts`.
+
+### Archivos modificados
+- `backend/app/routers/resena_router.py`
+- `frontend/src/services/reviewService.ts`
+- `frontend/src/components/perfil/PerfilDatosForm.tsx` (nuevo, compartido)
+- `frontend/src/pages/tecnico/perfil/DatosTab.tsx` (usa el formulario compartido)
+- `frontend/src/utils/comprobante.ts` (nuevo)
+- `frontend/src/pages/cliente/ClientePerfil.tsx` (reescrito como shell con pestañas)
+- `frontend/src/pages/cliente/perfil/DatosTab.tsx`, `SolicitudesTab.tsx`,
+  `CalificacionesTab.tsx`, `ComprobantesTab.tsx` (nuevos)
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo (Docker): `GET /resenas/cliente/{rut}` propio→200, de otro cliente→403; el cruce de
+datos verificado con un cliente semilla (2 reseñas, 2 solicitudes finalizadas con técnico,
+servicio y costo; los nombres públicos de técnico resuelven correctamente).
+
+### Observaciones
+No existe una entidad de "comprobante" en la BD; el comprobante se genera desde los datos de
+la solicitud finalizada (folio = id de solicitud). La descarga usa la ventana de impresión del
+navegador (permite guardar como PDF); si el navegador bloquea las ventanas emergentes se avisa
+al usuario. Con esto se completan las cuatro secciones del requerimiento de gestión de
+usuarios/perfiles (Fases 1–3).
+
+## M-37 · 2026-07-06 — Cotizaciones: monto íntegro + PDF profesional con firmas + estados (Fase B)
+**Categoría:** Corrección de bug / Mejora funcional (flujo de cotizaciones)
+
+### Problema detectado
+1. **Bug del monto:** el técnico ingresaba `$20.000` y el cliente veía `20`. Causa: el input
+   era `type="number"` y se parseaba con `Number("20.000")`, que interpreta el punto como
+   separador decimal → `20`. La BD (`Numeric(10,2)`) y el schema (`Decimal`) eran correctos;
+   el valor se perdía en el frontend antes de enviarse.
+2. El PDF de la cotización era un borrador básico (texto plano), sin formato profesional ni
+   firmas, y no se regeneraba al aceptar/rechazar.
+
+### Solución implementada
+- **Monto:** input CLP dedicado (`type="text"` + `inputMode="numeric"`) que guarda solo
+  dígitos y muestra separador de miles (`formatMilesCL`); se envía el entero de pesos. Todos
+  los displays usan `formatCLP` (helpers nuevos en `utils/format.ts`: `soloDigitos`,
+  `formatMilesCL`). Verificado en vivo: se almacena `20000.00`.
+- **PDF profesional** (`app/pdf/cotizacion_pdf.py`, reescrito con ReportLab) según el formato
+  de referencia: encabezado con logo FixYa + N° `COT-AAAA-NNNN` + fecha, barra de estado,
+  datos del técnico (con especialidad y calificación) y del cliente, descripción del trabajo,
+  tabla de detalle con "incluye materiales" y **TOTAL A PAGAR**, condiciones del servicio,
+  y **dos bloques de firma**: técnico (siempre, nombre/RUT/fecha, "verificado por FixYa") y
+  cliente ("Pendiente de aceptacion" hasta que acepta; luego nombre/RUT/fecha de aceptación).
+  El PDF se **regenera** al aceptar (estado ACEPTADA + firma del cliente) y al rechazar.
+- **Flag de materiales:** nueva columna `materiales_incluidos` (migración idempotente) + en
+  schema, service, y checkbox en el formulario del técnico.
+- **Estados:** se agrega **EXPIRADA**. El backend bloquea aceptar una cotización vencida
+  (marca EXPIRADA + 409); el frontend del cliente la muestra como "Expirada" y oculta el botón
+  de aceptar.
+- **Cliente:** descarga del PDF, **modal de confirmación** antes de aceptar (la aceptación
+  asigna al técnico y rechaza las demás), y visualización de vigencia/materiales. **Técnico:**
+  enlace "Ver PDF" e indicador de materiales en "Mis cotizaciones".
+
+### Archivos modificados
+- `backend/database/migrations/20260710_add_cotizacion_materiales.sql` (nuevo)
+- `backend/app/models/cotizacion.py`, `backend/app/schemas/cotizacion_schema.py`,
+  `backend/app/services/cotizacion_service.py`, `backend/app/pdf/cotizacion_pdf.py` (reescrito)
+- `frontend/src/utils/format.ts`, `frontend/src/services/cotizacionService.ts`
+- `frontend/src/pages/tecnico/TecnicoDashboard.tsx`,
+  `frontend/src/pages/cliente/ClienteDashboard.tsx`,
+  `frontend/src/tests/tecnico/TecnicoDashboard.test.tsx`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo (Docker): crear cotización con monto 20.000 → **BD 20000.00** (íntegro); PDF generado
+(~3.8 KB); aceptar → estado ACEPTADA + `fecha_aceptacion` + PDF regenerado con firma del
+cliente; solicitud pasa a ASIGNADO (se revirtió la semilla tras la prueba). Guardas de
+expiración y rechazo validadas.
+
+### Observaciones
+Se optó por **total único + flag de materiales** (no ítems editables) por acuerdo con el
+usuario. `reportlab` ya estaba en `requirements.txt`. Pendiente Fase C: creación automática
+del chat privado al aceptar y su mensajería.
+
+## M-38 · 2026-07-06 — Chat privado automático al aceptar la cotización (Fase C)
+**Categoría:** Mejora funcional (coordinación cliente-técnico)
+
+### Problema detectado
+Tras aceptar una cotización no existía forma de que cliente y técnico coordinaran el trabajo
+(fecha, hora, materiales, cambios). No había ningún sistema de mensajería en la plataforma.
+
+### Solución implementada
+Chat privado 1:1 que se **crea automáticamente solo cuando el cliente acepta** la cotización
+(no antes), atado a esa solicitud y cotización:
+- **Modelo:** `chat` (uno por cotización aceptada, con `cliente_rut`/`tecnico_rut`) y
+  `mensaje_chat` (emisor, contenido, `fecha_envio`, `leido`). Tablas creadas por
+  `create_all`.
+- **Creación automática:** `aceptar_cotizacion` llama a `crear_chat_para_cotizacion`
+  (idempotente) dentro de la misma transacción, después de regenerar el PDF.
+- **Endpoints** (`/chats`, auth por participante): `GET /chats/solicitud/{id}` (devuelve el
+  chat o 404 si aún no existe), `GET /chats/{id}/mensajes` (marca como leídos los recibidos),
+  `POST /chats/{id}/mensajes` (valida no-vacío, crea el mensaje y **notifica** al otro con
+  una `Notificacion` tipo `CHAT`). Un tercero recibe 403.
+- **Frontend:** `chatService.ts` + componente reutilizable `ChatPanel` con **polling** cada
+  4 s (near-realtime según la arquitectura actual), historial con fecha/hora, alineación por
+  remitente (míos a la derecha), indicador enviado/leído (✓ / ✓✓) y auto-scroll. Integrado en
+  el dashboard del **cliente** ("Chat con el técnico") y del **técnico** ("Chat con el
+  cliente"), disponible una vez que la solicitud está asignada. Las notificaciones de mensaje
+  nuevo aparecen por el sistema de notificaciones ya existente (polling).
+
+### Flujo completo verificado
+Solicitud → técnico cotiza (PDF) → cliente revisa/descarga PDF → acepta (confirmación) → PDF
+se regenera con ambas firmas + estado ACEPTADA → **se habilita el chat automáticamente** →
+ambos coordinan por mensajes.
+
+### Archivos modificados
+- `backend/app/models/chat.py` (nuevo), `backend/app/models/__init__.py`,
+  `backend/app/schemas/chat_schema.py` (nuevo), `backend/app/services/chat_service.py` (nuevo),
+  `backend/app/routers/chat_router.py` (nuevo), `backend/app/main.py`,
+  `backend/app/services/cotizacion_service.py`
+- `frontend/src/services/chatService.ts` (nuevo),
+  `frontend/src/components/chat/ChatPanel.tsx` (nuevo),
+  `frontend/src/pages/cliente/ClienteDashboard.tsx`,
+  `frontend/src/pages/tecnico/TecnicoDashboard.tsx`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo (Docker): al aceptar se crea el chat (1 por cotización); ambos participantes acceden;
+mensajes en ambos sentidos; los recibidos se marcan leídos al listar; se generan 2
+notificaciones tipo CHAT; un tercero recibe 403. Router HTTP: sin token 401, solicitud sin
+chat 404, mensaje vacío 422. Pruebas con datos reales revertidas (semilla intacta).
+
+### Observaciones
+El chat usa **polling** (no WebSockets) por acuerdo con el usuario y para no agregar
+infraestructura nueva; es casi instantáneo en la práctica. Queda como posible mejora futura
+migrar a WebSockets. Con esto el flujo de cotizaciones queda completo: monto íntegro, PDF
+profesional con firmas, estados, aceptación con confirmación y chat de coordinación.
+
+Adicional (integridad del monto en todas las etapas): se aplicó el mismo input CLP y
+`formatCLP` al **costo final** que el técnico registra al finalizar el trabajo
+(`TecnicoDashboard`), que tenía el mismo bug latente `type="number"` + display crudo.
+
+## M-39 · 2026-07-07 — Cambio de alcance del trabajo (nueva cotización con trazabilidad)
+**Categoría:** Mejora funcional (gestión profesional de servicios)
+
+### Problema detectado
+Si al llegar al domicilio el técnico detecta que el trabajo real es mucho mayor que lo
+cotizado (ej.: cotizó $25.000 por un enchufe pero el cableado de 3 piezas está quemado y el
+costo real es $100.000), no era correcto modificar la cotización ya aceptada. No existía forma
+de anular ese acuerdo por cambio de alcance y generar uno nuevo con trazabilidad.
+
+### Solución implementada
+Flujo completo de **cambio de alcance** que conserva todo el historial:
+- **Modelo/BD** (migración idempotente): `cotizacion.cotizacion_origen_id` (vínculo a la
+  cotización original), `cotizacion.plazo_estimado`, `mensaje_chat.es_sistema` (avisos
+  automáticos), y se amplió `estado_cotizacion` a `VARCHAR(30)` para el nuevo estado.
+- **Endpoint** `POST /cotizaciones/{id}/cambio-alcance` (solo el técnico dueño). El servicio
+  `solicitar_cambio_alcance`: valida que la original esté ACEPTADA y el trabajo en
+  ASIGNADO/EN_PROCESO; marca la original como **`ANULADA_CAMBIO_ALCANCE`** (se conserva, con
+  motivo) y regenera su PDF; crea una **nueva cotización ENVIADA vinculada** (nuevo
+  diagnóstico, materiales, plazo y valor) con su PDF; pasa la solicitud a
+  **`CAMBIO_ALCANCE`**; registra `HistorialSolicitud`; **notifica** al cliente; y agrega un
+  **mensaje automático de sistema** al chat existente (que se conserva).
+- **Aceptar/Rechazar la nueva:** se ajustó `aceptar_cotizacion` para permitir la cotización de
+  cambio de alcance (la solicitud no está "cotizable" pero sí en CAMBIO_ALCANCE) → al aceptar,
+  el trabajo continúa (ASIGNADO) con mensaje de sistema; `rechazar_cotizacion` detecta que es
+  de cambio de alcance y deja la solicitud **CANCELADA** (con notificación y aviso en chat).
+- **Chat único por solicitud:** `crear_chat_para_cotizacion` ahora reutiliza el chat de la
+  solicitud (no crea uno nuevo por cotización), preservando la conversación.
+- **Frontend técnico:** botón "Solicitar cambio de alcance" en trabajos ASIGNADO/EN_PROCESO +
+  modal con motivo (predefinido o personalizado), nuevo diagnóstico, nuevo valor (input CLP),
+  plazo, materiales y vigencia. **Frontend cliente:** la nueva cotización aparece resaltada
+  ("Nueva cotización por cambio de alcance, reemplaza a la #N"), con el motivo del cambio y el
+  plazo; estados con etiquetas legibles (`getCotizacionEstadoLabel`). **Chat:** los mensajes
+  de sistema se muestran centrados y diferenciados.
+
+### Trazabilidad garantizada
+Quedan registrados: cotización original (estado ANULADA_CAMBIO_ALCANCE + motivo), nueva
+cotización (vínculo `cotizacion_origen_id`), fecha y autor del cambio (`HistorialSolicitud`),
+estado de ambas cotizaciones y de la solicitud, notificación y aviso en el chat.
+
+### Archivos modificados
+- `backend/database/migrations/20260711_add_cambio_alcance.sql` (nuevo)
+- `backend/app/models/cotizacion.py`, `backend/app/models/chat.py`,
+  `backend/app/schemas/cotizacion_schema.py`, `backend/app/schemas/chat_schema.py`,
+  `backend/app/services/cotizacion_service.py`, `backend/app/services/chat_service.py`,
+  `backend/app/routers/cotizacion_router.py`, `backend/app/pdf/cotizacion_pdf.py`
+- `frontend/src/services/cotizacionService.ts`, `frontend/src/services/chatService.ts`,
+  `frontend/src/components/chat/ChatPanel.tsx`, `frontend/src/utils/requestStatus.ts`,
+  `frontend/src/pages/tecnico/TecnicoDashboard.tsx`,
+  `frontend/src/pages/cliente/ClienteDashboard.tsx`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo (Docker), flujo completo: cotización $25.000 aceptada → cambio de alcance a $100.000 →
+original `ANULADA_CAMBIO_ALCANCE` (con motivo), nueva ENVIADA (origen vinculado, plazo, PDF),
+solicitud `CAMBIO_ALCANCE`, mensaje de sistema en el chat y notificación al cliente → cliente
+acepta → nueva ACEPTADA y solicitud ASIGNADO (continúa). Auth del endpoint: sin token 401,
+cliente 403. Pruebas revertidas (semilla intacta).
+
+### Observaciones
+Para no multiplicar estados, los sub-estados ("nueva cotización enviada/aceptada/rechazada")
+se representan combinando `solicitud.estado_trabajo = CAMBIO_ALCANCE` con el
+`estado_cotizacion` de la nueva cotización. Al rechazarla, la solicitud queda CANCELADA
+(cancelado por cambio de alcance).
+
+## M-40 · 2026-07-07 — UX de publicación de reseñas + auditoría QA integral y correcciones
+**Categoría:** Corrección de bug / Seguridad / Consistencia / UX (previo a producción)
+
+### Problema puntual (reseñas)
+Al publicar una reseña se guardaba bien (con UNIQUE en BD que impide duplicados), pero la
+confirmación solo aparecía en el banner global (arriba), lejos del formulario, y el bloque
+"Califica el servicio" seguía ofreciendo el formulario tras publicar (permitía reintentos que
+daban 400).
+
+### Solución (reseñas)
+- Confirmación **inline persistente**: al publicar, el bloque se reemplaza por "¡Reseña
+  publicada con éxito! Gracias por compartir tu experiencia." (verde). Se rastrean las
+  solicitudes ya reseñadas (`getClientReviews` al cargar + al publicar) para no volver a
+  mostrar el formulario. El botón ya tenía loading y anti-doble-clic; el backend ya bloquea
+  duplicados por UNIQUE, y ahora `crear_resena` captura `IntegrityError` → 400 claro (no 500).
+
+### Auditoría QA (5 agentes en paralelo: UX/HTTP, admin, backend, flujos, auth/sesiones)
+**Correcciones aplicadas (backend):**
+- **Seguridad:** `GET /cotizaciones/{id}` ahora exige auth + propiedad (era lectura pública
+  IDOR); `GET /resenas/` y `/resenas/reportadas` detrás de `solo_admin` (cola de moderación
+  era pública); `get_current_usuario` rechaza usuarios desactivados (token vivo ya no opera);
+  login con mensaje genérico (menos enumeración); saneamiento del nombre de archivo subido
+  (evita path traversal); `resolver_reporte_resena` usa `usuario_tiene_rol` (multi-rol).
+- **Validación de montos/fechas:** `monto_estimado` y `costo_final` con `gt=0` y tope
+  `Numeric(10,2)` (evita negativos/cero y 500 por overflow); `mensaje_cotizacion`/`plazo`/
+  `comentario` con `max_length` = ancho de columna; `fecha_vigencia` debe ser futura.
+- **Estados/consistencia:** `CAMBIO_ALCANCE` agregado a `ESTADOS_SOLICITUD_VALIDOS` (el admin
+  puede destrabar); al salir de un estado terminal se restaura `solicitud_activa`; cancelar
+  solicitud **anula** las cotizaciones vivas y notifica al técnico; rechazar cotización normal
+  ahora **notifica** al técnico; iniciar/finalizar trabajo **notifican** al cliente; los
+  mensajes de sistema del chat no inflan el contador de no leídos.
+**Correcciones aplicadas (frontend):**
+- **Sesiones:** interceptor global de `fetch` que ante un 401 cierra sesión y redirige a
+  `/login` (evita la app "colgada" al expirar el token); guard anti-doble-submit en Login,
+  AdminLogin y Register; el login **relaya el mensaje real** del backend (ej. cuenta
+  desactivada) en vez de un texto fijo.
+- **Notificaciones:** el Navbar ahora **sondea** cada 30 s (antes solo al montar).
+- **CAMBIO_ALCANCE en la UI:** color en `StatusBadge`/`getEstadoStyle`, panel informativo en
+  la tarjeta del técnico, `RequestProgress` lo ubica en "En proceso" (no reinicia a 0), y la
+  lista de cotizaciones del técnico muestra "Expirada" con el mismo criterio que el cliente.
+- **Admin:** `RequestManagement` da feedback al resolver un reporte y ya no corta la lista a 5
+  (reportes 6+ eran inalcanzables); `ReviewManagement` refresca sin el spinner de página
+  completa que destruía la fila.
+- **Cliente:** botón "Cancelar solicitud" con confirmación (el endpoint existía sin UI).
+
+### Recomendado (no aplicado — mayor alcance o riesgo, documentado para el equipo)
+- Índice único parcial para "una sola cotización ACEPTADA por solicitud" y "una por
+  (solicitud, técnico)" — requiere migración y convivir con el cambio de alcance; hoy mitigado
+  por el modal de confirmación + botones deshabilitados en el frontend.
+- Job/barrido para marcar `EXPIRADA` (hoy es lazy al aceptar; el frontend ya la muestra).
+- Paginación en endpoints de listado (`/usuarios/`, `/solicitudes/`, etc.) — riesgo de escala,
+  no funcional en demo; incluye N+1 en `/usuarios/`.
+- Idempotencia del registro de técnico multi-paso (si falla la subida del documento tras crear
+  la cuenta, el reintento choca con "RUT/correo ya registrado").
+- Límite de tamaño y allowlist de tipos en subida de archivos; `Content-Disposition: attachment`.
+- Normalizar correo (lower) en `PUT /usuarios/me`; borrar el archivo PDF si la transacción hace
+  rollback (archivo huérfano).
+
+### Archivos modificados (principales)
+- Backend: `dependencies.py`, `routers/{cotizacion,resena,solicitud,usuario}_router.py`,
+  `services/{cotizacion,chat,archivo}_service.py`, `services/solicitud_service.py`,
+  `schemas/{cotizacion,solicitud,resena}_schema.py`
+- Frontend: `services/{authService,httpInterceptor,solicitudService}.ts`, `main.tsx`,
+  `components/Navbar.tsx`, `components/ui/{StatusBadge,RequestProgress}.tsx`,
+  `components/auth/AdminLoginModal.tsx`, `utils/requestStatus.ts`,
+  `pages/auth/{Login,Register}.tsx`, `pages/cliente/ClienteDashboard.tsx`,
+  `pages/tecnico/TecnicoDashboard.tsx`, `pages/admin/{RequestManagement,ReviewManagement}.tsx`
+- Tests: `tests/auth/Login.test.tsx`, `tests/services/authService.test.ts` (actualizados al
+  nuevo comportamiento de mensajes de error)
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (los 6 rojos son los preexistentes de
+`TecnicoDashboard`). En vivo (Docker): 401 sin token / 403 no-dueño en cotización; moderación
+403 para no-admin; login genérico; monto 0 → 422; cancelar anula la cotización y deja la
+solicitud CANCELADA. Pruebas con datos reales revertidas (semilla intacta).

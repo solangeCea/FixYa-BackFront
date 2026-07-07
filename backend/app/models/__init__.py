@@ -15,3 +15,4 @@ from .region import Region
 from .comuna import Comuna
 from .tecnico_servicio import TecnicoServicio
 from .tecnico_comuna import TecnicoComuna
+from .chat import Chat, MensajeChat

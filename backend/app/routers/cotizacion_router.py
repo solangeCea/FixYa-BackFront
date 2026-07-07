@@ -10,6 +10,7 @@ from app.dependencies import (
     usuario_tiene_rol,
 )
 from app.schemas.cotizacion_schema import (
+    CambioAlcanceCreate,
     CotizacionCreate,
     CotizacionResponse,
     CotizacionUpdate,
@@ -73,13 +74,25 @@ def listar_mis_cotizaciones(
 def obtener_cotizacion(
     id_cotizacion: int,
     db: Session = Depends(get_db),
+    usuario=Depends(get_current_usuario),
 ):
     cotizacion = cotizacion_service.obtener_cotizacion(db, id_cotizacion)
 
     if not cotizacion:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="Cotizacion no encontrada")
+
+    # Solo el técnico dueño, el cliente de la solicitud o un admin pueden verla.
+    solicitud = cotizacion_service.obtener_solicitud_de_cotizacion(db, cotizacion)
+    es_admin = usuario_tiene_rol(db, usuario.rut, "ADMIN")
+    es_dueno = usuario.rut in (
+        cotizacion.tecnico_usuario_rut,
+        solicitud.usuario_rut if solicitud else None,
+    )
+    if not es_admin and not es_dueno:
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permisos para ver esta cotizacion",
+        )
 
     return cotizacion
 
@@ -133,6 +146,24 @@ def rechazar_cotizacion(
         )
 
     return cotizacion_service.rechazar_cotizacion(db, id_cotizacion, usuario.rut)
+
+
+@router.post("/{id_cotizacion}/cambio-alcance", response_model=CotizacionResponse)
+def solicitar_cambio_alcance(
+    id_cotizacion: int,
+    data: CambioAlcanceCreate,
+    db: Session = Depends(get_db),
+    usuario=Depends(get_current_usuario),
+):
+    if not usuario_tiene_rol(db, usuario.rut, "TECNICO"):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo el tecnico puede solicitar un cambio de alcance"
+        )
+
+    return cotizacion_service.solicitar_cambio_alcance(
+        db, id_cotizacion, usuario.rut, data
+    )
 
 
 @router.put("/{id_cotizacion}/anular", response_model=CotizacionResponse)

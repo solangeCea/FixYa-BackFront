@@ -19,7 +19,13 @@ export async function login(
   );
 
   if (!response.ok) {
-    throw new Error("Credenciales incorrectas");
+    const data = await response.json().catch(() => null);
+    // Relaya el motivo real del backend (cuenta desactivada, credenciales, etc.).
+    throw new Error(
+      typeof data?.detail === "string"
+        ? data.detail
+        : "No pudimos iniciar sesión. Intenta nuevamente."
+    );
   }
 
   return response.json();

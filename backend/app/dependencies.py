@@ -105,6 +105,14 @@ def get_current_usuario(
             detail="Usuario no encontrado",
         )
 
+    # Un usuario desactivado no puede seguir operando aunque conserve un token
+    # válido (los tokens viven hasta 60 min). Se rechaza en el acto.
+    if not usuario.estado_usuario:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu cuenta se encuentra desactivada. Contacta al administrador.",
+        )
+
     return usuario
 
 

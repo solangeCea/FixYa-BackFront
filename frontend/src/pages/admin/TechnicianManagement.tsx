@@ -22,6 +22,7 @@ import {
   deleteTechnician,
   getTechnicianDocuments,
   getTechnicians,
+  rejectTechnicianDocument,
   reviewTechnician,
 } from "../../services/technicianService";
 import type {
@@ -219,12 +220,55 @@ export default function TechnicianManagement() {
     }
   }
 
+  async function handleConfirmRejectDocument() {
+    if (!rejectDocTarget) return;
+
+    const motivo = rejectDocText.trim();
+    if (!motivo) {
+      setError("Escribe el motivo del rechazo antes de continuar.");
+      return;
+    }
+
+    try {
+      setDocumentActionLoading(rejectDocTarget.id_documento);
+      setError("");
+      setSuccess("");
+
+      const updatedDocument = await rejectTechnicianDocument(
+        rejectDocTarget.id_documento,
+        motivo
+      );
+
+      setDocuments((currentDocuments) =>
+        currentDocuments.map((document) =>
+          document.id_documento === updatedDocument.id_documento
+            ? updatedDocument
+            : document
+        )
+      );
+      setSuccess("Documento rechazado. El técnico verá el motivo.");
+      setRejectDocTarget(null);
+      setRejectDocText("");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos rechazar este documento. Intenta nuevamente."
+      );
+    } finally {
+      setDocumentActionLoading(null);
+    }
+  }
+
   const [revisionTarget, setRevisionTarget] = useState<{
     tech: TecnicoAdmin;
     mode: "suspender" | "observar";
   } | null>(null);
   const [revisionText, setRevisionText] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<TecnicoAdmin | null>(null);
+  const [rejectDocTarget, setRejectDocTarget] =
+    useState<DocumentoTecnico | null>(null);
+  const [rejectDocText, setRejectDocText] = useState("");
 
   // Actualiza un técnico en memoria para reflejar la acción sin recargar.
   function applyTechnicianUpdate(rut: string, cambios: Partial<TecnicoAdmin>) {
@@ -840,16 +884,28 @@ export default function TechnicianManagement() {
 
                         <span
                           className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                            document.documento_aprobado
+                            document.estado_documento === "APROBADO"
                               ? "bg-green-100 text-green-700"
+                              : document.estado_documento === "RECHAZADO"
+                              ? "bg-rose-100 text-rose-700"
                               : "bg-yellow-100 text-yellow-700"
                           }`}
                         >
-                          {document.documento_aprobado
+                          {document.estado_documento === "APROBADO"
                             ? "Documento aprobado"
+                            : document.estado_documento === "RECHAZADO"
+                            ? "Documento rechazado"
                             : "Pendiente de validacion"}
                         </span>
                       </div>
+
+                      {document.estado_documento === "RECHAZADO" &&
+                        document.motivo_rechazo && (
+                          <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                            <span className="font-semibold">Motivo: </span>
+                            {document.motivo_rechazo}
+                          </div>
+                        )}
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         <a
@@ -862,7 +918,7 @@ export default function TechnicianManagement() {
                           Ver documento
                         </a>
 
-                        {!document.documento_aprobado && (
+                        {document.estado_documento !== "APROBADO" && (
                           <button
                             type="button"
                             onClick={() =>
@@ -874,10 +930,27 @@ export default function TechnicianManagement() {
                             className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:bg-green-300"
                           >
                             {documentActionLoading === document.id_documento
-                              ? "Aprobando documento..."
-                              : "Aprobar documento tecnico"}
+                              ? "Procesando..."
+                              : "Aprobar documento"}
                           </button>
                         )}
+
+                        {document.estado_documento !== "RECHAZADO" &&
+                          !document.documento_aprobado && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRejectDocText("");
+                                setRejectDocTarget(document);
+                              }}
+                              disabled={
+                                documentActionLoading === document.id_documento
+                              }
+                              className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                            >
+                              Rechazar documento
+                            </button>
+                          )}
                       </div>
                     </article>
                   ))}
@@ -979,6 +1052,69 @@ export default function TechnicianManagement() {
                 {actionLoading === deleteTarget.usuario_rut
                   ? "Eliminando..."
                   : "Eliminar definitivamente"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(rejectDocTarget)}
+        onClose={() => {
+          setRejectDocTarget(null);
+          setRejectDocText("");
+        }}
+        title="Rechazar documento"
+        description="El técnico verá el motivo y podrá eliminarlo para reenviar una versión corregida."
+        maxWidth="lg"
+      >
+        {rejectDocTarget && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Documento:{" "}
+              <span className="font-semibold text-slate-900">
+                {rejectDocTarget.tipo_documento} · {rejectDocTarget.nombre_archivo}
+              </span>
+            </p>
+            <div>
+              <label
+                htmlFor="motivo_rechazo"
+                className="mb-2 block text-sm font-bold text-slate-700"
+              >
+                Motivo del rechazo <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="motivo_rechazo"
+                value={rejectDocText}
+                onChange={(e) => setRejectDocText(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Ej: El certificado está ilegible / no corresponde al tipo indicado."
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-100"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectDocTarget(null);
+                  setRejectDocText("");
+                }}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRejectDocument}
+                disabled={
+                  documentActionLoading === rejectDocTarget.id_documento
+                }
+                className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:bg-rose-300"
+              >
+                {documentActionLoading === rejectDocTarget.id_documento
+                  ? "Rechazando..."
+                  : "Rechazar documento"}
               </button>
             </div>
           </div>

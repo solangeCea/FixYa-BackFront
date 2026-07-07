@@ -16,7 +16,8 @@ DiaSemana = Literal[
 
 
 class SolicitudFinalizar(BaseModel):
-    costo_final: Decimal
+    # > 0 y dentro del tope Numeric(10,2) para evitar montos inválidos o 500 por overflow.
+    costo_final: Decimal = Field(gt=0, le=Decimal("99999999.99"))
 
 
 class SolicitudEstadoUpdate(BaseModel):

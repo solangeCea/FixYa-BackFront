@@ -105,9 +105,11 @@ export default function ReviewManagement() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function cargarResenas() {
+  // silencioso: refresco tras una acción sin mostrar el spinner de página completa
+  // (que destruiría la fila y su indicador "Aprobando...").
+  async function cargarResenas(silencioso = false) {
     try {
-      setLoading(true);
+      if (!silencioso) setLoading(true);
       setError("");
 
       const data = await getReviews();
@@ -116,7 +118,7 @@ export default function ReviewManagement() {
       console.error("Error cargando resenas:", error);
       setError("No pudimos cargar las reseñas. Intenta actualizar el listado.");
     } finally {
-      setLoading(false);
+      if (!silencioso) setLoading(false);
     }
   }
 
@@ -133,7 +135,7 @@ export default function ReviewManagement() {
       await approveReview(idResena);
 
       setSuccess("Reseña aprobada. Seguirá visible para los usuarios.");
-      await cargarResenas();
+      await cargarResenas(true);
     } catch {
       setError("No pudimos aprobar la reseña. Intenta nuevamente.");
     } finally {
@@ -150,7 +152,7 @@ export default function ReviewManagement() {
       await hideReview(idResena);
 
       setSuccess("Reseña ocultada. Ya no estará visible para los usuarios.");
-      await cargarResenas();
+      await cargarResenas(true);
     } catch {
       setError("No pudimos ocultar la reseña. Intenta nuevamente.");
     } finally {
@@ -205,7 +207,7 @@ export default function ReviewManagement() {
         </div>
 
         <button
-          onClick={cargarResenas}
+          onClick={() => cargarResenas()}
           className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
         >
           <RefreshCw size={16} />

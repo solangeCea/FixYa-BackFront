@@ -13,7 +13,9 @@ from app.dependencies import (
     usuario_tiene_rol,
 )
 from app.services.archivo_service import guardar_archivo
+from app.models.cotizacion import Cotizacion
 from app.models.historial_solicitud import HistorialSolicitud
+from app.models.notificacion import Notificacion
 from app.models.solicitud import Solicitud
 from app.models.tecnico import Tecnico
 from app.schemas.reporte_solicitud_schema import (
@@ -330,6 +332,17 @@ def iniciar_solicitud(
     )
 
     db.add(historial)
+    db.add(
+        Notificacion(
+            usuario_rut=solicitud.usuario_rut,
+            titulo="Trabajo iniciado",
+            mensaje=(
+                "El tecnico comenzo el trabajo de: "
+                f"{solicitud.titulo_solicitud}"
+            ),
+            tipo="SOLICITUD_EN_PROCESO",
+        )
+    )
     db.commit()
     db.refresh(solicitud)
 
@@ -381,6 +394,17 @@ def finalizar_solicitud(
     )
 
     db.add(historial)
+    db.add(
+        Notificacion(
+            usuario_rut=solicitud.usuario_rut,
+            titulo="Trabajo finalizado",
+            mensaje=(
+                f"El trabajo '{solicitud.titulo_solicitud}' fue finalizado. "
+                "Ya puedes calificar al tecnico."
+            ),
+            tipo="SOLICITUD_FINALIZADA",
+        )
+    )
     db.commit()
     db.refresh(solicitud)
 
@@ -421,6 +445,28 @@ def cancelar_solicitud(
 
     solicitud.estado_trabajo = "CANCELADO"
     solicitud.solicitud_activa = False
+
+    # Anula las cotizaciones vivas (aceptada o enviadas) para no dejar acuerdos
+    # colgando, y avisa al técnico asignado si lo hay.
+    cotizaciones_vivas = db.query(Cotizacion).filter(
+        Cotizacion.solicitud_id_solicitud == solicitud.id_solicitud,
+        Cotizacion.estado_cotizacion.in_(["ENVIADA", "ACEPTADA"]),
+    ).all()
+    for cot in cotizaciones_vivas:
+        cot.estado_cotizacion = "ANULADA"
+        cot.motivo_anulacion = "Solicitud cancelada por el cliente"
+
+    if solicitud.tecnico_usuario_rut:
+        db.add(
+            Notificacion(
+                usuario_rut=solicitud.tecnico_usuario_rut,
+                titulo="Solicitud cancelada",
+                mensaje=(
+                    f"El cliente cancelo la solicitud '{solicitud.titulo_solicitud}'."
+                ),
+                tipo="SOLICITUD_CANCELADA",
+            )
+        )
 
     historial = HistorialSolicitud(
         solicitud_id_solicitud=solicitud.id_solicitud,
