@@ -1146,3 +1146,39 @@ El técnico verá el cambio al recargar su dashboard o volver a iniciar sesión 
 re-consulta el perfil en cada carga y con el botón "Actualizar trabajos"); no requiere
 reemitir el token. Sigue existiendo la vía directa "Aprobar técnico pendiente"
 (`PUT /admin/tecnicos/{rut}/verificar`) que aprueba sin depender de los documentos.
+
+## M-33 · 2026-07-06 — Cambio de contraseña desde el perfil + perfil del administrador
+**Categoría:** Mejora funcional
+
+### Problema detectado
+Ningún rol podía cambiar su contraseña desde la app, y el Administrador no tenía
+página para editar su perfil (secciones 1 y 5 del requerimiento de gestión de usuarios).
+
+### Solución implementada
+- **Backend:** `PUT /usuarios/me/password` (autenticado) con schema `CambioPassword`
+  (actual + nueva + confirmación). Valida la contraseña actual (`verify_password`), la
+  fuerza de la nueva (8+, mayúscula, minúscula, número), que la confirmación coincida y
+  que la nueva sea distinta de la actual; guarda con `hash_password` y **renueva el token**.
+- **Frontend:** componente reutilizable `CambiarPassword` (3 campos con mostrar/ocultar,
+  validación en vivo, mensajes de éxito/error, guarda el token renovado). Servicio
+  `changeMyPassword`. Se integró en los perfiles de Cliente, Técnico y Administrador.
+- **Perfil del administrador:** nueva página `AdminPerfil` (`/admin/perfil`, dentro del
+  layout admin) con edición de datos personales (reusa `updateMyProfile`, Región→Comuna y
+  confirmación de correo) + cambio de contraseña, con enlace "Mi Perfil" en el sidebar.
+
+### Archivos modificados
+- `backend/app/schemas/usuario_schema.py`, `backend/app/routers/usuario_router.py`
+- `frontend/src/services/userService.ts`, `frontend/src/components/CambiarPassword.tsx` (nuevo)
+- `frontend/src/pages/admin/AdminPerfil.tsx` (nuevo), `frontend/src/pages/cliente/ClientePerfil.tsx`,
+  `frontend/src/pages/tecnico/TecnicoPerfil.tsx`, `frontend/src/routes/AppRoutes.tsx`,
+  `frontend/src/layouts/AdminLayout.tsx`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo: contraseña actual incorrecta (400), nueva débil (422), confirmación no coincide (400),
+cambio válido (200) con login nuevo (200) y viejo (401).
+
+### Observaciones
+Las contraseñas semilla (ej. `cliente123`) no cumplen las reglas de fuerza (sin mayúscula):
+sirven para login pero no pueden re-establecerse por el endpoint (por diseño). Pendiente
+por fases: recuperación de contraseña, y perfiles enriquecidos de técnico/cliente.

@@ -24,6 +24,7 @@ from app.models.usuario import Usuario
 from app.models.usuario_rol import UsuarioRol
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate
 from app.schemas.usuario_schema import (
+    CambioPassword,
     RegistroTecnicoCreate,
     SolicitudRolTecnicoCreate,
     UsuarioCreate,
@@ -417,6 +418,55 @@ def actualizar_mi_perfil(
         },
         "access_token": token,
         "token_type": "bearer"
+    }
+
+
+@router.put("/me/password")
+def cambiar_mi_password(
+    datos: CambioPassword,
+    db: Session = Depends(get_db),
+    usuario_actual: dict = Depends(get_current_user),
+):
+    usuario = db.query(Usuario).filter(
+        Usuario.correo == usuario_actual["correo"]
+    ).first()
+
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if not verify_password(datos.contrasena_actual, usuario.contrasena):
+        raise HTTPException(
+            status_code=400,
+            detail="La contraseña actual no es correcta",
+        )
+
+    if datos.contrasena_nueva != datos.confirmar_contrasena:
+        raise HTTPException(
+            status_code=400,
+            detail="La nueva contraseña y su confirmación no coinciden",
+        )
+
+    if verify_password(datos.contrasena_nueva, usuario.contrasena):
+        raise HTTPException(
+            status_code=400,
+            detail="La nueva contraseña debe ser distinta de la actual",
+        )
+
+    usuario.contrasena = hash_password(datos.contrasena_nueva)
+    db.commit()
+
+    # Se renueva el token para invalidar el anterior tras el cambio.
+    token = crear_token({
+        "sub": usuario.correo,
+        "tipo_usuario": usuario.tipo_usuario.value,
+        "rut": usuario.rut,
+        "roles": obtener_roles_usuario(db, usuario.rut),
+    })
+
+    return {
+        "mensaje": "Contraseña actualizada correctamente",
+        "access_token": token,
+        "token_type": "bearer",
     }
 
 

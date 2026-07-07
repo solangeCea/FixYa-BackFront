@@ -13,6 +13,7 @@ import ClientePerfil from "../pages/cliente/ClientePerfil";
 
 import AdminLayout from "../layouts/AdminLayout";
 import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminPerfil from "../pages/admin/AdminPerfil";
 import TechnicianManagement from "../pages/admin/TechnicianManagement";
 import UserManagement from "../pages/admin/UserManagement";
 import ReviewManagement from "../pages/admin/ReviewManagement";
@@ -83,6 +84,7 @@ function AppRoutes() {
           <Route path="tecnicos" element={<TechnicianManagement />} />
           <Route path="usuarios" element={<UserManagement />} />
           <Route path="resenas" element={<ReviewManagement />} />
+          <Route path="perfil" element={<AdminPerfil />} />
         </Route>
       </Routes>
     </BrowserRouter>

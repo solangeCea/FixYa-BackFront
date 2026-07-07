@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   ClipboardList,
+  UserCog,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -30,6 +31,7 @@ function AdminLayout() {
     { path: "/admin/tecnicos", icon: UserCheck, label: "Técnicos" },
     { path: "/admin/usuarios", icon: Users, label: "Usuarios" },
     { path: "/admin/resenas", icon: Star, label: "Reseñas" },
+    { path: "/admin/perfil", icon: UserCog, label: "Mi Perfil" },
   ];
 
   const activeItem = menuItems.find((item) => location.pathname === item.path);

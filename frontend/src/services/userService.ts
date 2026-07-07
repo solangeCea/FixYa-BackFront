@@ -61,6 +61,41 @@ export async function setUserEstado(
   return response.json();
 }
 
+export interface CambioPassword {
+  contrasena_actual: string;
+  contrasena_nueva: string;
+  confirmar_contrasena: string;
+}
+
+export async function changeMyPassword(
+  data: CambioPassword
+): Promise<{ mensaje: string; access_token: string; token_type: string }> {
+  const token = getToken();
+
+  const response = await fetch(`${API_URL}/usuarios/me/password`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const detail = errorData?.detail;
+    throw new Error(
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail) && detail[0]?.msg
+        ? detail[0].msg
+        : "No pudimos cambiar tu contraseña."
+    );
+  }
+
+  return response.json();
+}
+
 export async function getUsers(): Promise<UsuarioAdmin[]> {
   const token = getToken();
 

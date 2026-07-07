@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import Navbar from "../../components/Navbar";
+import CambiarPassword from "../../components/CambiarPassword";
 import { useAuth } from "../../context/AuthContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { getComunas, getRegiones } from "../../services/catalogService";
@@ -461,6 +462,10 @@ function ClientePerfil() {
             </form>
           )}
         </section>
+
+        <div className="mt-6">
+          <CambiarPassword />
+        </div>
       </main>
     </div>
   );
