@@ -36,6 +36,7 @@ const statusLabels: Record<string, string> = {
   INICIADO: "Solicitud enviada",
   ASIGNADO: "Técnico asignado",
   EN_PROCESO: "En proceso",
+  EN_REVISION_ADMIN: "Cancelación en revisión",
   FINALIZADO: "Finalizada",
   CANCELADO: "Cancelada",
   CAMBIO_ALCANCE: "Cambio de alcance · nueva cotización pendiente",
@@ -45,6 +46,8 @@ const statusDescriptions: Record<string, string> = {
   INICIADO: "Estamos esperando que un técnico disponible tome tu solicitud.",
   ASIGNADO: "Ya hay un técnico asociado. Revisa cotizaciones o próximos pasos.",
   EN_PROCESO: "El servicio está avanzando. Mantente atento a las actualizaciones.",
+  EN_REVISION_ADMIN:
+    "Se solicitó cancelar el trabajo. Un administrador está revisando el caso.",
   FINALIZADO: "El trabajo fue cerrado. Puedes dejar una reseña si corresponde.",
   CANCELADO: "La solicitud fue cancelada y no seguirá avanzando.",
   CAMBIO_ALCANCE:

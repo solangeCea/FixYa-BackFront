@@ -11,6 +11,7 @@ import {
   ClipboardList,
   UserCog,
   ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -32,6 +33,7 @@ function AdminLayout() {
     { path: "/admin/tecnicos", icon: UserCheck, label: "Técnicos" },
     { path: "/admin/usuarios", icon: Users, label: "Usuarios" },
     { path: "/admin/resenas", icon: Star, label: "Reseñas" },
+    { path: "/admin/conflictos", icon: ShieldAlert, label: "Conflictos" },
     { path: "/admin/auditoria", icon: ShieldCheck, label: "Auditoría" },
     { path: "/admin/perfil", icon: UserCog, label: "Mi Perfil" },
   ];

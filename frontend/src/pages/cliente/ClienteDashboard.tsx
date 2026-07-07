@@ -43,6 +43,7 @@ import {
   rejectCotizacion,
 } from "../../services/cotizacionService";
 import { cancelarSolicitud } from "../../services/solicitudService";
+import ReportarConflictoModal from "../../components/conflictos/ReportarConflictoModal";
 import type { Cotizacion } from "../../services/cotizacionService";
 import EmptyState from "../../components/ui/EmptyState";
 import RequestProgress from "../../components/ui/RequestProgress";
@@ -433,7 +434,10 @@ function ClienteDashboard() {
   const [sendingReview, setSendingReview] = useState(false);
   // Solicitud pendiente de confirmar cancelación (modal).
   const [cancelTarget, setCancelTarget] = useState<Solicitud | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  // Solicitud sobre la que se reporta un conflicto (modal).
+  const [conflictoTarget, setConflictoTarget] = useState<Solicitud | null>(null);
   // Ids de solicitudes que el cliente ya reseñó (para no permitir duplicados en la UI).
   const [resenadas, setResenadas] = useState<Set<number>>(new Set());
 
@@ -1052,9 +1056,13 @@ function ClienteDashboard() {
     setError("");
     setSuccess("");
     try {
-      await cancelarSolicitud(cancelTarget.id_solicitud);
-      setSuccess("Solicitud cancelada correctamente.");
+      const resultado = await cancelarSolicitud(
+        cancelTarget.id_solicitud,
+        cancelMotivo.trim() || undefined
+      );
+      setSuccess(resultado.mensaje);
       setCancelTarget(null);
+      setCancelMotivo("");
       await cargarSolicitudes();
     } catch (err) {
       setError(
@@ -2039,8 +2047,19 @@ function ClienteDashboard() {
                       )}
 
                     {solicitud.estado_trabajo !== "FINALIZADO" &&
-                      solicitud.estado_trabajo !== "CANCELADO" && (
-                        <div className="mt-3 flex justify-end">
+                      solicitud.estado_trabajo !== "CANCELADO" &&
+                      solicitud.estado_trabajo !== "EN_REVISION_ADMIN" && (
+                        <div className="mt-3 flex flex-wrap justify-end gap-4">
+                          {(solicitud.estado_trabajo === "EN_PROCESO" ||
+                            solicitud.estado_trabajo === "CAMBIO_ALCANCE") && (
+                            <button
+                              type="button"
+                              onClick={() => setConflictoTarget(solicitud)}
+                              className="text-sm font-semibold text-amber-700 underline-offset-2 hover:underline"
+                            >
+                              Reportar problema
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => setCancelTarget(solicitud)}
@@ -2050,6 +2069,13 @@ function ClienteDashboard() {
                           </button>
                         </div>
                       )}
+
+                    {solicitud.estado_trabajo === "EN_REVISION_ADMIN" && (
+                      <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-800">
+                        Hay una solicitud de cancelación en revisión por el
+                        administrador.
+                      </div>
+                    )}
 
                     {(cotizaciones[solicitud.id_solicitud]?.length || 0) > 0 && (
                       <div className="mt-5 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-slate-50 p-4">
@@ -2323,25 +2349,54 @@ function ClienteDashboard() {
 
       <Modal
         open={Boolean(cancelTarget)}
-        onClose={() => (cancelling ? null : setCancelTarget(null))}
+        onClose={() => (cancelling ? null : (setCancelTarget(null), setCancelMotivo("")))}
         title="Cancelar solicitud"
-        description="La solicitud quedará cancelada y no seguirá avanzando. Esta acción no se puede deshacer."
+        description="Cuéntanos por qué quieres cancelar. Según el estado del trabajo, la cancelación es directa o pasa a revisión del administrador."
         maxWidth="md"
       >
         {cancelTarget && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">
-              ¿Seguro que quieres cancelar{" "}
-              <span className="font-semibold text-slate-900">
-                {cancelTarget.titulo_solicitud}
-              </span>
-              ? Si hay una cotización aceptada, también se anulará y se avisará al
-              técnico.
-            </p>
+            {cancelTarget.estado_trabajo === "EN_PROCESO" ? (
+              <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-800">
+                El trabajo está en proceso: tu solicitud de cancelación quedará
+                <span className="font-semibold"> en revisión del administrador</span>,
+                que decidirá si se cancela o el trabajo continúa.
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600">
+                ¿Seguro que quieres cancelar{" "}
+                <span className="font-semibold text-slate-900">
+                  {cancelTarget.titulo_solicitud}
+                </span>
+                ? Si hay una cotización aceptada, también se anulará y se avisará
+                al técnico.
+              </p>
+            )}
+
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-slate-700">
+                Motivo{" "}
+                {cancelTarget.estado_trabajo === "EN_PROCESO" && (
+                  <span className="text-rose-600">*</span>
+                )}
+              </label>
+              <textarea
+                value={cancelMotivo}
+                onChange={(e) => setCancelMotivo(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder="Explica brevemente por qué cancelas."
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+              />
+            </div>
+
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setCancelTarget(null)}
+                onClick={() => {
+                  setCancelTarget(null);
+                  setCancelMotivo("");
+                }}
                 disabled={cancelling}
                 className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
@@ -2350,15 +2405,35 @@ function ClienteDashboard() {
               <button
                 type="button"
                 onClick={confirmarCancelacion}
-                disabled={cancelling}
+                disabled={
+                  cancelling ||
+                  (cancelTarget.estado_trabajo === "EN_PROCESO" &&
+                    cancelMotivo.trim().length < 5)
+                }
                 className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:bg-rose-300"
               >
-                {cancelling ? "Cancelando..." : "Sí, cancelar solicitud"}
+                {cancelling
+                  ? "Procesando..."
+                  : cancelTarget.estado_trabajo === "EN_PROCESO"
+                    ? "Solicitar cancelación"
+                    : "Sí, cancelar solicitud"}
               </button>
             </div>
           </div>
         )}
       </Modal>
+
+      <ReportarConflictoModal
+        open={Boolean(conflictoTarget)}
+        idSolicitud={conflictoTarget?.id_solicitud ?? 0}
+        tituloSolicitud={conflictoTarget?.titulo_solicitud}
+        onClose={() => setConflictoTarget(null)}
+        onReportado={() => {
+          setSuccess(
+            "Reporte enviado. Un administrador lo revisará a la brevedad."
+          );
+        }}
+      />
 
       <Modal
         open={Boolean(confirmAccept)}

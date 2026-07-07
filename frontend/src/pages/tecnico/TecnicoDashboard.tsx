@@ -21,6 +21,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 import {
+  cancelarSolicitud,
   descartarSolicitud,
   finalizarSolicitud,
   getSolicitudesDisponiblesTecnico,
@@ -29,6 +30,7 @@ import {
   reportarSolicitud,
 } from "../../services/solicitudService";
 import type { Solicitud } from "../../services/solicitudService";
+import ReportarConflictoModal from "../../components/conflictos/ReportarConflictoModal";
 import { getServicios } from "../../services/catalogService";
 import type { Servicio } from "../../services/catalogService";
 import {
@@ -199,6 +201,10 @@ function TecnicoDashboard() {
   // Solicitud cuyo chat está abierto (null = ninguno).
   const [chatSolicitudId, setChatSolicitudId] = useState<number | null>(null);
   // Solicitud para la que se está solicitando un cambio de alcance (modal).
+  const [conflictoTarget, setConflictoTarget] = useState<Solicitud | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Solicitud | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState("");
+  const [cancelling, setCancelling] = useState(false);
   const [cambioTarget, setCambioTarget] = useState<Solicitud | null>(null);
   const [cambioForm, setCambioForm] = useState({
     motivoOpcion: motivosCambioAlcance[0],
@@ -575,6 +581,32 @@ function TecnicoDashboard() {
       );
     } finally {
       setAccionLoading(null);
+    }
+  }
+
+  async function confirmarCancelacionTecnico() {
+    if (!cancelTarget) return;
+    if (cancelMotivo.trim().length < 5) {
+      setError("Indica el motivo de la cancelación (mínimo 5 caracteres).");
+      return;
+    }
+    try {
+      setCancelling(true);
+      resetMessages();
+      const resultado = await cancelarSolicitud(
+        cancelTarget.id_solicitud,
+        cancelMotivo.trim()
+      );
+      setSuccess(resultado.mensaje);
+      setCancelTarget(null);
+      setCancelMotivo("");
+      await cargarDatos();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No pudimos cancelar el trabajo."
+      );
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -1130,6 +1162,33 @@ function TecnicoDashboard() {
                           </button>
                         </div>
                       )}
+
+                      {(solicitud.estado_trabajo === "EN_PROCESO" ||
+                        solicitud.estado_trabajo === "CAMBIO_ALCANCE") && (
+                        <div className="mt-3 flex flex-wrap justify-end gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setConflictoTarget(solicitud)}
+                            className="text-sm font-semibold text-amber-700 underline-offset-2 hover:underline"
+                          >
+                            Reportar problema
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCancelTarget(solicitud)}
+                            className="text-sm font-semibold text-rose-600 underline-offset-2 hover:underline"
+                          >
+                            Solicitar cancelación
+                          </button>
+                        </div>
+                      )}
+
+                      {solicitud.estado_trabajo === "EN_REVISION_ADMIN" && (
+                        <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-800">
+                          Hay una solicitud de cancelación en revisión por el
+                          administrador.
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1436,6 +1495,69 @@ function TecnicoDashboard() {
                 {cambioLoading
                   ? "Enviando..."
                   : "Anular y enviar nueva cotización"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ReportarConflictoModal
+        open={Boolean(conflictoTarget)}
+        idSolicitud={conflictoTarget?.id_solicitud ?? 0}
+        tituloSolicitud={conflictoTarget?.titulo_solicitud}
+        onClose={() => setConflictoTarget(null)}
+        onReportado={() =>
+          setSuccess("Reporte enviado. Un administrador lo revisará a la brevedad.")
+        }
+      />
+
+      <Modal
+        open={Boolean(cancelTarget)}
+        onClose={() =>
+          cancelling ? null : (setCancelTarget(null), setCancelMotivo(""))
+        }
+        title="Solicitar cancelación del trabajo"
+        description="El trabajo está en proceso: tu solicitud pasará a revisión del administrador, que decidirá si se cancela o continúa."
+        maxWidth="md"
+      >
+        {cancelTarget && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-sm text-violet-800">
+              Trabajo:{" "}
+              <span className="font-semibold">{cancelTarget.titulo_solicitud}</span>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-slate-700">
+                Motivo <span className="text-rose-600">*</span>
+              </label>
+              <textarea
+                value={cancelMotivo}
+                onChange={(e) => setCancelMotivo(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder="Explica por qué solicitas cancelar el trabajo."
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setCancelTarget(null);
+                  setCancelMotivo("");
+                }}
+                disabled={cancelling}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={confirmarCancelacionTecnico}
+                disabled={cancelling || cancelMotivo.trim().length < 5}
+                className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:bg-rose-300"
+              >
+                {cancelling ? "Enviando..." : "Solicitar cancelación"}
               </button>
             </div>
           </div>

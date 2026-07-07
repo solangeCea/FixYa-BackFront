@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -33,7 +33,13 @@ from app.schemas.solicitud_schema import (
     SolicitudResponse,
     SolicitudUpdate,
 )
+from app.schemas.cancelacion_schema import (
+    CancelacionCreate,
+    SolicitarCancelacionResultado,
+)
 from app.services import solicitud_service
+from app.services import cancelacion_service
+from app.services import audit_service
 
 
 router = APIRouter(
@@ -434,14 +440,23 @@ def finalizar_solicitud(
     }
 
 
-@router.put("/{id_solicitud}/cancelar")
+@router.put(
+    "/{id_solicitud}/cancelar",
+    response_model=SolicitarCancelacionResultado,
+)
 def cancelar_solicitud(
     id_solicitud: int,
+    request: Request,
     db: Session = Depends(get_db),
     usuario_actual=Depends(get_current_usuario),
+    data: Optional[CancelacionCreate] = None,
 ):
-    _require_role(db, usuario_actual, "CLIENTE")
+    """Cancela una solicitud según su estado (Fase D):
+    - Antes de iniciar el trabajo (INICIADO/ASIGNADO/CAMBIO_ALCANCE): directa.
+    - EN_PROCESO: crea una solicitud de cancelación que queda en revisión admin.
 
+    Pueden pedirla el cliente dueño o el técnico asignado.
+    """
     solicitud = db.query(Solicitud).filter(
         Solicitud.id_solicitud == id_solicitud
     ).first()
@@ -449,59 +464,21 @@ def cancelar_solicitud(
     if not solicitud:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
 
-    if solicitud.usuario_rut != usuario_actual.rut:
+    es_dueno = solicitud.usuario_rut == usuario_actual.rut
+    es_tecnico_asignado = solicitud.tecnico_usuario_rut == usuario_actual.rut
+
+    if not (es_dueno or es_tecnico_asignado):
         raise HTTPException(
             status_code=403,
-            detail="No puedes cancelar una solicitud de otro cliente"
+            detail="Solo el cliente dueño o el técnico asignado pueden cancelar",
         )
 
-    if solicitud.estado_trabajo == "FINALIZADO":
-        raise HTTPException(
-            status_code=400,
-            detail="No se puede cancelar una solicitud finalizada"
-        )
+    rol = "CLIENTE" if es_dueno else "TECNICO"
+    motivo = (data.motivo if data else None) or "Cancelación solicitada por el usuario"
 
-    solicitud.estado_trabajo = "CANCELADO"
-    solicitud.solicitud_activa = False
-
-    # Anula las cotizaciones vivas (aceptada o enviadas) para no dejar acuerdos
-    # colgando, y avisa al técnico asignado si lo hay.
-    cotizaciones_vivas = db.query(Cotizacion).filter(
-        Cotizacion.solicitud_id_solicitud == solicitud.id_solicitud,
-        Cotizacion.estado_cotizacion.in_(["ENVIADA", "ACEPTADA"]),
-    ).all()
-    for cot in cotizaciones_vivas:
-        cot.estado_cotizacion = "ANULADA"
-        cot.motivo_anulacion = "Solicitud cancelada por el cliente"
-
-    if solicitud.tecnico_usuario_rut:
-        db.add(
-            Notificacion(
-                usuario_rut=solicitud.tecnico_usuario_rut,
-                titulo="Solicitud cancelada",
-                mensaje=(
-                    f"El cliente cancelo la solicitud '{solicitud.titulo_solicitud}'."
-                ),
-                tipo="SOLICITUD_CANCELADA",
-            )
-        )
-
-    historial = HistorialSolicitud(
-        solicitud_id_solicitud=solicitud.id_solicitud,
-        usuario_rut=usuario_actual.rut,
-        estado="CANCELADO",
-        motivo="Solicitud cancelada",
+    return cancelacion_service.solicitar_cancelacion(
+        db, solicitud, usuario_actual, rol, motivo
     )
-
-    db.add(historial)
-    db.commit()
-    db.refresh(solicitud)
-
-    return {
-        "mensaje": "Solicitud cancelada correctamente",
-        "id_solicitud": solicitud.id_solicitud,
-        "estado": solicitud.estado_trabajo,
-    }
 
 
 @router.get("/{id_solicitud}", response_model=SolicitudResponse)

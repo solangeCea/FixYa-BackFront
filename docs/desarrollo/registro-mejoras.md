@@ -1706,3 +1706,60 @@ Trabajado en la rama `feature/auditoria-conflictos`.
 ### Pendiente (fases siguientes acordadas)
 D) Gestión de conflictos (reportes durante el trabajo con evidencia + cancelación según estado
 con revisión admin) · E) QA.
+
+## M-44 · 2026-07-07 — Gestión de conflictos y cancelación con revisión admin (Fase D)
+**Categoría:** Mejora funcional (gestión de disputas / control operativo)
+
+### Problema
+No existía forma de gestionar problemas surgidos **durante** un trabajo: el cliente/técnico no
+podían reportar un conflicto con evidencia, y la cancelación era directa y solo del cliente
+(un trabajo EN_PROCESO podía cancelarse sin control). Faltaba un flujo con intervención del
+administrador.
+
+### Solución
+**Nuevo estado `EN_REVISION_ADMIN`** en el ciclo de vida de la solicitud (trabajo pausado
+mientras el admin revisa una cancelación).
+
+- **Reportes de conflicto con evidencia** (modelos `conflicto_solicitud` + `conflicto_evidencia`,
+  migración `20260715`): cliente o técnico reportan un conflicto sobre un trabajo en curso
+  (tipos: trabajo incompleto/deficiente, no se presentó, cobro indebido, daños, etc.) con
+  **hasta 5 archivos** (JPG/PNG/WEBP/PDF) guardados vía `storage_service` (R2/dev-disk).
+  `conflicto_service` registra el evento en el historial y **notifica** a la contraparte;
+  `POST /solicitudes/{id}/conflictos` (multipart), `GET /solicitudes/{id}/conflictos`,
+  `GET /solicitudes/conflictos` (admin) y `PUT /solicitudes/conflictos/{id}/resolver`
+  (CONFIRMADO/DESCARTADO) — la resolución se **audita** (Fase B) y notifica al reportante.
+- **Cancelación según estado** (modelo `cancelacion_solicitud`): el endpoint `PUT
+  /solicitudes/{id}/cancelar` (ahora abierto a cliente dueño **y** técnico asignado) bifurca:
+  antes de iniciar (INICIADO/ASIGNADO/CAMBIO_ALCANCE) → **cancelación directa**; EN_PROCESO →
+  crea una solicitud de cancelación y deja la solicitud en `EN_REVISION_ADMIN`. El admin
+  resuelve con `PUT /solicitudes/cancelaciones/{id}/resolver`: **aprobar** → CANCELADO (anula
+  cotizaciones vivas); **rechazar** → restaura el estado previo (EN_PROCESO). Todo con
+  historial, **auditoría** y **notificaciones** a ambas partes.
+- **Orden de rutas:** el `conflicto_router` se incluye antes que el `solicitud_router` para que
+  las rutas literales (`/solicitudes/conflictos`, `/solicitudes/cancelaciones`) no las capture
+  `/solicitudes/{id_solicitud}`.
+- **Frontend:** `services/conflictoService.ts`; `cancelarSolicitud` ahora envía motivo y maneja
+  la respuesta (directa vs. en revisión). Componente `ReportarConflictoModal` (tipo, descripción,
+  evidencia con validación de tipo/tamaño) integrado en los dashboards de **cliente** y
+  **técnico** (botones "Reportar problema" y "Cancelar/Solicitar cancelación" en trabajos en
+  curso, con aviso de estado EN_REVISION_ADMIN). Nueva página admin
+  `ConflictManagement.tsx` (pestañas Conflictos/Cancelaciones con evidencia descargable y
+  acciones de resolución), ruta `/admin/conflictos` e ítem "Conflictos" en el `AdminLayout`.
+  Estado `EN_REVISION_ADMIN` y eventos `CONFLICTO_REPORTADO` añadidos a `StatusBadge`,
+  `requestStatus` y a la línea de tiempo (Fase C).
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (los 6 rojos son los preexistentes de
+`TecnicoDashboard`). En vivo (Docker): migración aplicada (3 tablas + índices + FK). Flujo
+completo probado sobre una solicitud EN_PROCESO real (tokens generados con `crear_token`):
+técnico y cliente crearon conflictos (uno con 2 evidencias a disco), admin lo resolvió
+CONFIRMADO (auditado); cliente y técnico solicitaron cancelación → `EN_REVISION_ADMIN`; admin
+**rechazó** (volvió a EN_PROCESO) y **aprobó** (→ CANCELADO), ambos auditados
+(APROBAR/RECHAZAR_CANCELACION con estado antes→después). Rutas literales no colisionan con
+`/solicitudes/{id}`. **Datos de prueba revertidos**: solicitud 9014 restaurada a EN_PROCESO,
+tablas de conflicto/cancelación vaciadas, `audit_log` truncada, notificaciones de prueba y
+archivos de evidencia eliminados; semilla intacta. Trabajado en la rama
+`feature/auditoria-conflictos`.
+
+### Pendiente (fase siguiente acordada)
+E) QA final (seguridad, concurrencia, edge cases) sobre las Fases A–D.

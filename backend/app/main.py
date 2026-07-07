@@ -16,6 +16,7 @@ from app.models import password_reset
 from app.models import tecnico_solicitud_descartada, reporte_solicitud
 from app.models import chat
 from app.models import audit_log
+from app.models import conflicto_solicitud, cancelacion_solicitud
 
 from app.routers.usuario_router import router as usuario_router
 from app.routers.tecnico_router import router as tecnico_router
@@ -32,6 +33,7 @@ from app.routers import tecnico_servicio_router
 from app.routers import tecnico_comuna_router
 from app.routers import notificacion_router
 from app.routers import chat_router
+from app.routers import conflicto_router
 
 app = FastAPI(
     title="FixYa API",
@@ -123,6 +125,11 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(usuario_router)
 app.include_router(tecnico_router)
+# El router de conflictos/cancelaciones se incluye ANTES que el de solicitudes
+# para que sus rutas literales (/solicitudes/conflictos, /solicitudes/cancelaciones)
+# se resuelvan antes que /solicitudes/{id_solicitud} (que aceptaría cualquier
+# segmento y devolvería 422 al no poder parsearlo como entero).
+app.include_router(conflicto_router.router)
 app.include_router(solicitud_router)
 app.include_router(cotizacion_router)
 app.include_router(historial_solicitud_router)

@@ -16,7 +16,9 @@ function StatusBadge({ status, label }: StatusBadgeProps) {
           ? "bg-teal-100 text-teal-700 ring-teal-200"
           : normalized === "CAMBIO_ALCANCE"
             ? "bg-orange-100 text-orange-700 ring-orange-200"
-            : normalized === "EXPIRADA"
+            : normalized === "EN_REVISION_ADMIN"
+              ? "bg-violet-100 text-violet-700 ring-violet-200"
+              : normalized === "EXPIRADA"
               ? "bg-slate-200 text-slate-600 ring-slate-300"
               : normalized === "CANCELADO" ||
                   normalized === "RECHAZADA" ||

@@ -211,12 +211,25 @@ export async function getSolicitudesCliente(
   return response.json();
 }
 
-export async function cancelarSolicitud(idSolicitud: number) {
+export interface CancelacionResultado {
+  resultado: "CANCELADA_DIRECTA" | "EN_REVISION_ADMIN";
+  mensaje: string;
+  id_solicitud: number;
+  estado: string;
+  id_cancelacion: number | null;
+}
+
+export async function cancelarSolicitud(
+  idSolicitud: number,
+  motivo?: string
+): Promise<CancelacionResultado> {
   const response = await fetch(
     `${API_URL}/solicitudes/${idSolicitud}/cancelar`,
     {
       method: "PUT",
       headers: getAuthHeaders(),
+      // Sin motivo no se envía cuerpo: el backend valida el modelo solo si viene.
+      body: motivo ? JSON.stringify({ motivo }) : undefined,
     }
   );
 

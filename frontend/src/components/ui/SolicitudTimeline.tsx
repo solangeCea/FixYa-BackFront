@@ -12,6 +12,8 @@ import {
   FileText,
   Circle,
   RefreshCw,
+  AlertTriangle,
+  ShieldAlert,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -54,6 +56,18 @@ const EVENTO_META: Record<
   CAMBIO_ALCANCE: {
     icon: RefreshCcw,
     label: "Cambio de alcance",
+    dot: "text-violet-600",
+    ring: "bg-violet-100",
+  },
+  CONFLICTO_REPORTADO: {
+    icon: AlertTriangle,
+    label: "Conflicto reportado",
+    dot: "text-orange-600",
+    ring: "bg-orange-100",
+  },
+  EN_REVISION_ADMIN: {
+    icon: ShieldAlert,
+    label: "Cancelación en revisión",
     dot: "text-violet-600",
     ring: "bg-violet-100",
   },
