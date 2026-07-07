@@ -1586,3 +1586,37 @@ daban 400).
 `TecnicoDashboard`). En vivo (Docker): 401 sin token / 403 no-dueño en cotización; moderación
 403 para no-admin; login genérico; monto 0 → 422; cancelar anula la cotización y deja la
 solicitud CANCELADA. Pruebas con datos reales revertidas (semilla intacta).
+
+## M-41 · 2026-07-07 — Comprobante profesional de trabajo finalizado (Fase A)
+**Categoría:** Mejora funcional (trazabilidad / respaldo documental)
+
+### Problema
+El "comprobante" de un trabajo finalizado era básico (impresión client-side). Se necesitaba
+un comprobante profesional en PDF como respaldo para cliente, técnico y administración.
+
+### Solución
+- **Campos nuevos en `solicitud`** (migración idempotente `20260713`): `costo_materiales`,
+  `metodo_pago`, `garantia`, `observaciones_finales`, `comprobante_codigo`,
+  `archivo_comprobante_url`.
+- **`app/pdf/comprobante_pdf.py`** (nuevo): PDF profesional con encabezado + logo, N° de
+  comprobante (`COMP-AAAA-NNNNN`), fecha de emisión, estado FINALIZADO, datos de técnico
+  (con especialidad) y cliente, N° de solicitud, servicio, dirección, **fecha/hora de inicio
+  y término**, detalle de pago (**mano de obra / materiales / TOTAL**), método de pago,
+  garantía, observaciones, y **constancia de aceptación** de ambas partes. Se guarda vía
+  `storage_service` (R2 en prod, disco en dev).
+- **`PUT /solicitudes/{id}/finalizar`**: ahora captura los datos del comprobante, genera el
+  PDF, fija `comprobante_codigo`, registra el evento `COMPROBANTE_EMITIDO` en el historial y
+  notifica al cliente que puede descargarlo. Validación: materiales ≤ total.
+- **Frontend:** el formulario de finalizar del técnico pide monto total, valor de materiales
+  (opcional), método de pago, garantía y observaciones; botón **"Descargar comprobante"** en
+  trabajos finalizados (dashboard técnico y cliente) y en la pestaña **Comprobantes** del
+  perfil del cliente (usa el PDF real del backend, con respaldo al imprimible antiguo).
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes). En vivo: migración
+aplicada, comprobante generado para una solicitud real (PDF ~3.6 KB en `uploads/comprobantes`).
+Trabajado en la rama `feature/auditoria-conflictos`.
+
+### Pendiente (fases siguientes acordadas)
+B) Audit Log de acciones admin · C) Estados + historial + línea de tiempo · D) Gestión de
+conflictos (reportes durante el trabajo + cancelación según estado con revisión admin) · E) QA.

@@ -160,6 +160,34 @@ function TecnicoDashboard() {
   const [costosFinales, setCostosFinales] = useState<Record<number, string>>(
     {}
   );
+  // Datos extra para el comprobante al finalizar (materiales, pago, garantía, obs).
+  const [finalizarExtra, setFinalizarExtra] = useState<
+    Record<
+      number,
+      { materiales: string; metodo: string; garantia: string; observaciones: string }
+    >
+  >({});
+
+  function updateFinalizar(
+    id: number,
+    patch: Partial<{
+      materiales: string;
+      metodo: string;
+      garantia: string;
+      observaciones: string;
+    }>
+  ) {
+    setFinalizarExtra((prev) => ({
+      ...prev,
+      [id]: {
+        materiales: prev[id]?.materiales ?? "",
+        metodo: prev[id]?.metodo ?? "",
+        garantia: prev[id]?.garantia ?? "",
+        observaciones: prev[id]?.observaciones ?? "",
+        ...patch,
+      },
+    }));
+  }
   const [cotizaciones, setCotizaciones] = useState<
     Record<
       number,
@@ -407,11 +435,26 @@ function TecnicoDashboard() {
       return;
     }
 
+    const extra = finalizarExtra[idSolicitud];
+    const materiales = Number(soloDigitos(extra?.materiales ?? ""));
+    if (materiales > costo) {
+      setError("El costo de materiales no puede superar el total.");
+      return;
+    }
+
     try {
       setAccionLoading(`finish-${idSolicitud}`);
       resetMessages();
-      await finalizarSolicitud(idSolicitud, costo);
-      setSuccess("Trabajo finalizado. El cliente podra revisar y calificar.");
+      await finalizarSolicitud(idSolicitud, {
+        costo_final: costo,
+        costo_materiales: materiales > 0 ? materiales : null,
+        metodo_pago: extra?.metodo?.trim() || null,
+        garantia: extra?.garantia?.trim() || null,
+        observaciones_finales: extra?.observaciones?.trim() || null,
+      });
+      setSuccess(
+        "Trabajo finalizado. Se generó el comprobante y el cliente podrá descargarlo."
+      );
       setCostosFinales((prev) => ({ ...prev, [idSolicitud]: "" }));
       await cargarDatos();
     } catch (err) {
@@ -925,6 +968,19 @@ function TecnicoDashboard() {
                         </div>
                       )}
 
+                      {solicitud.estado_trabajo === "FINALIZADO" &&
+                        solicitud.archivo_comprobante_url && (
+                          <a
+                            href={getUploadUrl(solicitud.archivo_comprobante_url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            <CheckCircle className="h-4 w-4 text-emerald-600" />
+                            Descargar comprobante
+                          </a>
+                        )}
+
                       {isTechnicianApproved &&
                         (solicitud.estado_trabajo === "ASIGNADO" ||
                           solicitud.estado_trabajo === "EN_PROCESO") && (
@@ -985,10 +1041,75 @@ function TecnicoDashboard() {
                                   ),
                                 }))
                               }
-                              placeholder="Costo final (ej: 45.000)"
+                              placeholder="Costo final total (ej: 45.000)"
                               className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-600"
                             />
                           </div>
+
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-semibold text-gray-500">
+                              $
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={formatMilesCL(
+                                finalizarExtra[solicitud.id_solicitud]?.materiales ||
+                                  ""
+                              )}
+                              onChange={(e) =>
+                                updateFinalizar(solicitud.id_solicitud, {
+                                  materiales: soloDigitos(e.target.value),
+                                })
+                              }
+                              placeholder="Valor materiales (opcional)"
+                              className="w-full rounded-xl border border-gray-300 py-3 pl-8 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            />
+                          </div>
+
+                          <input
+                            type="text"
+                            value={
+                              finalizarExtra[solicitud.id_solicitud]?.metodo || ""
+                            }
+                            onChange={(e) =>
+                              updateFinalizar(solicitud.id_solicitud, {
+                                metodo: e.target.value,
+                              })
+                            }
+                            placeholder="Método de pago (ej: Efectivo, Transferencia)"
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          />
+
+                          <input
+                            type="text"
+                            value={
+                              finalizarExtra[solicitud.id_solicitud]?.garantia || ""
+                            }
+                            onChange={(e) =>
+                              updateFinalizar(solicitud.id_solicitud, {
+                                garantia: e.target.value,
+                              })
+                            }
+                            placeholder="Garantía (ej: 30 días sobre la reparación)"
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          />
+
+                          <textarea
+                            value={
+                              finalizarExtra[solicitud.id_solicitud]
+                                ?.observaciones || ""
+                            }
+                            onChange={(e) =>
+                              updateFinalizar(solicitud.id_solicitud, {
+                                observaciones: e.target.value,
+                              })
+                            }
+                            rows={2}
+                            placeholder="Observaciones finales (opcional)"
+                            className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          />
+
                           <button
                             type="button"
                             onClick={() => handleFinalizar(solicitud.id_solicitud)}

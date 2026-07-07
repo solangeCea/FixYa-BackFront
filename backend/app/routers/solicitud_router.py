@@ -13,6 +13,7 @@ from app.dependencies import (
     usuario_tiene_rol,
 )
 from app.services.archivo_service import guardar_archivo
+from app.pdf.comprobante_pdf import generar_pdf_comprobante
 from app.models.cotizacion import Cotizacion
 from app.models.historial_solicitud import HistorialSolicitud
 from app.models.notificacion import Notificacion
@@ -384,7 +385,17 @@ def finalizar_solicitud(
     solicitud.estado_trabajo = "FINALIZADO"
     solicitud.fecha_real = datetime.utcnow()
     solicitud.costo_final = data.costo_final
+    solicitud.costo_materiales = data.costo_materiales
+    solicitud.metodo_pago = data.metodo_pago
+    solicitud.garantia = data.garantia
+    solicitud.observaciones_finales = data.observaciones_finales
     solicitud.solicitud_activa = False
+    # Código único del comprobante (determinista y legible).
+    solicitud.comprobante_codigo = (
+        f"COMP-{solicitud.fecha_real.year}-{solicitud.id_solicitud:05d}"
+    )
+    # Genera el comprobante profesional (R2 en prod, disco local en dev).
+    solicitud.archivo_comprobante_url = generar_pdf_comprobante(db, solicitud)
 
     historial = HistorialSolicitud(
         solicitud_id_solicitud=solicitud.id_solicitud,
@@ -392,15 +403,22 @@ def finalizar_solicitud(
         estado="FINALIZADO",
         motivo=f"Solicitud finalizada con costo final: {data.costo_final}",
     )
-
     db.add(historial)
+    db.add(
+        HistorialSolicitud(
+            solicitud_id_solicitud=solicitud.id_solicitud,
+            usuario_rut=usuario_actual.rut,
+            estado="COMPROBANTE_EMITIDO",
+            motivo=f"Comprobante emitido: {solicitud.comprobante_codigo}",
+        )
+    )
     db.add(
         Notificacion(
             usuario_rut=solicitud.usuario_rut,
             titulo="Trabajo finalizado",
             mensaje=(
                 f"El trabajo '{solicitud.titulo_solicitud}' fue finalizado. "
-                "Ya puedes calificar al tecnico."
+                "Ya puedes descargar tu comprobante y calificar al tecnico."
             ),
             tipo="SOLICITUD_FINALIZADA",
         )

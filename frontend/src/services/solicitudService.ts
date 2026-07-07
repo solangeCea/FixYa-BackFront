@@ -61,6 +61,14 @@ export interface Solicitud {
   ubicacion_problema_referencia: string;
   costo_final: string | null;
   fecha_real: string | null;
+  fecha_inicio?: string | null;
+  fecha_asignacion?: string | null;
+  costo_materiales?: string | null;
+  metodo_pago?: string | null;
+  garantia?: string | null;
+  observaciones_finales?: string | null;
+  comprobante_codigo?: string | null;
+  archivo_comprobante_url?: string | null;
   tipo_inmueble?: string | null;
   detalle_inmueble?: string | null;
   piso?: string | null;
@@ -384,18 +392,24 @@ export async function iniciarSolicitud(idSolicitud: number) {
   return response.json();
 }
 
+export interface FinalizarData {
+  costo_final: number;
+  costo_materiales?: number | null;
+  metodo_pago?: string | null;
+  garantia?: string | null;
+  observaciones_finales?: string | null;
+}
+
 export async function finalizarSolicitud(
   idSolicitud: number,
-  costoFinal: number
+  data: FinalizarData
 ) {
   const response = await fetch(
     `${API_URL}/solicitudes/${idSolicitud}/finalizar`,
     {
       method: "PUT",
       headers: getAuthHeaders(),
-      body: JSON.stringify({
-        costo_final: costoFinal,
-      }),
+      body: JSON.stringify(data),
     }
   );
 

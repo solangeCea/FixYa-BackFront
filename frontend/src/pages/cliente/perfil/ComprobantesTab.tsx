@@ -4,7 +4,7 @@ import { Download, Receipt, UserRound, Wrench } from "lucide-react";
 import EmptyState from "../../../components/ui/EmptyState";
 import SectionCard from "../../../components/ui/SectionCard";
 import type { Solicitud } from "../../../services/solicitudService";
-import { formatCLP, formatDate } from "../../../utils/format";
+import { formatCLP, formatDate, getUploadUrl } from "../../../utils/format";
 import { imprimirComprobante } from "../../../utils/comprobante";
 
 interface ComprobantesTabProps {
@@ -124,14 +124,28 @@ function ComprobantesTab({
                 <span className="text-lg font-bold text-slate-900">
                   {formatCLP(solicitud.costo_final)}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => descargar(solicitud)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-teal-200 px-3 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-50"
-                >
-                  <Download className="h-4 w-4" />
-                  Comprobante
-                </button>
+                {solicitud.archivo_comprobante_url ? (
+                  // Comprobante profesional generado por el backend (PDF real).
+                  <a
+                    href={getUploadUrl(solicitud.archivo_comprobante_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-teal-200 px-3 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    Comprobante
+                  </a>
+                ) : (
+                  // Respaldo: comprobante básico imprimible (trabajos antiguos).
+                  <button
+                    type="button"
+                    onClick={() => descargar(solicitud)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    Comprobante
+                  </button>
+                )}
               </div>
             </article>
           ))}

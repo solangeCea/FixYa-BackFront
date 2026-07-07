@@ -2018,6 +2018,21 @@ function ClienteDashboard() {
                       <RequestProgress status={solicitud.estado_trabajo} />
                     </div>
 
+                    {solicitud.estado_trabajo === "FINALIZADO" &&
+                      solicitud.archivo_comprobante_url && (
+                        <div className="mt-3 flex justify-end">
+                          <a
+                            href={getUploadUrl(solicitud.archivo_comprobante_url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200"
+                          >
+                            <Download className="h-4 w-4" />
+                            Descargar comprobante
+                          </a>
+                        </div>
+                      )}
+
                     {solicitud.estado_trabajo !== "FINALIZADO" &&
                       solicitud.estado_trabajo !== "CANCELADO" && (
                         <div className="mt-3 flex justify-end">

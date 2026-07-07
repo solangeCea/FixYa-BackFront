@@ -25,6 +25,14 @@ class Solicitud(Base):
     fecha_fin_estimada = Column(DateTime, nullable=True)
     costo_final = Column(Numeric(10, 2), nullable=True)
 
+    # Datos del comprobante de trabajo finalizado.
+    costo_materiales = Column(Numeric(10, 2), nullable=True)
+    metodo_pago = Column(String(50), nullable=True)
+    garantia = Column(String(300), nullable=True)
+    observaciones_finales = Column(String(1000), nullable=True)
+    comprobante_codigo = Column(String(40), nullable=True)
+    archivo_comprobante_url = Column(String(300), nullable=True)
+
     tipo_problema = Column(String(50), nullable=False)
     foto_problema = Column(String(300), nullable=True)
     ubicacion_problema_referencia = Column(String(200), nullable=False)

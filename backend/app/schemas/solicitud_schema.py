@@ -18,6 +18,17 @@ DiaSemana = Literal[
 class SolicitudFinalizar(BaseModel):
     # > 0 y dentro del tope Numeric(10,2) para evitar montos inválidos o 500 por overflow.
     costo_final: Decimal = Field(gt=0, le=Decimal("99999999.99"))
+    # Datos opcionales para el comprobante profesional.
+    costo_materiales: Optional[Decimal] = Field(default=None, ge=0, le=Decimal("99999999.99"))
+    metodo_pago: Optional[str] = Field(default=None, max_length=50)
+    garantia: Optional[str] = Field(default=None, max_length=300)
+    observaciones_finales: Optional[str] = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def _materiales_no_supera_total(self):
+        if self.costo_materiales is not None and self.costo_materiales > self.costo_final:
+            raise ValueError("El costo de materiales no puede superar el total.")
+        return self
 
 
 class SolicitudEstadoUpdate(BaseModel):
@@ -208,6 +219,15 @@ class SolicitudResponse(BaseModel):
     ubicacion_problema_referencia: str
     costo_final: Optional[Decimal] = None
     fecha_real: Optional[datetime] = None
+    fecha_inicio: Optional[datetime] = None
+    fecha_asignacion: Optional[datetime] = None
+    # Comprobante de trabajo finalizado.
+    costo_materiales: Optional[Decimal] = None
+    metodo_pago: Optional[str] = None
+    garantia: Optional[str] = None
+    observaciones_finales: Optional[str] = None
+    comprobante_codigo: Optional[str] = None
+    archivo_comprobante_url: Optional[str] = None
     tipo_inmueble: Optional[str] = None
     detalle_inmueble: Optional[str] = None
     piso: Optional[str] = None
