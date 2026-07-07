@@ -917,3 +917,53 @@ Para activar el modo IA basta poner `GEMINI_API_KEY` (clave gratuita en
 https://aistudio.google.com/app/apikey) en el `.env` y reiniciar el backend; sin clave,
 el sistema usa el análisis local automáticamente. Modelo configurable con `GEMINI_MODEL`
 (por defecto `gemini-2.0-flash`).
+
+## M-27 · 2026-07-06 — Gestión completa de técnicos desde el panel de administración
+**Categoría:** Corrección / Mejora funcional
+
+### Problema detectado
+En el panel de administración, la vista de técnicos solo permitía "Ver perfil" y
+"Aprobar". Faltaban por completo las acciones de eliminar, suspender, reactivar y
+gestionar observaciones, pese a que la barra lateral y los filtros ya contemplaban
+esos estados (Observados, Suspendidos, etc.).
+
+### Causa
+El problema era principalmente del **frontend**: los endpoints del backend ya
+existían (`PUT /admin/tecnicos/{rut}/revision` para suspender/observar/reactivar y
+`DELETE /tecnicos/{rut}` para eliminar), pero `TechnicianManagement.tsx` nunca los
+invocaba ni tenía UI. Además, `eliminar_tecnico` hacía `db.delete` directo, que
+fallaba por claves foráneas (servicios, comunas, documentos, cotizaciones, solicitudes).
+
+### Solución implementada
+- **Backend:** se blindó `tecnico_service.eliminar_tecnico` para limpiar las
+  dependencias en orden (desvincula solicitudes dejando el historial y sus reseñas,
+  borra cotizaciones/documentos/servicios/comunas, quita el rol TECNICO) y luego
+  elimina el perfil técnico; la cuenta de usuario se conserva.
+- **Frontend:** en `technicianService.ts` se agregaron `reviewTechnician`
+  (`PUT /admin/tecnicos/{rut}/revision`) y `deleteTechnician` (`DELETE /tecnicos/{rut}`).
+  En `TechnicianManagement.tsx` se añadieron por cada técnico las acciones **Aprobar,
+  Suspender, Reactivar, Observación (agregar/editar) y Eliminar**, con modales para
+  el motivo de suspensión/observación y para confirmar el borrado. El estado y la
+  observación se muestran en la tabla, y la UI se actualiza **en memoria tras cada
+  acción** (sin recargar la página); al eliminar, la fila desaparece del listado.
+
+### Archivos modificados
+- `backend/app/services/tecnico_service.py`
+- `frontend/src/services/technicianService.ts`
+- `frontend/src/pages/admin/TechnicianManagement.tsx`
+- `frontend/src/tests/admin/TechnicianManagement.test.tsx`
+
+### Impacto
+El administrador gestiona por completo el ciclo de vida de un técnico (aprobar,
+observar, suspender, reactivar, eliminar) desde el dashboard, con feedback inmediato.
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest TechnicianManagement 2/2 y suite 66/72
+(los 6 rojos son preexistentes de `main` en `TecnicoDashboard`). Pruebas en vivo contra
+el stack: revisión suspender→observar→reactivar (estados y observación correctos) y
+borrado con FK (HTTP 200, técnico y asociaciones eliminados, usuario conservado).
+
+### Observaciones
+El endpoint `/revision` acopla estado y observación: "agregar/editar observación"
+fija el estado en `OBSERVADO`, "suspender" en `SUSPENDIDO` y "reactivar" en `APROBADO`
+(limpia la observación). Eliminar es una acción destructiva confirmada por modal.

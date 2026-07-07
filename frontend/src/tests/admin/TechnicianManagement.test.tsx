@@ -37,6 +37,8 @@ vi.mock("../../services/technicianService", () => ({
   approveTechnicianDocument: vi.fn(),
   getTechnicianDocuments: vi.fn(),
   getTechnicians: vi.fn(),
+  reviewTechnician: vi.fn(),
+  deleteTechnician: vi.fn(),
 }))
 
 vi.mock("../../services/userService", () => ({

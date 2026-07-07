@@ -9,6 +9,10 @@ from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate
 from app.models.servicio import Servicio
 from app.models.comuna import Comuna
 from app.models.usuario import Usuario
+from app.models.documento_tecnico import DocumentoTecnico
+from app.models.cotizacion import Cotizacion
+from app.models.solicitud import Solicitud
+from app.models.usuario_rol import UsuarioRol
 
 def crear_tecnico(db: Session, tecnico_data: TecnicoCreate):
     tecnico_existente = db.query(Tecnico).filter(
@@ -125,11 +129,46 @@ def actualizar_tecnico(db: Session, rut: str, tecnico_data: TecnicoUpdate):
 
 
 def eliminar_tecnico(db: Session, rut: str):
+    """Elimina el perfil técnico y sus asociaciones. Preserva las solicitudes
+    (desvinculándolas) y la cuenta de usuario; solo se quita el rol TECNICO.
+
+    Es necesario limpiar las dependencias porque la tabla `tecnico` es
+    referenciada por varias FK sin ON DELETE CASCADE (servicios, comunas,
+    documentos, cotizaciones y solicitudes)."""
     tecnico = obtener_tecnico(db, rut)
 
     if not tecnico:
         return None
 
+    # Desvincular solicitudes para conservar el historial y sus reseñas.
+    db.query(Solicitud).filter(
+        Solicitud.tecnico_usuario_rut == rut
+    ).update({Solicitud.tecnico_usuario_rut: None}, synchronize_session=False)
+
+    # Borrar datos propios del técnico que bloquearían el DELETE por FK.
+    db.query(Cotizacion).filter(
+        Cotizacion.tecnico_usuario_rut == rut
+    ).delete(synchronize_session=False)
+
+    db.query(DocumentoTecnico).filter(
+        DocumentoTecnico.tecnico_usuario_rut == rut
+    ).delete(synchronize_session=False)
+
+    db.query(TecnicoServicio).filter(
+        TecnicoServicio.tecnico_usuario_rut == rut
+    ).delete(synchronize_session=False)
+
+    db.query(TecnicoComuna).filter(
+        TecnicoComuna.tecnico_usuario_rut == rut
+    ).delete(synchronize_session=False)
+
+    # Quitar el rol TECNICO (la cuenta de usuario permanece).
+    db.query(UsuarioRol).filter(
+        UsuarioRol.usuario_rut == rut,
+        UsuarioRol.rol == "TECNICO",
+    ).delete(synchronize_session=False)
+
+    # reporte_solicitud y tecnico_solicitud_descartada caen por ON DELETE CASCADE.
     db.delete(tecnico)
     db.commit()
 

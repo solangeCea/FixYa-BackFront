@@ -201,6 +201,65 @@ export async function approveTechnician(rut: string) {
   return response.json();
 }
 
+export type EstadoRevision =
+  | "EN_REVISION"
+  | "OBSERVADO"
+  | "APROBADO"
+  | "RECHAZADO"
+  | "SUSPENDIDO";
+
+export interface RevisionTecnicoResponse {
+  usuario_rut: string;
+  tecnico_verificado: boolean;
+  estado_verificacion: string;
+  fecha_revision: string | null;
+  admin_revisor_rut: string | null;
+  observacion_admin: string | null;
+}
+
+export async function reviewTechnician(
+  rut: string,
+  estadoVerificacion: EstadoRevision,
+  observacionAdmin?: string | null
+): Promise<RevisionTecnicoResponse> {
+  const token = getToken();
+
+  const response = await fetch(`${API_URL}/admin/tecnicos/${rut}/revision`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      estado_verificacion: estadoVerificacion,
+      observacion_admin: observacionAdmin ?? null,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || "Error al actualizar la revisión del técnico");
+  }
+
+  return response.json();
+}
+
+export async function deleteTechnician(rut: string): Promise<void> {
+  const token = getToken();
+
+  const response = await fetch(`${API_URL}/tecnicos/${rut}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.detail || "Error al eliminar el técnico");
+  }
+}
+
 export async function getMyTechnicianProfile(): Promise<Tecnico> {
   const token = getToken();
 

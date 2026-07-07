@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  Ban,
   CheckCircle,
   ExternalLink,
   FileText,
   Mail,
+  MessageSquare,
   Phone,
+  RotateCcw,
   Search,
   ShieldCheck,
+  Trash2,
   UserCog,
   XCircle,
 } from "lucide-react";
@@ -15,8 +19,10 @@ import {
 import {
   approveTechnicianDocument,
   approveTechnician,
+  deleteTechnician,
   getTechnicianDocuments,
   getTechnicians,
+  reviewTechnician,
 } from "../../services/technicianService";
 import type {
   DocumentoTecnico,
@@ -210,6 +216,128 @@ export default function TechnicianManagement() {
       setError("No pudimos aprobar este documento tecnico. Intenta nuevamente.");
     } finally {
       setDocumentActionLoading(null);
+    }
+  }
+
+  const [revisionTarget, setRevisionTarget] = useState<{
+    tech: TecnicoAdmin;
+    mode: "suspender" | "observar";
+  } | null>(null);
+  const [revisionText, setRevisionText] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<TecnicoAdmin | null>(null);
+
+  // Actualiza un técnico en memoria para reflejar la acción sin recargar.
+  function applyTechnicianUpdate(rut: string, cambios: Partial<TecnicoAdmin>) {
+    setTechnicians((prev) =>
+      prev.map((tech) =>
+        tech.usuario_rut === rut ? { ...tech, ...cambios } : tech
+      )
+    );
+    setSelectedTechnician((prev) =>
+      prev && prev.usuario_rut === rut ? { ...prev, ...cambios } : prev
+    );
+  }
+
+  function openRevision(tech: TecnicoAdmin, mode: "suspender" | "observar") {
+    setError("");
+    setSuccess("");
+    setRevisionText(mode === "observar" ? tech.observacion_admin || "" : "");
+    setRevisionTarget({ tech, mode });
+  }
+
+  async function handleConfirmRevision() {
+    if (!revisionTarget) return;
+
+    const { tech, mode } = revisionTarget;
+    const texto = revisionText.trim();
+
+    if (mode === "observar" && !texto) {
+      setError("Escribe una observación antes de guardar.");
+      return;
+    }
+
+    const estado = mode === "suspender" ? "SUSPENDIDO" : "OBSERVADO";
+    const observacion =
+      texto || (mode === "suspender" ? "Suspendido por el administrador" : null);
+
+    try {
+      setActionLoading(tech.usuario_rut);
+      setError("");
+      setSuccess("");
+
+      const res = await reviewTechnician(tech.usuario_rut, estado, observacion);
+
+      applyTechnicianUpdate(tech.usuario_rut, {
+        estado_verificacion: res.estado_verificacion,
+        tecnico_verificado: res.tecnico_verificado,
+        observacion_admin: res.observacion_admin,
+        fecha_revision: res.fecha_revision,
+        admin_revisor_rut: res.admin_revisor_rut,
+      });
+
+      setSuccess(
+        mode === "suspender"
+          ? "Técnico suspendido correctamente."
+          : "Observación guardada correctamente."
+      );
+      setRevisionTarget(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No pudimos completar la acción."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleReactivate(tech: TecnicoAdmin) {
+    try {
+      setActionLoading(tech.usuario_rut);
+      setError("");
+      setSuccess("");
+
+      const res = await reviewTechnician(tech.usuario_rut, "APROBADO", null);
+
+      applyTechnicianUpdate(tech.usuario_rut, {
+        estado_verificacion: res.estado_verificacion,
+        tecnico_verificado: res.tecnico_verificado,
+        observacion_admin: res.observacion_admin,
+        fecha_revision: res.fecha_revision,
+        admin_revisor_rut: res.admin_revisor_rut,
+      });
+
+      setSuccess("Técnico reactivado. Vuelve a estado aprobado.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No pudimos reactivar al técnico."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+
+    const rut = deleteTarget.usuario_rut;
+
+    try {
+      setActionLoading(rut);
+      setError("");
+      setSuccess("");
+
+      await deleteTechnician(rut);
+
+      setTechnicians((prev) => prev.filter((tech) => tech.usuario_rut !== rut));
+      if (selectedTechnician?.usuario_rut === rut) setSelectedTechnician(null);
+      setSuccess("Técnico eliminado correctamente.");
+      setDeleteTarget(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No pudimos eliminar al técnico."
+      );
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -491,28 +619,78 @@ export default function TechnicianManagement() {
                           </span>
                         </span>
                       )}
+
+                      {tech.observacion_admin && (
+                        <p className="mt-2 flex max-w-[220px] items-start gap-1 text-xs text-orange-700">
+                          <MessageSquare className="mt-0.5 h-3 w-3 shrink-0" />
+                          <span className="break-words">
+                            {tech.observacion_admin}
+                          </span>
+                        </p>
+                      )}
                     </td>
 
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => handleOpenTechnicianProfile(tech)}
-                          className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
+                          disabled={actionLoading === tech.usuario_rut}
+                          className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
                         >
                           Ver perfil técnico
                         </button>
 
-                        {verificationState !== "APROBADO" && (
+                        {verificationState !== "APROBADO" &&
+                          verificationState !== "SUSPENDIDO" && (
+                            <button
+                              onClick={() => handleApprove(tech.usuario_rut)}
+                              disabled={actionLoading === tech.usuario_rut}
+                              className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              Aprobar
+                            </button>
+                          )}
+
+                        {verificationState === "SUSPENDIDO" ? (
                           <button
-                            onClick={() => handleApprove(tech.usuario_rut)}
+                            onClick={() => handleReactivate(tech)}
                             disabled={actionLoading === tech.usuario_rut}
-                            className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:bg-green-300"
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                           >
-                            {actionLoading === tech.usuario_rut
-                              ? "Aprobando técnico..."
-                              : "Aprobar técnico pendiente"}
+                            <RotateCcw className="h-4 w-4" />
+                            Reactivar
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => openRevision(tech, "suspender")}
+                            disabled={actionLoading === tech.usuario_rut}
+                            className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                          >
+                            <Ban className="h-4 w-4" />
+                            Suspender
                           </button>
                         )}
+
+                        <button
+                          onClick={() => openRevision(tech, "observar")}
+                          disabled={actionLoading === tech.usuario_rut}
+                          className="inline-flex items-center gap-1 rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          {tech.observacion_admin
+                            ? "Editar observación"
+                            : "Observación"}
+                        </button>
+
+                        <button
+                          onClick={() => setDeleteTarget(tech)}
+                          disabled={actionLoading === tech.usuario_rut}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Eliminar
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -707,6 +885,103 @@ export default function TechnicianManagement() {
               )}
             </section>
           </>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(revisionTarget)}
+        title={
+          revisionTarget?.mode === "suspender"
+            ? "Suspender técnico"
+            : "Observación del técnico"
+        }
+        description={
+          revisionTarget?.mode === "suspender"
+            ? `Suspenderás a ${revisionTarget?.tech.nombre_completo}. Puedes indicar el motivo.`
+            : `Agrega o edita la observación de ${revisionTarget?.tech.nombre_completo}.`
+        }
+        onClose={() => setRevisionTarget(null)}
+      >
+        {revisionTarget && (
+          <div className="mt-4 space-y-4">
+            <textarea
+              value={revisionText}
+              onChange={(event) => setRevisionText(event.target.value)}
+              rows={4}
+              maxLength={1000}
+              placeholder={
+                revisionTarget.mode === "suspender"
+                  ? "Motivo de la suspensión (opcional)"
+                  : "Escribe la observación para este técnico..."
+              }
+              className="w-full rounded-xl border border-slate-300 p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600"
+            />
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRevisionTarget(null)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRevision}
+                disabled={actionLoading === revisionTarget.tech.usuario_rut}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${
+                  revisionTarget.mode === "suspender"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-teal-700 hover:bg-teal-800"
+                }`}
+              >
+                {actionLoading === revisionTarget.tech.usuario_rut
+                  ? "Guardando..."
+                  : revisionTarget.mode === "suspender"
+                  ? "Suspender técnico"
+                  : "Guardar observación"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteTarget)}
+        title="Eliminar técnico"
+        description="Esta acción no se puede deshacer."
+        onClose={() => setDeleteTarget(null)}
+      >
+        {deleteTarget && (
+          <div className="mt-4 space-y-4">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              Vas a eliminar a <strong>{deleteTarget.nombre_completo}</strong> (
+              {deleteTarget.usuario_rut}). Se quitarán su perfil técnico,
+              servicios, comunas, documentos y cotizaciones. Las solicitudes se
+              conservan sin técnico asignado y la cuenta de usuario se mantiene.
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={actionLoading === deleteTarget.usuario_rut}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {actionLoading === deleteTarget.usuario_rut
+                  ? "Eliminando..."
+                  : "Eliminar definitivamente"}
+              </button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>
