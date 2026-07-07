@@ -1,5 +1,3 @@
-import os
-
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from datetime import datetime
@@ -9,6 +7,7 @@ from app.models.tecnico import Tecnico
 from app.models.usuario import Usuario
 from app.schemas.documento_tecnico_schema import DocumentoTecnicoCreate
 from app.dependencies import usuario_tiene_rol
+from app.services import storage_service
 
 
 def crear_documento_tecnico(db: Session, documento: DocumentoTecnicoCreate):
@@ -145,15 +144,8 @@ def eliminar_documento_tecnico(db: Session, id_documento: int, tecnico_rut: str)
             detail="No puedes eliminar un documento ya aprobado"
         )
 
-    # Borra el archivo físico (best-effort): la URL es /uploads/<sub>/<archivo>.
-    ruta_relativa = (documento.archivo_url or "").lstrip("/")
-    if ruta_relativa.startswith("uploads/"):
-        try:
-            if os.path.isfile(ruta_relativa):
-                os.remove(ruta_relativa)
-        except OSError:
-            # Si el archivo no existe o no se puede borrar, igual quitamos la fila.
-            pass
+    # Borra el archivo (R2 o disco local, best-effort) antes de quitar la fila.
+    storage_service.eliminar(documento.archivo_url)
 
     db.delete(documento)
     db.commit()

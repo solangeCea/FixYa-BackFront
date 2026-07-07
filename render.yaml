@@ -1,0 +1,86 @@
+# Blueprint de despliegue en Render (https://render.com).
+# Define 3 recursos: base de datos PostgreSQL administrada, backend (Docker) y
+# frontend (sitio estático). Se puede importar desde Render > "New +" > "Blueprint".
+#
+# NOTA: todos usan plan "free" para que el blueprint importe sin problemas.
+#       Con un clic en el panel puedes subir el plan (ej. backend -> "starter",
+#       base -> "basic-256mb") para que los servicios NO se duerman.
+#
+# Las variables marcadas con "sync: false" se configuran a mano en el panel
+# (secretos y URLs que se conocen recién tras el primer deploy).
+
+databases:
+  - name: fixya-db
+    databaseName: fixya_db
+    user: fixya
+    plan: free
+
+services:
+  # ---------- Backend: FastAPI (Docker) ----------
+  - type: web
+    name: fixya-backend
+    runtime: docker            # si Render se queja, cambia "runtime" por "env"
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    # Render asigna el puerto por la variable $PORT; se sobreescribe el CMD.
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fixya-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true    # Render genera un secreto fuerte automáticamente
+      - key: RUN_SEED
+        value: "false"         # PRODUCCIÓN: no sembrar datos de demo
+      # URLs (se completan tras conocer el dominio del frontend)
+      - key: FRONTEND_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      # Almacenamiento de archivos en Cloudflare R2 (S3-compatible)
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+      # Opcionales: IA de reseñas y correo (si se dejan vacíos, degradan sin romper)
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+
+  # ---------- Frontend: React + Vite (estático) ----------
+  - type: web
+    name: fixya-frontend
+    runtime: static            # si Render se queja, cambia "runtime" por "env"
+    plan: free
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    autoDeploy: true
+    envVars:
+      # URL pública del backend (se hornea en el build). Se completa tras el
+      # primer deploy del backend, con su dominio .onrender.com
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      # SPA: cualquier ruta cae en index.html (para React Router)
+      - type: rewrite
+        source: /*
+        destination: /index.html

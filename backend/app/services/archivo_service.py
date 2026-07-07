@@ -1,23 +1,20 @@
 import os
 import re
-import shutil
 from datetime import datetime
 
 from fastapi import UploadFile
 
+from app.services import storage_service
+
 
 def guardar_archivo(archivo: UploadFile, subcarpeta: str) -> tuple[str, str]:
-    """Guarda un archivo subido en ``uploads/<subcarpeta>`` y retorna
-    ``(nombre_archivo, archivo_url)``.
+    """Guarda un archivo subido y retorna ``(nombre_archivo, archivo_url)``.
 
-    Centraliza la lógica de subida (crear carpeta, nombrar con timestamp,
-    copiar y construir la URL pública) para reutilizarla entre los distintos
-    módulos que aceptan archivos (documentos técnicos, fotos de solicitudes),
-    evitando duplicar código.
+    Delega el almacenamiento en ``storage_service``: en producción va a R2/S3
+    (URL absoluta) y en desarrollo a ``uploads/<subcarpeta>`` (ruta ``/uploads/...``).
+    Centraliza el nombrado seguro con timestamp para reutilizarlo entre módulos
+    (documentos técnicos, fotos de solicitudes).
     """
-    carpeta_destino = os.path.join("uploads", subcarpeta)
-    os.makedirs(carpeta_destino, exist_ok=True)
-
     # Sanitiza el nombre recibido del cliente: solo el basename (evita "../" y
     # separadores de ruta) y caracteres seguros, para no escribir fuera de la carpeta.
     original = os.path.basename(archivo.filename or "archivo")
@@ -25,10 +22,11 @@ def guardar_archivo(archivo: UploadFile, subcarpeta: str) -> tuple[str, str]:
 
     fecha = datetime.now().strftime("%Y%m%d%H%M%S")
     nombre_archivo = f"{fecha}_{original}"
-    ruta_archivo = os.path.join(carpeta_destino, nombre_archivo)
 
-    with open(ruta_archivo, "wb") as buffer:
-        shutil.copyfileobj(archivo.file, buffer)
+    data = archivo.file.read()
+    content_type = archivo.content_type or "application/octet-stream"
 
-    archivo_url = f"/uploads/{subcarpeta}/{nombre_archivo}"
+    archivo_url = storage_service.guardar_bytes(
+        subcarpeta, nombre_archivo, data, content_type
+    )
     return nombre_archivo, archivo_url

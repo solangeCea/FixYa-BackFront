@@ -44,12 +44,11 @@ import {
 } from "../../services/cotizacionService";
 import { cancelarSolicitud } from "../../services/solicitudService";
 import type { Cotizacion } from "../../services/cotizacionService";
-import API_URL from "../../services/api";
 import EmptyState from "../../components/ui/EmptyState";
 import RequestProgress from "../../components/ui/RequestProgress";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
-import { formatCLP, formatDate } from "../../utils/format";
+import { formatCLP, formatDate, getUploadUrl } from "../../utils/format";
 import Modal from "../../components/ui/Modal";
 import ChatPanel from "../../components/chat/ChatPanel";
 
@@ -2111,7 +2110,7 @@ function ClienteDashboard() {
                                 <div className="mt-4 flex flex-wrap items-center gap-2">
                                   {cotizacion.archivo_pdf_url && (
                                     <a
-                                      href={`${API_URL}${cotizacion.archivo_pdf_url}`}
+                                      href={getUploadUrl(cotizacion.archivo_pdf_url)}
                                       target="_blank"
                                       rel="noreferrer"
                                       className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-200"

@@ -6,7 +6,7 @@ el total, condiciones del servicio y los dos bloques de firma (técnico siempre;
 cliente solo cuando la cotización fue aceptada).
 """
 
-import os
+import io
 from datetime import datetime
 
 from reportlab.lib.pagesizes import letter
@@ -21,6 +21,7 @@ from app.models.servicio import Servicio
 from app.models.solicitud import Solicitud
 from app.models.tecnico import Tecnico
 from app.models.usuario import Usuario
+from app.services import storage_service
 
 
 # Paleta (tomada del formato de referencia).
@@ -127,8 +128,9 @@ def _lineas(c, x, y, pares, ancho, leading=13):
 
 
 def generar_pdf_cotizacion(db, cotizacion, solicitud):
-    os.makedirs("uploads/cotizaciones", exist_ok=True)
-    ruta = f"uploads/cotizaciones/cotizacion_{cotizacion.id_cotizacion}.pdf"
+    # El PDF se renderiza en memoria y se guarda vía storage_service (R2 en
+    # producción, disco local en desarrollo).
+    buffer = io.BytesIO()
 
     # --- Datos relacionados ---
     tecnico = db.query(Tecnico).filter(
@@ -152,7 +154,7 @@ def generar_pdf_cotizacion(db, cotizacion, solicitud):
     )
     promedio, total_resenas = _rating_tecnico(db, cotizacion.tecnico_usuario_rut)
 
-    c = canvas.Canvas(ruta, pagesize=letter)
+    c = canvas.Canvas(buffer, pagesize=letter)
     c.setTitle(f"Cotizacion {_numero_cotizacion(cotizacion)}")
 
     # ================= ENCABEZADO =================
@@ -419,5 +421,10 @@ def generar_pdf_cotizacion(db, cotizacion, solicitud):
     c.showPage()
     c.save()
 
-    # URL pública servible (mount /uploads).
-    return f"/{ruta}"
+    # Guarda el PDF (R2 en producción, disco local en desarrollo) y devuelve su URL.
+    return storage_service.guardar_bytes(
+        "cotizaciones",
+        f"cotizacion_{cotizacion.id_cotizacion}.pdf",
+        buffer.getvalue(),
+        "application/pdf",
+    )
