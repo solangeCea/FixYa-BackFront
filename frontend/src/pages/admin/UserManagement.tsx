@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Mail, Phone, MapPin, UserCheck, AlertCircle, Eye } from "lucide-react";
+import { Search, Mail, Phone, MapPin, UserCheck, AlertCircle, Eye, Ban, Power } from "lucide-react";
 import { motion } from "framer-motion";
 
-import { getUsers } from "../../services/userService";
+import { getUsers, setUserEstado } from "../../services/userService";
 import type { UsuarioAdmin } from "../../services/userService";
 import { getComunas } from "../../services/catalogService";
 import type { Comuna } from "../../services/catalogService";
+import { useAuth } from "../../context/AuthContext";
 import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
 
@@ -47,6 +48,7 @@ function DetailItem({
 }
 
 export default function UserManagement() {
+  const { usuario: adminActual } = useAuth();
   const [users, setUsers] = useState<UsuarioAdmin[]>([]);
   const [comunas, setComunas] = useState<Comuna[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
@@ -54,6 +56,44 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<UsuarioAdmin | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  async function handleToggleEstado(user: UsuarioAdmin) {
+    const nuevoEstado = !user.estado_usuario;
+
+    try {
+      setActionLoading(user.rut);
+      setError("");
+      setSuccess("");
+
+      await setUserEstado(user.rut, nuevoEstado);
+
+      setUsers((prev) =>
+        prev.map((item) =>
+          item.rut === user.rut ? { ...item, estado_usuario: nuevoEstado } : item
+        )
+      );
+      setSelectedUser((prev) =>
+        prev && prev.rut === user.rut
+          ? { ...prev, estado_usuario: nuevoEstado }
+          : prev
+      );
+      setSuccess(
+        nuevoEstado
+          ? `Cuenta de ${user.nombre_completo} activada.`
+          : `Cuenta de ${user.nombre_completo} desactivada.`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No pudimos actualizar el estado del usuario."
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   useEffect(() => {
     async function cargarUsuarios() {
@@ -240,6 +280,12 @@ export default function UserManagement() {
         </div>
       )}
 
+      {success && !loading && (
+        <div className="rounded-2xl border border-green-200 bg-green-50 p-5 font-medium text-green-700">
+          {success}
+        </div>
+      )}
+
       {!loading && !error && (
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
           <div className="overflow-x-auto">
@@ -336,14 +382,43 @@ export default function UserManagement() {
                     </td>
 
                     <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedUser(user)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Ver detalle de usuario
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUser(user)}
+                          className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Ver detalle
+                        </button>
+
+                        {adminActual?.rut !== user.rut &&
+                          (user.estado_usuario ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleEstado(user)}
+                              disabled={actionLoading === user.rut}
+                              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                            >
+                              <Ban className="h-4 w-4" />
+                              {actionLoading === user.rut
+                                ? "Desactivando..."
+                                : "Desactivar"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleEstado(user)}
+                              disabled={actionLoading === user.rut}
+                              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              <Power className="h-4 w-4" />
+                              {actionLoading === user.rut
+                                ? "Activando..."
+                                : "Activar"}
+                            </button>
+                          ))}
+                      </div>
                     </td>
                   </motion.tr>
                 ))}
@@ -403,11 +478,34 @@ export default function UserManagement() {
               <DetailItem label="Roles" value={getRolesLabel(selectedUser)} />
             </div>
 
-            <div className="rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900">
-              Desde esta vista puedes revisar la información base del usuario.
-              Los cambios de estado se gestionan desde los flujos
-              administrativos habilitados.
-            </div>
+            {adminActual?.rut === selectedUser.rut ? (
+              <div className="rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900">
+                Esta es tu propia cuenta de administrador; no puedes cambiar su
+                estado desde aquí.
+              </div>
+            ) : (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleToggleEstado(selectedUser)}
+                  disabled={actionLoading === selectedUser.rut}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${
+                    selectedUser.estado_usuario
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-emerald-600 hover:bg-emerald-700"
+                  }`}
+                >
+                  {selectedUser.estado_usuario ? (
+                    <Ban className="h-4 w-4" />
+                  ) : (
+                    <Power className="h-4 w-4" />
+                  )}
+                  {selectedUser.estado_usuario
+                    ? "Desactivar cuenta"
+                    : "Activar cuenta"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Modal>

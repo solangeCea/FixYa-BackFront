@@ -24,8 +24,26 @@ vi.mock("framer-motion", () => ({
   },
 }))
 
+vi.mock("../../context/AuthContext", () => ({
+  useAuth: () => ({
+    usuario: {
+      rut: "33.333.333-3",
+      nombre_completo: "Admin FixYa",
+      correo: "admin@fixya.cl",
+      telefono: "+56933333333",
+      tipo_usuario: "ADMIN",
+      comuna_id_comuna: 10,
+      estado_usuario: true,
+    },
+    setUsuario: () => undefined,
+    loading: false,
+    logout: () => undefined,
+  }),
+}))
+
 vi.mock("../../services/userService", () => ({
   getUsers: vi.fn(),
+  setUserEstado: vi.fn(),
 }))
 
 vi.mock("../../services/catalogService", () => ({

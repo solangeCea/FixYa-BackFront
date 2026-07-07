@@ -274,6 +274,12 @@ def login(
     if not verify_password(data.contrasena, usuario.contrasena):
         raise HTTPException(status_code=401, detail="Contrasena incorrecta")
 
+    if not usuario.estado_usuario:
+        raise HTTPException(
+            status_code=403,
+            detail="Tu cuenta está desactivada. Contacta al administrador.",
+        )
+
     roles = obtener_roles_usuario(db, usuario.rut)
     token = crear_token({
         "sub": usuario.correo,
@@ -518,6 +524,39 @@ def actualizar_mi_perfil_tecnico(
     db.commit()
     db.refresh(tecnico)
     return tecnico
+
+
+class EstadoUsuarioUpdate(BaseModel):
+    estado_usuario: bool
+
+
+@router.put("/{rut}/estado")
+def cambiar_estado_usuario(
+    rut: str,
+    datos: EstadoUsuarioUpdate,
+    db: Session = Depends(get_db),
+    usuario_actual: dict = Depends(solo_admin),
+):
+    # Un admin no puede desactivar su propia cuenta (evita quedar bloqueado).
+    if usuario_actual.get("rut") == rut:
+        raise HTTPException(
+            status_code=400,
+            detail="No puedes cambiar el estado de tu propia cuenta",
+        )
+
+    usuario = db.query(Usuario).filter(Usuario.rut == rut).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    usuario.estado_usuario = datos.estado_usuario
+    db.commit()
+    db.refresh(usuario)
+
+    return {
+        "mensaje": "Estado del usuario actualizado correctamente",
+        "rut": usuario.rut,
+        "estado_usuario": usuario.estado_usuario,
+    }
 
 
 @router.get("/{rut}/dashboard")

@@ -34,6 +34,33 @@ export interface RegistroTecnicoCreate extends UsuarioCreate {
   comunas: number[];
 }
 
+export async function setUserEstado(
+  rut: string,
+  estado: boolean
+): Promise<{ rut: string; estado_usuario: boolean }> {
+  const token = getToken();
+
+  const response = await fetch(`${API_URL}/usuarios/${rut}/estado`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ estado_usuario: estado }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(
+      typeof errorData?.detail === "string"
+        ? errorData.detail
+        : "No pudimos actualizar el estado del usuario."
+    );
+  }
+
+  return response.json();
+}
+
 export async function getUsers(): Promise<UsuarioAdmin[]> {
   const token = getToken();
 

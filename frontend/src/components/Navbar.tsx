@@ -14,6 +14,7 @@ const roleLinks = {
   CLIENTE: [
     { to: "/servicios", label: "Solicitar servicio", icon: Wrench },
     { to: "/cliente/dashboard", label: "Mis solicitudes", icon: ClipboardList },
+    { to: "/cliente/perfil", label: "Mi Perfil", icon: UserCog },
   ],
   TECNICO: [
     { to: "/tecnico/dashboard", label: "Trabajos técnicos", icon: Briefcase },

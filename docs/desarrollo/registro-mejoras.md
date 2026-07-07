@@ -1012,3 +1012,35 @@ Pendientes recomendados (no bloqueantes): UI de "Editar perfil" para Cliente (re
 (activar/desactivar); asignación manual de técnico a solicitud; limpieza de endpoints
 huérfanos (`/dashboard/admin` duplicado, `/admin/estadisticas`). El endpoint `A4`
 (`/tecnicos/{rut}/perfil` sin auth) queda documentado como recomendación de menor impacto.
+
+## M-29 · 2026-07-06 — Gestión de estado de usuarios (admin) + "Editar perfil" del cliente
+**Categoría:** Mejora funcional
+
+### Problema detectado
+Dos gaps de funcionalidad requerida detectados en la revisión QA (M-28): el panel de
+administración de Usuarios solo permitía "Ver detalle" (sin activar/desactivar cuentas)
+y el rol Cliente no tenía pantalla para editar su perfil (solo el técnico la tenía).
+
+### Solución implementada
+- **Backend:** endpoint `PUT /usuarios/{rut}/estado` (`solo_admin`) que activa/desactiva
+  una cuenta; impide que un admin desactive la suya. Además el **login ahora rechaza
+  cuentas desactivadas** (HTTP 403), de modo que "desactivar" bloquea el acceso real.
+- **Frontend (admin):** `UserManagement` muestra botones **Activar/Desactivar** por
+  usuario (ocultos para la propia cuenta del admin) y en el modal de detalle, con
+  actualización inmediata en memoria y banner de éxito. Servicio `setUserEstado`.
+- **Frontend (cliente):** nueva página `ClientePerfil` en la ruta protegida
+  `/cliente/perfil` (reutiliza `updateMyProfile`, dependencia Región→Comuna y
+  confirmación de correo, igual que `TecnicoPerfil`) + enlace "Mi Perfil" en el Navbar
+  del cliente.
+
+### Archivos modificados
+- `backend/app/routers/usuario_router.py`
+- `frontend/src/services/userService.ts`, `frontend/src/pages/admin/UserManagement.tsx`
+- `frontend/src/pages/cliente/ClientePerfil.tsx` (nuevo)
+- `frontend/src/routes/AppRoutes.tsx`, `frontend/src/components/Navbar.tsx`
+- `frontend/src/tests/admin/UserManagement.test.tsx`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest UserManagement 3/3 y suite 66/72
+(6 preexistentes de `TecnicoDashboard`). En vivo: desactivar/reactivar (200), auto-desactivación
+(400), sin token (401), y login de cuenta desactivada (403) → reactivada (200).
