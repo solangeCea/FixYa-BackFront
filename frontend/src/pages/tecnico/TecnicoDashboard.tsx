@@ -45,6 +45,7 @@ import {
   type TecnicoDashboardMetrics,
 } from "../../services/technicianService";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
+import SolicitudTimeline from "../../components/ui/SolicitudTimeline";
 import {
   formatCLP,
   formatMilesCL,
@@ -936,6 +937,10 @@ function TecnicoDashboard() {
                       </div>
 
                       <AvailabilitySummary solicitud={solicitud} />
+
+                      <div className="mt-4">
+                        <SolicitudTimeline idSolicitud={solicitud.id_solicitud} />
+                      </div>
 
                       {solicitud.estado_trabajo !== "CANCELADO" && (
                         <div className="mt-4">

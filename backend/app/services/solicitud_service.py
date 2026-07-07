@@ -99,6 +99,17 @@ def crear_solicitud(db: Session, data: SolicitudCreate):
     db.add(nueva)
     db.flush()
 
+    # Primer evento de la línea de tiempo: la creación. Sin esto el historial
+    # empezaría recién en la asignación y la línea de tiempo quedaría "coja".
+    db.add(
+        HistorialSolicitud(
+            solicitud_id_solicitud=nueva.id_solicitud,
+            usuario_rut=nueva.usuario_rut,
+            estado="INICIADO",
+            motivo="Solicitud creada por el cliente",
+        )
+    )
+
     for disponibilidad in data.disponibilidad_horaria or []:
         db.add(
             SolicitudDisponibilidad(

@@ -1665,3 +1665,44 @@ Trabajado en la rama `feature/auditoria-conflictos`.
 ### Pendiente (fases siguientes acordadas)
 C) Estados + historial + línea de tiempo · D) Gestión de conflictos (reportes durante el
 trabajo + cancelación según estado con revisión admin) · E) QA.
+
+## M-43 · 2026-07-07 — Historial completo + línea de tiempo de la solicitud (Fase C)
+**Categoría:** Mejora funcional (trazabilidad) + corrección de seguridad (autorización)
+
+### Problema
+El historial de estados de una solicitud (`historial_solicitud`) se registraba en las
+transiciones (asignar/iniciar/finalizar/cancelar/cotización/cambio de alcance) pero **(a)** no
+se registraba el evento de **creación**, así que la línea de tiempo empezaba "coja"; **(b)** no
+existía ninguna **UI de línea de tiempo** para verlo; y **(c)** el endpoint
+`GET /historial-solicitudes/solicitud/{id}` lo podía leer **cualquier usuario autenticado**
+(fuga de autorización).
+
+### Solución
+- **Evento de creación:** `crear_solicitud` ahora registra el evento `INICIADO`
+  ("Solicitud creada por el cliente") en la misma transacción, dando inicio a la línea de
+  tiempo.
+- **Autorización:** helper `_autorizar_ver_solicitud` en `historial_solicitud_router`; el
+  historial y la línea de tiempo solo son visibles para el **cliente dueño**, el **técnico
+  asignado** o un **admin** (403 en cualquier otro caso). Se aseguró también el endpoint
+  existente.
+- **Timeline enriquecido:** nuevo `GET /historial-solicitudes/solicitud/{id}/timeline`
+  (schema `TimelineEventoResponse`) que devuelve los eventos en orden **cronológico** con el
+  **nombre y rol del actor** resueltos en un solo lote (sin N+1), vía
+  `listar_timeline_por_solicitud`.
+- **Frontend:** `services/historyService.ts` + componente reutilizable
+  `components/ui/SolicitudTimeline.tsx` (sección **desplegable** "Ver línea de tiempo",
+  **carga perezosa** al abrir, línea de tiempo vertical con icono/color/etiqueta por estado —
+  incluye `COTIZACION_ENVIADA`, `CAMBIO_ALCANCE`, `COMPROBANTE_EMITIDO`—, fecha, actor y
+  motivo). Integrado en las **tres** vistas: dashboard del **cliente** (bajo el stepper),
+  dashboard del **técnico** (en cada trabajo asignado) y **modal de detalle del admin**.
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo (Docker): timeline de solicitud real enriquecido con actor/rol en orden cronológico;
+**403** para un cliente ajeno y **200** para el dueño; solicitud nueva creada por API registró
+el evento `INICIADO`. Datos de prueba (solicitud creada) **eliminados**; semilla intacta.
+Trabajado en la rama `feature/auditoria-conflictos`.
+
+### Pendiente (fases siguientes acordadas)
+D) Gestión de conflictos (reportes durante el trabajo con evidencia + cancelación según estado
+con revisión admin) · E) QA.

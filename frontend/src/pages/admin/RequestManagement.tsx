@@ -14,6 +14,7 @@ import { getPublicTechnicianProfiles } from "../../services/technicianService";
 import type { TecnicoPublicProfile } from "../../services/technicianService";
 import EmptyState from "../../components/ui/EmptyState";
 import Modal from "../../components/ui/Modal";
+import SolicitudTimeline from "../../components/ui/SolicitudTimeline";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
 
 function getEstadoStyle(estado: string) {
@@ -492,6 +493,8 @@ function RequestManagement() {
               <DetailItem label="Costo final" value={selectedSolicitud.costo_final} />
               <DetailItem label="Fecha real" value={selectedSolicitud.fecha_real} />
             </div>
+
+            <SolicitudTimeline idSolicitud={selectedSolicitud.id_solicitud} />
 
             {!selectedSolicitud.tecnico_usuario_rut &&
               isSolicitudActiva(selectedSolicitud.estado_trabajo) && (

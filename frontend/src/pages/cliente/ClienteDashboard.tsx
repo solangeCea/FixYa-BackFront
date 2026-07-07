@@ -46,6 +46,7 @@ import { cancelarSolicitud } from "../../services/solicitudService";
 import type { Cotizacion } from "../../services/cotizacionService";
 import EmptyState from "../../components/ui/EmptyState";
 import RequestProgress from "../../components/ui/RequestProgress";
+import SolicitudTimeline from "../../components/ui/SolicitudTimeline";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { getSolicitudStatusLabel } from "../../utils/requestStatus";
 import { formatCLP, formatDate, getUploadUrl } from "../../utils/format";
@@ -2016,6 +2017,10 @@ function ClienteDashboard() {
 
                     <div className="mt-5">
                       <RequestProgress status={solicitud.estado_trabajo} />
+                    </div>
+
+                    <div className="mt-3">
+                      <SolicitudTimeline idSolicitud={solicitud.id_solicitud} />
                     </div>
 
                     {solicitud.estado_trabajo === "FINALIZADO" &&
