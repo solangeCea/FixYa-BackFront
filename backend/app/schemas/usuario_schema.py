@@ -161,6 +161,27 @@ class CambioPassword(BaseModel):
         return contrasena
 
 
+class RecuperarPassword(BaseModel):
+    correo: EmailStr
+
+
+class RestablecerPassword(BaseModel):
+    token: str
+    contrasena_nueva: str = Field(min_length=8, max_length=72)
+    confirmar_contrasena: str
+
+    @field_validator("contrasena_nueva")
+    @classmethod
+    def validar_contrasena_segura(cls, contrasena: str):
+        if not re.search(r"[A-Z]", contrasena):
+            raise ValueError("La contraseña debe contener al menos una letra mayúscula")
+        if not re.search(r"[a-z]", contrasena):
+            raise ValueError("La contraseña debe contener al menos una letra minúscula")
+        if not re.search(r"\d", contrasena):
+            raise ValueError("La contraseña debe contener al menos un número")
+        return contrasena
+
+
 class UsuarioRolResponse(BaseModel):
     usuario_rut: str
     rol: str

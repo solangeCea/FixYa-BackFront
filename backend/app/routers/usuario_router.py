@@ -25,11 +25,14 @@ from app.models.usuario_rol import UsuarioRol
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate
 from app.schemas.usuario_schema import (
     CambioPassword,
+    RecuperarPassword,
     RegistroTecnicoCreate,
+    RestablecerPassword,
     SolicitudRolTecnicoCreate,
     UsuarioCreate,
     UsuarioUpdate,
 )
+from app.services import password_reset_service
 from app.security import hash_password, verify_password
 
 
@@ -297,6 +300,36 @@ def login(
         "access_token": token,
         "token_type": "bearer",
         "roles": roles,
+    }
+
+
+@router.post("/password/recuperar")
+def recuperar_password(
+    datos: RecuperarPassword,
+    db: Session = Depends(get_db),
+):
+    # No revela si el correo existe (buena práctica de seguridad).
+    password_reset_service.solicitar_reset(db, datos.correo)
+    return {
+        "mensaje": "Si el correo está registrado, te enviamos un enlace para "
+        "restablecer tu contraseña. Revisa tu bandeja de entrada.",
+    }
+
+
+@router.post("/password/restablecer")
+def restablecer_password(
+    datos: RestablecerPassword,
+    db: Session = Depends(get_db),
+):
+    if datos.contrasena_nueva != datos.confirmar_contrasena:
+        raise HTTPException(
+            status_code=400,
+            detail="La nueva contraseña y su confirmación no coinciden",
+        )
+
+    password_reset_service.restablecer(db, datos.token, datos.contrasena_nueva)
+    return {
+        "mensaje": "Contraseña restablecida correctamente. Ya puedes iniciar sesión.",
     }
 
 

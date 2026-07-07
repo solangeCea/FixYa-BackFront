@@ -312,6 +312,14 @@ function Login() {
                     {fieldErrors.contrasena}
                   </p>
                 )}
+                <div className="mt-2 flex justify-end">
+                  <Link
+                    to="/recuperar"
+                    className="text-sm font-semibold text-teal-700 hover:text-teal-800"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
               </div>
             </div>
 

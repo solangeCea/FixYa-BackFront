@@ -1182,3 +1182,46 @@ cambio válido (200) con login nuevo (200) y viejo (401).
 Las contraseñas semilla (ej. `cliente123`) no cumplen las reglas de fuerza (sin mayúscula):
 sirven para login pero no pueden re-establecerse por el endpoint (por diseño). Pendiente
 por fases: recuperación de contraseña, y perfiles enriquecidos de técnico/cliente.
+
+## M-34 · 2026-07-06 — Recuperación de contraseña ("¿Olvidaste tu contraseña?")
+**Categoría:** Seguridad / Mejora funcional
+
+### Problema detectado
+No existía forma de recuperar la contraseña si el usuario la olvidaba (sección 2 del
+requerimiento de gestión de usuarios).
+
+### Solución implementada
+Flujo completo de recuperación por correo, para los tres roles:
+- **Modelo `password_reset_token`** (migración idempotente): guarda el **hash** del token
+  (nunca el token en claro), su expiración (60 min) y si fue usado. FK a usuario con CASCADE.
+- **`POST /usuarios/password/recuperar`** (público): busca el usuario por correo; si existe
+  y está activo, invalida tokens previos, genera un token seguro (`secrets.token_urlsafe`),
+  guarda su hash y envía el enlace por correo. **No revela** si el correo existe (siempre 200).
+- **`POST /usuarios/password/restablecer`** (público): valida token (existe, no usado, no
+  expirado) y la fuerza de la nueva contraseña, actualiza con `hash_password` y marca el
+  token como usado (un solo uso).
+- **Servicio de email** (`email_service`) por SMTP con degradación: si no hay `SMTP_*`
+  configurado, registra el enlace en el log del backend (para pruebas).
+- **Frontend:** enlace "¿Olvidaste tu contraseña?" en el login; página `/recuperar`
+  (ingresar correo) y `/restablecer?token=...` (nueva contraseña con validación). Servicios
+  `requestPasswordReset` y `resetPassword`.
+- Config `SMTP_HOST/PORT/USER/PASSWORD/FROM` y `FRONTEND_URL` en docker-compose y `.env.example`.
+
+### Archivos modificados
+- `backend/app/models/password_reset.py` (nuevo), `backend/app/models/__init__.py`, `backend/app/main.py`
+- `backend/database/migrations/20260708_add_password_reset_token.sql` (nuevo)
+- `backend/app/services/email_service.py` (nuevo), `backend/app/services/password_reset_service.py` (nuevo)
+- `backend/app/schemas/usuario_schema.py`, `backend/app/routers/usuario_router.py`, `backend/.env.example`
+- `frontend/src/services/userService.ts`, `frontend/src/pages/auth/RecuperarPassword.tsx` (nuevo),
+  `frontend/src/pages/auth/RestablecerPassword.tsx` (nuevo), `frontend/src/pages/auth/Login.tsx`,
+  `frontend/src/routes/AppRoutes.tsx`, `docker-compose.yml`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo: solicitar (200), correo inexistente no revela (200), restablecer con débil (422) y
+válido (200), login con la nueva (200), reuso del token (400), token inválido (400).
+
+### Observaciones
+Para enviar correos reales, configurar `SMTP_*` en el `.env` (Gmail requiere contraseña de
+aplicación). Sin SMTP, el enlace queda en `docker logs` del backend para pruebas. Pendiente
+por fases: perfiles enriquecidos de técnico y cliente (secciones 3 y 4).

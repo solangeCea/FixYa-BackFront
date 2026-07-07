@@ -12,6 +12,7 @@ from app.models import usuario, usuario_rol, comuna, region
 from app.models import tecnico, tecnico_servicio, tecnico_comuna
 from app.models import solicitud, servicio, cotizacion
 from app.models import historial_solicitud, resena, Notificacion
+from app.models import password_reset
 from app.models import tecnico_solicitud_descartada, reporte_solicitud
 
 from app.routers.usuario_router import router as usuario_router

@@ -9,6 +9,7 @@ from .reporte_solicitud import ReporteSolicitud
 from .resena import Resena
 from .documento_tecnico import DocumentoTecnico
 from .notificacion import Notificacion
+from .password_reset import PasswordResetToken
 from .servicio import Servicio
 from .region import Region
 from .comuna import Comuna

@@ -5,6 +5,8 @@ import Servicios from "../pages/Servicios";
 import Tecnicos from "../pages/Tecnicos";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
+import RecuperarPassword from "../pages/auth/RecuperarPassword";
+import RestablecerPassword from "../pages/auth/RestablecerPassword";
 
 import TecnicoDashboard from "../pages/tecnico/TecnicoDashboard";
 import TecnicoPerfil from "../pages/tecnico/TecnicoPerfil";
@@ -31,6 +33,8 @@ function AppRoutes() {
         <Route path="/tecnicos" element={<Tecnicos />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/recuperar" element={<RecuperarPassword />} />
+        <Route path="/restablecer" element={<RestablecerPassword />} />
 
         {/* RUTA TÉCNICO */}
         <Route

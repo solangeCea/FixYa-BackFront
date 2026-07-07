@@ -61,6 +61,50 @@ export async function setUserEstado(
   return response.json();
 }
 
+export async function requestPasswordReset(
+  correo: string
+): Promise<{ mensaje: string }> {
+  const response = await fetch(`${API_URL}/usuarios/password/recuperar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      "No pudimos procesar tu solicitud. Intenta nuevamente en unos minutos."
+    );
+  }
+
+  return response.json();
+}
+
+export async function resetPassword(data: {
+  token: string;
+  contrasena_nueva: string;
+  confirmar_contrasena: string;
+}): Promise<{ mensaje: string }> {
+  const response = await fetch(`${API_URL}/usuarios/password/restablecer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const detail = errorData?.detail;
+    throw new Error(
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail) && detail[0]?.msg
+        ? detail[0].msg
+        : "No pudimos restablecer tu contraseña."
+    );
+  }
+
+  return response.json();
+}
+
 export interface CambioPassword {
   contrasena_actual: string;
   contrasena_nueva: string;
