@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, text
 from datetime import datetime
 
 from app.database import Base
@@ -21,7 +21,11 @@ class DocumentoTecnico(Base):
 
     # Estado de revisión explícito: PENDIENTE / APROBADO / RECHAZADO.
     # documento_aprobado se conserva por compatibilidad (True solo si APROBADO).
-    estado_documento = Column(String(20), default="PENDIENTE", nullable=False)
+    # server_default: para que create_all cree la columna con DEFAULT en la BD
+    # (así los INSERT crudos del seed no violan NOT NULL en una base nueva).
+    estado_documento = Column(
+        String(20), default="PENDIENTE", server_default=text("'PENDIENTE'"), nullable=False
+    )
 
     # Motivo del rechazo escrito por el admin (solo cuando estado = RECHAZADO).
     motivo_rechazo = Column(String(500), nullable=True)

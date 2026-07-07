@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, text
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -20,7 +20,7 @@ class Chat(Base):
     cliente_rut = Column(String(12), ForeignKey("usuario.rut"), nullable=False)
     tecnico_rut = Column(String(12), ForeignKey("usuario.rut"), nullable=False)
     fecha_creacion = Column(DateTime, server_default=func.now())
-    activo = Column(Boolean, default=True, nullable=False)
+    activo = Column(Boolean, default=True, server_default=text("true"), nullable=False)
 
 
 class MensajeChat(Base):
@@ -31,6 +31,6 @@ class MensajeChat(Base):
     emisor_rut = Column(String(12), ForeignKey("usuario.rut"), nullable=False)
     contenido = Column(String(1000), nullable=False)
     fecha_envio = Column(DateTime, server_default=func.now())
-    leido = Column(Boolean, default=False, nullable=False)
+    leido = Column(Boolean, default=False, server_default=text("false"), nullable=False)
     # Mensaje automático generado por la plataforma (avisos del flujo, no de un usuario).
-    es_sistema = Column(Boolean, default=False, nullable=False)
+    es_sistema = Column(Boolean, default=False, server_default=text("false"), nullable=False)
