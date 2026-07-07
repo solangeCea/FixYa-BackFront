@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
+from app.services import audit_service
 from app.models.resena import Resena
 from app.models.solicitud import Solicitud
 from app.models.usuario import Usuario
@@ -112,6 +113,7 @@ def listar_resenas_reportadas(
 def resolver_reporte_resena(
     id_resena: int,
     data: ResolverReporteResena,
+    request: Request,
     db: Session = Depends(get_db),
     usuario_actual = Depends(get_current_user)
 ):
@@ -135,6 +137,8 @@ def resolver_reporte_resena(
     if not resena:
         raise HTTPException(status_code=404, detail="Reseña no encontrada")
 
+    estado_antes = "VISIBLE" if resena.resena_activa == "S" else "OCULTA"
+
     resena.reporte_resuelto = "S"
     resena.fecha_resolucion = datetime.utcnow()
     resena.admin_rut_resuelve = admin.rut
@@ -149,6 +153,19 @@ def resolver_reporte_resena(
 
     db.commit()
     db.refresh(resena)
+
+    audit_service.registrar_auditoria(
+        db,
+        admin_rut=admin.rut,
+        accion="APROBAR_RESENA" if data.aprobar_publicacion else "OCULTAR_RESENA",
+        entidad_tipo="RESENA",
+        entidad_id=resena.id_resena,
+        usuario_afectado_rut=resena.usuario_rut,
+        motivo=data.motivo_reporte,
+        estado_antes=estado_antes,
+        estado_despues="VISIBLE" if resena.resena_activa == "S" else "OCULTA",
+        ip=audit_service.obtener_ip(request),
+    )
 
     return resena
 @router.get("/tecnico/{rut_tecnico}", response_model=list[ResenaResponse])

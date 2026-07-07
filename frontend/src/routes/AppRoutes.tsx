@@ -20,6 +20,7 @@ import TechnicianManagement from "../pages/admin/TechnicianManagement";
 import UserManagement from "../pages/admin/UserManagement";
 import ReviewManagement from "../pages/admin/ReviewManagement";
 import RequestManagement from "../pages/admin/RequestManagement";
+import AuditManagement from "../pages/admin/AuditManagement";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -88,6 +89,7 @@ function AppRoutes() {
           <Route path="tecnicos" element={<TechnicianManagement />} />
           <Route path="usuarios" element={<UserManagement />} />
           <Route path="resenas" element={<ReviewManagement />} />
+          <Route path="auditoria" element={<AuditManagement />} />
           <Route path="perfil" element={<AdminPerfil />} />
         </Route>
       </Routes>

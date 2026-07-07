@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import crear_token
 from app.database import get_db
+from app.services import audit_service
 from app.dependencies import (
     get_current_user,
     get_current_usuario,
@@ -621,6 +622,7 @@ class EstadoUsuarioUpdate(BaseModel):
 def cambiar_estado_usuario(
     rut: str,
     datos: EstadoUsuarioUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     usuario_actual: dict = Depends(solo_admin),
 ):
@@ -635,9 +637,23 @@ def cambiar_estado_usuario(
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+    estado_antes = "ACTIVO" if usuario.estado_usuario else "SUSPENDIDO"
     usuario.estado_usuario = datos.estado_usuario
     db.commit()
     db.refresh(usuario)
+
+    audit_service.registrar_auditoria(
+        db,
+        admin_rut=usuario_actual.get("rut"),
+        accion="REACTIVAR_USUARIO" if datos.estado_usuario else "SUSPENDER_USUARIO",
+        entidad_tipo="USUARIO",
+        entidad_id=usuario.rut,
+        usuario_afectado_rut=usuario.rut,
+        estado_antes=estado_antes,
+        estado_despues="ACTIVO" if usuario.estado_usuario else "SUSPENDIDO",
+        detalle=f"Usuario: {usuario.correo}",
+        ip=audit_service.obtener_ip(request),
+    )
 
     return {
         "mensaje": "Estado del usuario actualizado correctamente",

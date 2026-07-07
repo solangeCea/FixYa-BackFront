@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 from sqlalchemy import func
@@ -16,6 +16,7 @@ from app.database import get_db
 from app.dependencies import get_current_usuario, solo_admin, usuario_tiene_rol
 from app.schemas.tecnico_schema import TecnicoCreate, TecnicoUpdate, TecnicoResponse
 from app.services import tecnico_service
+from app.services import audit_service
 from app.services.resena_service import generar_resumen_reputacion
 
 router = APIRouter(
@@ -217,13 +218,29 @@ def actualizar_tecnico(
 @router.delete("/{rut}")
 def eliminar_tecnico(
     rut: str,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: dict = Depends(solo_admin),
 ):
+    tecnico_previo = db.query(Tecnico).filter(Tecnico.usuario_rut == rut).first()
+    estado_antes = tecnico_previo.estado_verificacion if tecnico_previo else None
+
     tecnico_eliminado = tecnico_service.eliminar_tecnico(db, rut)
 
     if not tecnico_eliminado:
         raise HTTPException(status_code=404, detail="Técnico no encontrado")
+
+    audit_service.registrar_auditoria(
+        db,
+        admin_rut=current_user.get("rut"),
+        accion="ELIMINAR_TECNICO",
+        entidad_tipo="TECNICO",
+        entidad_id=rut,
+        usuario_afectado_rut=rut,
+        estado_antes=estado_antes,
+        estado_despues="ELIMINADO",
+        ip=audit_service.obtener_ip(request),
+    )
 
     return {"mensaje": "Técnico eliminado correctamente"}
 @router.get("/{rut}/rating")

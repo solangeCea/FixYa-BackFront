@@ -15,6 +15,7 @@ from app.models import historial_solicitud, resena, Notificacion
 from app.models import password_reset
 from app.models import tecnico_solicitud_descartada, reporte_solicitud
 from app.models import chat
+from app.models import audit_log
 
 from app.routers.usuario_router import router as usuario_router
 from app.routers.tecnico_router import router as tecnico_router

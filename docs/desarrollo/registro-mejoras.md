@@ -1620,3 +1620,48 @@ Trabajado en la rama `feature/auditoria-conflictos`.
 ### Pendiente (fases siguientes acordadas)
 B) Audit Log de acciones admin · C) Estados + historial + línea de tiempo · D) Gestión de
 conflictos (reportes durante el trabajo + cancelación según estado con revisión admin) · E) QA.
+
+## M-42 · 2026-07-07 — Audit Log de acciones administrativas (Fase B)
+**Categoría:** Mejora funcional / seguridad (trazabilidad y rendición de cuentas)
+
+### Problema
+Las acciones sensibles del administrador (aprobar/rechazar documentos, verificar/observar/
+suspender/rechazar/eliminar técnicos, suspender/reactivar usuarios y moderar reseñas) se
+ejecutaban sin dejar rastro. No existía forma de responder **quién** hizo **qué**, sobre
+**quién**, **cuándo**, **por qué** y **desde dónde** — un requisito básico de auditoría y
+control interno.
+
+### Solución
+- **Modelo `audit_log`** (`app/models/audit_log.py`, migración idempotente `20260714`): fila
+  inmutable con `admin_rut` (FK a `usuario`, `ON DELETE SET NULL`) + `admin_correo`
+  (respaldo legible), `accion`, `entidad_tipo`, `entidad_id`, `usuario_afectado_rut`,
+  `motivo`, `estado_antes`, `estado_despues`, `detalle`, `ip` y `fecha`. Índices en las
+  columnas de filtro.
+- **`app/services/audit_service.py`** (nuevo): `registrar_auditoria(...)` escribe la bitácora
+  en una transacción propia **después** de confirmarse la acción de negocio y **nunca
+  propaga excepción** (auditar no debe tumbar la operación); `obtener_ip(request)` resuelve
+  la IP real detrás de proxy/CDN vía `X-Forwarded-For` (Render/Cloudflare); `listar_auditoria`
+  con filtros (`accion`, `entidad_tipo`, `admin_rut`, `usuario_afectado_rut`) y paginación
+  acotada (≤500), orden descendente por fecha.
+- **Instrumentación** de los endpoints admin, capturando el `estado_antes` antes de mutar:
+  `admin_router` verificar/revisar técnico (acción según nuevo estado:
+  APROBAR/OBSERVAR/SUSPENDER/RECHAZAR/REVISAR_TECNICO), `documento_tecnico_router`
+  aprobar/rechazar documento, `usuario_router` suspender/reactivar usuario,
+  `tecnico_router` eliminar técnico, `resena_router` aprobar/ocultar reseña con motivo.
+- **Endpoint** `GET /admin/auditoria` (solo admin) con los filtros anteriores.
+- **Frontend:** `services/auditService.ts`, página `pages/admin/AuditManagement.tsx` (tarjetas
+  de filtro por tipo de entidad + tabla legible con badges de acción, cambio de estado
+  antes→después, motivo/detalle e IP), ruta `/admin/auditoria` e ítem **"Auditoría"**
+  (icono escudo) en el `AdminLayout`.
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo (Docker): migración aplicada (tabla + 7 índices + FK), login admin, revisión de
+técnico `PENDIENTE→OBSERVADO` registrada con admin/correo/acción/afectado/motivo/estado
+antes-después/IP/fecha; filtros por `accion` y `entidad_tipo` correctos. Datos de prueba
+revertidos (técnico a PENDIENTE, `audit_log` vaciada; semilla intacta).
+Trabajado en la rama `feature/auditoria-conflictos`.
+
+### Pendiente (fases siguientes acordadas)
+C) Estados + historial + línea de tiempo · D) Gestión de conflictos (reportes durante el
+trabajo + cancelación según estado con revisión admin) · E) QA.
