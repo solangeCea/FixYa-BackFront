@@ -1107,3 +1107,42 @@ Reproducción del error real (FK `tecnico_comuna_tecnico_usuario_rut_fkey`) y co
 del arreglo. Registro real vía API `POST /usuarios/registro-tecnico` → **201**, con usuario,
 técnico (PENDIENTE), servicio, comuna y rol TECNICO creados, y login del nuevo técnico → 200.
 Datos de prueba eliminados tras la verificación.
+
+## M-32 · 2026-07-06 — Corrección: aprobar el documento no validaba al técnico
+**Categoría:** Corrección
+
+### Problema detectado
+Tras aprobar el administrador el documento del técnico, al iniciar sesión el técnico
+seguía viendo "Aún no has sido validado" y no podía ver ni aceptar trabajos.
+
+### Causa (100% backend)
+`verificar_tecnico_automaticamente` (aprobación de documento → verificación automática)
+exigía tener aprobados **dos tipos fijos**: `CERTIFICADO_TECNICO` **y** `ANTECEDENTES`.
+Pero el formulario de registro (`Register.tsx`) sube **un único** documento
+(`CERTIFICADO_TECNICO`); `ANTECEDENTES` nunca se sube, por lo que la condición nunca se
+cumplía y el técnico jamás se verificaba al aprobar su documento. El gate del dashboard
+(y el backend `require_approved_technician_usuario`) exigen `estado_verificacion="APROBADO"`
+**y** `tecnico_verificado=True`, así que el técnico quedaba bloqueado.
+- El **frontend estaba correcto**: lee `estado_verificacion` + `tecnico_verificado` de un
+  fetch fresco (`GET /usuarios/me/perfil-tecnico`), sin caché ni dependencia del token; la
+  lógica del gate no está invertida.
+
+### Solución implementada
+`verificar_tecnico_automaticamente` ahora verifica al técnico cuando tiene **al menos un
+documento y TODOS están aprobados** (robusto a cuántos y qué tipos suba), fijando
+`tecnico_verificado=True` y `estado_verificacion="APROBADO"`. Se agregaron logs de
+diagnóstico. Se desatascó al técnico ya afectado en la BD ejecutando la función corregida.
+
+### Archivos modificados
+- `backend/app/services/documento_tecnico_service.py`
+
+### Verificación
+HTTP end-to-end: registro de técnico (201, `PENDIENTE`) → admin aprueba el documento
+(`PUT /documentos-tecnicos/{id}/aprobar`, 200) → técnico auto-verificado a `APROBADO` /
+`verificado=true`. El técnico afectado (18291418-5) quedó `APROBADO`.
+
+### Observaciones
+El técnico verá el cambio al recargar su dashboard o volver a iniciar sesión (el dashboard
+re-consulta el perfil en cada carga y con el botón "Actualizar trabajos"); no requiere
+reemitir el token. Sigue existiendo la vía directa "Aprobar técnico pendiente"
+(`PUT /admin/tecnicos/{rut}/verificar`) que aprueba sin depender de los documentos.

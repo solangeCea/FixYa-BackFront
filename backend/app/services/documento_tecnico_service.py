@@ -132,22 +132,25 @@ def crear_documento_tecnico_archivo(
     return nuevo_documento
 
 def verificar_tecnico_automaticamente(db: Session, tecnico_rut: str):
-    
-    documentos_requeridos = [
-        "CERTIFICADO_TECNICO",
-        "ANTECEDENTES"
-    ]
+    """Verifica al técnico automáticamente cuando tiene al menos un documento y
+    TODOS sus documentos están aprobados.
 
-    documentos_aprobados = db.query(DocumentoTecnico).filter(
-        DocumentoTecnico.tecnico_usuario_rut == tecnico_rut,
-        DocumentoTecnico.documento_aprobado == True
+    Antes exigía tipos fijos (CERTIFICADO_TECNICO y ANTECEDENTES), pero el registro
+    sube un único documento (CERTIFICADO_TECNICO), por lo que la verificación nunca
+    se disparaba al aprobar el documento. Ahora se basa en el estado real de los
+    documentos subidos.
+    """
+    documentos = db.query(DocumentoTecnico).filter(
+        DocumentoTecnico.tecnico_usuario_rut == tecnico_rut
     ).all()
 
-    tipos_aprobados = [doc.tipo_documento for doc in documentos_aprobados]
+    total = len(documentos)
+    aprobados = sum(1 for doc in documentos if doc.documento_aprobado)
+    cumple_requisitos = total > 0 and aprobados == total
 
-    cumple_requisitos = all(
-        tipo in tipos_aprobados
-        for tipo in documentos_requeridos
+    print(
+        f"[verificar_tecnico_automaticamente] tecnico={tecnico_rut} "
+        f"documentos={total} aprobados={aprobados} -> verifica={cumple_requisitos}"
     )
 
     if cumple_requisitos:
@@ -160,6 +163,10 @@ def verificar_tecnico_automaticamente(db: Session, tecnico_rut: str):
             tecnico.estado_verificacion = "APROBADO"
             tecnico.fecha_revision = datetime.utcnow()
             db.commit()
+            print(
+                f"[verificar_tecnico_automaticamente] tecnico={tecnico_rut} "
+                f"marcado como APROBADO / verificado=True"
+            )
             
 def listar_tecnicos_pendientes_verificacion(db: Session):
     return db.query(Tecnico).filter(
