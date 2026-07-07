@@ -967,3 +967,48 @@ borrado con FK (HTTP 200, técnico y asociaciones eliminados, usuario conservado
 El endpoint `/revision` acopla estado y observación: "agregar/editar observación"
 fija el estado en `OBSERVADO`, "suspender" en `SUSPENDIDO` y "reactivar" en `APROBADO`
 (limpia la observación). Eliminar es una acción destructiva confirmada por modal.
+
+## M-28 · 2026-07-06 — Revisión QA full-stack: seguridad y consistencia FE↔BE
+**Categoría:** Corrección / Seguridad
+
+### Problema detectado
+Revisión completa de los flujos Cliente/Técnico/Admin y de consistencia frontend↔backend
+(4 revisiones en paralelo). Hallazgos confirmados con el código y en vivo:
+- **Fugas de autenticación (IDOR):** `GET/PUT/DELETE /solicitudes/{id}`, `GET /usuarios/{rut}/dashboard`
+  y los 3 endpoints de `/historial-solicitudes` respondían **200 sin token** (cualquiera podía
+  leer/editar/eliminar solicitudes o ver el gasto de otro usuario).
+- **Foto de solicitud no se subía:** el frontend guardaba el nombre del archivo, no la imagen.
+- **Teléfono:** el registro aceptaba 8–12 dígitos; el backend exige `9\d{8}`.
+- **`nivel_tecnico`** con valores `Senior`/`Inicial` fuera del `Literal` del schema.
+- **Panel admin de reseñas** mostraba vacíos los datos de moderación.
+- **`PUT /usuarios/me`** reemitía el token sin `rut`/`roles`.
+
+### Solución implementada
+- **Seguridad:** `GET /solicitudes/{id}` exige auth + propiedad (cliente dueño / técnico
+  asignado / admin); `PUT` y `DELETE` pasan a `solo_admin`; `GET /usuarios/{rut}/dashboard`
+  exige auth + (dueño o admin); `/historial-solicitudes` protegido (admin / autenticado).
+- **Foto:** `ClienteDashboard` sube la imagen con `uploadSolicitudFoto` y persiste la
+  `archivo_url`; guard de "subiendo" en el submit.
+- **Teléfono:** `Register.tsx` valida `/^9\d{8}$/`.
+- **Niveles:** seed y BD normalizados a `Basico/Intermedio/Avanzado`.
+- **Reseñas:** `ResenaResponse` expone `fecha_reporte`, `reporte_resuelto`, `fecha_resolucion`,
+  `usuario_rut_reporta`, `admin_rut_resuelve`.
+- **Token:** `PUT /usuarios/me` reemite con `rut` + `roles` + `tipo_usuario.value`.
+
+### Archivos modificados
+- `backend/app/routers/solicitud_router.py`, `usuario_router.py`, `historial_solicitud_router.py`
+- `backend/app/schemas/resena_schema.py`, `backend/database/seed.sql`
+- `frontend/src/pages/auth/Register.tsx`, `frontend/src/pages/cliente/ClienteDashboard.tsx`
+- `frontend/src/tests/solicitudes/SolicitudForm.test.tsx`
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`).
+En vivo: IDOR cerrado (401 sin token; dueño 200 / tercero 403 / admin 200); `/resenas` expone
+los 5 campos; niveles normalizados; SolicitudForm 18/18 con la foto subida a URL real.
+
+### Observaciones
+Pendientes recomendados (no bloqueantes): UI de "Editar perfil" para Cliente (reusar
+`updateMyProfile`); vista "Mis cotizaciones" del técnico; acciones admin sobre Usuarios
+(activar/desactivar); asignación manual de técnico a solicitud; limpieza de endpoints
+huérfanos (`/dashboard/admin` duplicado, `/admin/estadisticas`). El endpoint `A4`
+(`/tecnicos/{rut}/perfil` sin auth) queda documentado como recomendación de menor impacto.
