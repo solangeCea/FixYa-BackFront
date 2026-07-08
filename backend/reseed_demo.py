@@ -145,14 +145,10 @@ def build_sql() -> str:
     filas = [f"  ('{rut(t[0])}', {t[6]}, true)" for t in TECNICOS]
     out.append(",\n".join(filas) + "\nON CONFLICT DO NOTHING;\n")
 
-    # Documentos aprobados (CARNET + ANTECEDENTES) para cada tecnico
-    out.append("INSERT INTO documento_tecnico (tecnico_usuario_rut, tipo_documento, nombre_archivo, archivo_url, documento_aprobado, estado_documento, fecha_subida, fecha_aprobacion) VALUES")
-    filas = []
-    for t in TECNICOS:
-        r = rut(t[0])
-        for tipo in ("CARNET_IDENTIDAD", "ANTECEDENTES"):
-            filas.append(f"  ('{r}', '{tipo}', '{tipo.lower()}_{t[0]}.pdf', '/uploads/documentos_tecnicos/{tipo.lower()}_{t[0]}.pdf', true, 'APROBADO', now(), now())")
-    out.append(",\n".join(filas) + "\nON CONFLICT DO NOTHING;\n")
+    # Nota: no se siembran documentos. Los técnicos ya quedan verificados
+    # (tecnico_verificado=true / estado_verificacion='APROBADO'), que es lo que
+    # los hace visibles en el catálogo. documento_tecnico no tiene índice único
+    # natural, así que sembrarlo en cada arranque duplicaría/rompería el seed.
 
     return "\n".join(out)
 

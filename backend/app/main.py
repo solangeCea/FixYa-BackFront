@@ -142,7 +142,12 @@ def reseed_demo_if_requested():
 
 Base.metadata.create_all(bind=engine)
 apply_database_migrations()
-seed_database()
+# El seed es best-effort: si falla (p. ej. sobre una BD con datos previos), no
+# debe impedir el arranque del backend. El reseed guardado se encarga del reset.
+try:
+    seed_database()
+except Exception as _seed_error:  # noqa: BLE001
+    print(f"[seed] Aviso: el seed no se aplicó ({_seed_error}); el backend continúa.")
 reseed_demo_if_requested()
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

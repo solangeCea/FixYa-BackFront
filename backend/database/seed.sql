@@ -69,42 +69,41 @@ VALUES
 ON CONFLICT (id_servicio) DO NOTHING;
 
 
--- ===========================================================================
--- USUARIOS DE DEMOSTRACION (dataset limpio · presentacion final)
--- 2 admins · 16 tecnicos (2 por servicio, verificados) · 4 clientes
+-- =============================================================================
+-- USUARIOS DE DEMOSTRACION (dataset limpio, sin documentos sembrados)
+-- 2 admins - 16 tecnicos (2 por servicio, verificados) - 4 clientes
 -- Contrasenas: Admin1234 / Tecnico1234 / Cliente1234
--- Generado con backend/reseed_demo.py (RUT con DV valido, hash bcrypt real)
--- ===========================================================================
+-- =============================================================================
 
 INSERT INTO usuario (rut, nombre_completo, fecha_nacimiento, genero, correo, telefono, contrasena, estado_usuario, comuna_id_comuna, tipo_usuario) VALUES
-  ('21000101-8', 'Vanesa Gonzalez Navarro', '1992-05-12', 'Femenino', 'vanesa.gonzalez@fixya.cl', '990010101', '$2b$12$yL2.izYuPIY9q77MMbASK.IhIQio13Dt9uhli5FdNnkA/0bxz6JCC', true, 1, 'ADMIN'),
-  ('21000202-2', 'Daniel Orellana Soto', '1988-09-03', 'Masculino', 'daniel.orellana@fixya.cl', '990010202', '$2b$12$yL2.izYuPIY9q77MMbASK.IhIQio13Dt9uhli5FdNnkA/0bxz6JCC', true, 1, 'ADMIN')
+  ('21000101-8', 'Vanesa Gonzalez Navarro', '1992-05-12', 'Femenino', 'vanesa.gonzalez@fixya.cl', '990010101', '$2b$12$94VenAWUJmuR2tUZpU4UzeCEzqLDEm2t.m99LbRsK1Hq92kiqf.p2', true, 1, 'ADMIN'),
+  ('21000202-2', 'Daniel Orellana Soto', '1988-09-03', 'Masculino', 'daniel.orellana@fixya.cl', '990010202', '$2b$12$94VenAWUJmuR2tUZpU4UzeCEzqLDEm2t.m99LbRsK1Hq92kiqf.p2', true, 1, 'ADMIN')
 ON CONFLICT (rut) DO NOTHING;
 
 INSERT INTO usuario (rut, nombre_completo, fecha_nacimiento, genero, correo, telefono, contrasena, estado_usuario, comuna_id_comuna, tipo_usuario) VALUES
-  ('22010011-1', 'Matias Fuentes Morales', '1989-07-22', 'Masculino', 'matias.fuentes@fixya.cl', '961000011', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 12, 'TECNICO'),
-  ('22010022-7', 'Antonia Salas Espinoza', '1990-08-17', 'Femenino', 'antonia.salas@fixya.cl', '961000022', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 13, 'TECNICO'),
-  ('22020011-6', 'Sofia Contreras Rojas', '1991-03-14', 'Femenino', 'sofia.contreras@fixya.cl', '962000011', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 11, 'TECNICO'),
-  ('22020022-1', 'Rodrigo Pizarro Leon', '1986-02-09', 'Masculino', 'rodrigo.pizarro@fixya.cl', '962000022', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 10, 'TECNICO'),
-  ('22030011-0', 'Francisca Munoz Tapia', '1985-09-30', 'Femenino', 'francisca.munoz@fixya.cl', '963000011', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 5, 'TECNICO'),
-  ('22030022-6', 'Tomas Reyes Alarcon', '1994-04-18', 'Masculino', 'tomas.reyes@fixya.cl', '963000022', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 6, 'TECNICO'),
-  ('22040011-5', 'Sebastian Navarro Fuentealba', '1982-12-11', 'Masculino', 'sebastian.navarro@fixya.cl', '964000011', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 7, 'TECNICO'),
-  ('22040022-0', 'Daniela Vergara Rojas', '1993-06-27', 'Femenino', 'daniela.vergara@fixya.cl', '964000022', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 9, 'TECNICO'),
-  ('22050011-K', 'Camila Herrera Nunez', '1994-11-02', 'Femenino', 'camila.herrera@fixya.cl', '965000011', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 8, 'TECNICO'),
-  ('22050022-5', 'Cristobal Bravo Miranda', '1993-05-05', 'Masculino', 'cristobal.bravo@fixya.cl', '965000022', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 16, 'TECNICO'),
-  ('22060011-4', 'Diego Vera Sanhueza', '1996-01-19', 'Masculino', 'diego.vera@fixya.cl', '966000011', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 19, 'TECNICO'),
-  ('22060022-K', 'Paula Cortes Marin', '1991-10-08', 'Femenino', 'paula.cortes@fixya.cl', '966000022', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 20, 'TECNICO'),
-  ('22070011-9', 'Ignacio Riquelme Soto', '1990-04-08', 'Masculino', 'ignacio.riquelme@fixya.cl', '967000011', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 23, 'TECNICO'),
-  ('22070022-4', 'Marcelo Aravena Diaz', '1987-01-23', 'Masculino', 'marcelo.aravena@fixya.cl', '967000022', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 7, 'TECNICO'),
-  ('22080011-3', 'Valentina Caceres Pino', '1995-06-25', 'Femenino', 'valentina.caceres@fixya.cl', '968000011', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 14, 'TECNICO'),
-  ('22080022-9', 'Felipe Munoz Carrasco', '1992-03-30', 'Masculino', 'felipe.munoz@fixya.cl', '968000022', '$2b$12$L90Cd4sUvvJCOugB5j/Bwe54yjwnU.5MqQDiS573wKp80xd5AeWtu', true, 11, 'TECNICO')
+  ('22010011-1', 'Matias Fuentes Morales', '1989-07-22', 'Masculino', 'matias.fuentes@fixya.cl', '961000011', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 12, 'TECNICO'),
+  ('22010022-7', 'Antonia Salas Espinoza', '1990-08-17', 'Femenino', 'antonia.salas@fixya.cl', '961000022', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 13, 'TECNICO'),
+  ('22020011-6', 'Sofia Contreras Rojas', '1991-03-14', 'Femenino', 'sofia.contreras@fixya.cl', '962000011', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 11, 'TECNICO'),
+  ('22020022-1', 'Rodrigo Pizarro Leon', '1986-02-09', 'Masculino', 'rodrigo.pizarro@fixya.cl', '962000022', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 10, 'TECNICO'),
+  ('22030011-0', 'Francisca Munoz Tapia', '1985-09-30', 'Femenino', 'francisca.munoz@fixya.cl', '963000011', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 5, 'TECNICO'),
+  ('22030022-6', 'Tomas Reyes Alarcon', '1994-04-18', 'Masculino', 'tomas.reyes@fixya.cl', '963000022', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 6, 'TECNICO'),
+  ('22040011-5', 'Sebastian Navarro Fuentealba', '1982-12-11', 'Masculino', 'sebastian.navarro@fixya.cl', '964000011', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 7, 'TECNICO'),
+  ('22040022-0', 'Daniela Vergara Rojas', '1993-06-27', 'Femenino', 'daniela.vergara@fixya.cl', '964000022', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 9, 'TECNICO'),
+  ('22050011-K', 'Camila Herrera Nunez', '1994-11-02', 'Femenino', 'camila.herrera@fixya.cl', '965000011', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 8, 'TECNICO'),
+  ('22050022-5', 'Cristobal Bravo Miranda', '1993-05-05', 'Masculino', 'cristobal.bravo@fixya.cl', '965000022', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 16, 'TECNICO'),
+  ('22060011-4', 'Diego Vera Sanhueza', '1996-01-19', 'Masculino', 'diego.vera@fixya.cl', '966000011', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 19, 'TECNICO'),
+  ('22060022-K', 'Paula Cortes Marin', '1991-10-08', 'Femenino', 'paula.cortes@fixya.cl', '966000022', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 20, 'TECNICO'),
+  ('22070011-9', 'Ignacio Riquelme Soto', '1990-04-08', 'Masculino', 'ignacio.riquelme@fixya.cl', '967000011', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 23, 'TECNICO'),
+  ('22070022-4', 'Marcelo Aravena Diaz', '1987-01-23', 'Masculino', 'marcelo.aravena@fixya.cl', '967000022', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 7, 'TECNICO'),
+  ('22080011-3', 'Valentina Caceres Pino', '1995-06-25', 'Femenino', 'valentina.caceres@fixya.cl', '968000011', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 14, 'TECNICO'),
+  ('22080022-9', 'Felipe Munoz Carrasco', '1992-03-30', 'Masculino', 'felipe.munoz@fixya.cl', '968000022', '$2b$12$rsE37Xd/mnnUo90izBlqw.JbfP.Li1GIFSd52AlTRhTXkBO3FX1C2', true, 11, 'TECNICO')
 ON CONFLICT (rut) DO NOTHING;
 
 INSERT INTO usuario (rut, nombre_completo, fecha_nacimiento, genero, correo, telefono, contrasena, estado_usuario, comuna_id_comuna, tipo_usuario) VALUES
-  ('23000011-5', 'Josefa Reyes Vidal', '1995-02-14', 'Femenino', 'josefa.reyes@gmail.com', '970000011', '$2b$12$aSFurS8.LG50bwcxg/13xuxxTgjp8Jh4rCepHDaJyDjoxpISmCWVq', true, 10, 'CLIENTE'),
-  ('23000022-0', 'Catalina Figueroa Rojas', '1990-07-19', 'Femenino', 'catalina.figueroa@gmail.com', '970000022', '$2b$12$aSFurS8.LG50bwcxg/13xuxxTgjp8Jh4rCepHDaJyDjoxpISmCWVq', true, 12, 'CLIENTE'),
-  ('23000033-6', 'Andres Soto Lagos', '1988-11-05', 'Masculino', 'andres.soto@gmail.com', '970000033', '$2b$12$aSFurS8.LG50bwcxg/13xuxxTgjp8Jh4rCepHDaJyDjoxpISmCWVq', true, 8, 'CLIENTE'),
-  ('23000044-1', 'Martin Espinoza Ruiz', '1993-09-21', 'Masculino', 'martin.espinoza@gmail.com', '970000044', '$2b$12$aSFurS8.LG50bwcxg/13xuxxTgjp8Jh4rCepHDaJyDjoxpISmCWVq', true, 5, 'CLIENTE')
+  ('23000011-5', 'Josefa Reyes Vidal', '1995-02-14', 'Femenino', 'josefa.reyes@gmail.com', '970000011', '$2b$12$uBFuxbAZg/kPdeFh8Y2eZ./RKwrxnG9SEjcvvx5fOKA80.JkP36VW', true, 10, 'CLIENTE'),
+  ('23000022-0', 'Catalina Figueroa Rojas', '1990-07-19', 'Femenino', 'catalina.figueroa@gmail.com', '970000022', '$2b$12$uBFuxbAZg/kPdeFh8Y2eZ./RKwrxnG9SEjcvvx5fOKA80.JkP36VW', true, 12, 'CLIENTE'),
+  ('23000033-6', 'Andres Soto Lagos', '1988-11-05', 'Masculino', 'andres.soto@gmail.com', '970000033', '$2b$12$uBFuxbAZg/kPdeFh8Y2eZ./RKwrxnG9SEjcvvx5fOKA80.JkP36VW', true, 8, 'CLIENTE'),
+  ('23000044-1', 'Martin Espinoza Ruiz', '1993-09-21', 'Masculino', 'martin.espinoza@gmail.com', '970000044', '$2b$12$uBFuxbAZg/kPdeFh8Y2eZ./RKwrxnG9SEjcvvx5fOKA80.JkP36VW', true, 5, 'CLIENTE')
 ON CONFLICT (rut) DO NOTHING;
 
 INSERT INTO usuario_rol (usuario_rut, rol, activo) VALUES
@@ -187,40 +186,5 @@ INSERT INTO tecnico_comuna (tecnico_usuario_rut, comuna_id_comuna, estado_cobert
   ('22070022-4', 7, true),
   ('22080011-3', 14, true),
   ('22080022-9', 11, true)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO documento_tecnico (tecnico_usuario_rut, tipo_documento, nombre_archivo, archivo_url, documento_aprobado, estado_documento, fecha_subida, fecha_aprobacion) VALUES
-  ('22010011-1', 'CARNET_IDENTIDAD', 'carnet_identidad_22010011.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22010011.pdf', true, 'APROBADO', now(), now()),
-  ('22010011-1', 'ANTECEDENTES', 'antecedentes_22010011.pdf', '/uploads/documentos_tecnicos/antecedentes_22010011.pdf', true, 'APROBADO', now(), now()),
-  ('22010022-7', 'CARNET_IDENTIDAD', 'carnet_identidad_22010022.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22010022.pdf', true, 'APROBADO', now(), now()),
-  ('22010022-7', 'ANTECEDENTES', 'antecedentes_22010022.pdf', '/uploads/documentos_tecnicos/antecedentes_22010022.pdf', true, 'APROBADO', now(), now()),
-  ('22020011-6', 'CARNET_IDENTIDAD', 'carnet_identidad_22020011.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22020011.pdf', true, 'APROBADO', now(), now()),
-  ('22020011-6', 'ANTECEDENTES', 'antecedentes_22020011.pdf', '/uploads/documentos_tecnicos/antecedentes_22020011.pdf', true, 'APROBADO', now(), now()),
-  ('22020022-1', 'CARNET_IDENTIDAD', 'carnet_identidad_22020022.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22020022.pdf', true, 'APROBADO', now(), now()),
-  ('22020022-1', 'ANTECEDENTES', 'antecedentes_22020022.pdf', '/uploads/documentos_tecnicos/antecedentes_22020022.pdf', true, 'APROBADO', now(), now()),
-  ('22030011-0', 'CARNET_IDENTIDAD', 'carnet_identidad_22030011.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22030011.pdf', true, 'APROBADO', now(), now()),
-  ('22030011-0', 'ANTECEDENTES', 'antecedentes_22030011.pdf', '/uploads/documentos_tecnicos/antecedentes_22030011.pdf', true, 'APROBADO', now(), now()),
-  ('22030022-6', 'CARNET_IDENTIDAD', 'carnet_identidad_22030022.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22030022.pdf', true, 'APROBADO', now(), now()),
-  ('22030022-6', 'ANTECEDENTES', 'antecedentes_22030022.pdf', '/uploads/documentos_tecnicos/antecedentes_22030022.pdf', true, 'APROBADO', now(), now()),
-  ('22040011-5', 'CARNET_IDENTIDAD', 'carnet_identidad_22040011.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22040011.pdf', true, 'APROBADO', now(), now()),
-  ('22040011-5', 'ANTECEDENTES', 'antecedentes_22040011.pdf', '/uploads/documentos_tecnicos/antecedentes_22040011.pdf', true, 'APROBADO', now(), now()),
-  ('22040022-0', 'CARNET_IDENTIDAD', 'carnet_identidad_22040022.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22040022.pdf', true, 'APROBADO', now(), now()),
-  ('22040022-0', 'ANTECEDENTES', 'antecedentes_22040022.pdf', '/uploads/documentos_tecnicos/antecedentes_22040022.pdf', true, 'APROBADO', now(), now()),
-  ('22050011-K', 'CARNET_IDENTIDAD', 'carnet_identidad_22050011.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22050011.pdf', true, 'APROBADO', now(), now()),
-  ('22050011-K', 'ANTECEDENTES', 'antecedentes_22050011.pdf', '/uploads/documentos_tecnicos/antecedentes_22050011.pdf', true, 'APROBADO', now(), now()),
-  ('22050022-5', 'CARNET_IDENTIDAD', 'carnet_identidad_22050022.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22050022.pdf', true, 'APROBADO', now(), now()),
-  ('22050022-5', 'ANTECEDENTES', 'antecedentes_22050022.pdf', '/uploads/documentos_tecnicos/antecedentes_22050022.pdf', true, 'APROBADO', now(), now()),
-  ('22060011-4', 'CARNET_IDENTIDAD', 'carnet_identidad_22060011.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22060011.pdf', true, 'APROBADO', now(), now()),
-  ('22060011-4', 'ANTECEDENTES', 'antecedentes_22060011.pdf', '/uploads/documentos_tecnicos/antecedentes_22060011.pdf', true, 'APROBADO', now(), now()),
-  ('22060022-K', 'CARNET_IDENTIDAD', 'carnet_identidad_22060022.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22060022.pdf', true, 'APROBADO', now(), now()),
-  ('22060022-K', 'ANTECEDENTES', 'antecedentes_22060022.pdf', '/uploads/documentos_tecnicos/antecedentes_22060022.pdf', true, 'APROBADO', now(), now()),
-  ('22070011-9', 'CARNET_IDENTIDAD', 'carnet_identidad_22070011.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22070011.pdf', true, 'APROBADO', now(), now()),
-  ('22070011-9', 'ANTECEDENTES', 'antecedentes_22070011.pdf', '/uploads/documentos_tecnicos/antecedentes_22070011.pdf', true, 'APROBADO', now(), now()),
-  ('22070022-4', 'CARNET_IDENTIDAD', 'carnet_identidad_22070022.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22070022.pdf', true, 'APROBADO', now(), now()),
-  ('22070022-4', 'ANTECEDENTES', 'antecedentes_22070022.pdf', '/uploads/documentos_tecnicos/antecedentes_22070022.pdf', true, 'APROBADO', now(), now()),
-  ('22080011-3', 'CARNET_IDENTIDAD', 'carnet_identidad_22080011.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22080011.pdf', true, 'APROBADO', now(), now()),
-  ('22080011-3', 'ANTECEDENTES', 'antecedentes_22080011.pdf', '/uploads/documentos_tecnicos/antecedentes_22080011.pdf', true, 'APROBADO', now(), now()),
-  ('22080022-9', 'CARNET_IDENTIDAD', 'carnet_identidad_22080022.pdf', '/uploads/documentos_tecnicos/carnet_identidad_22080022.pdf', true, 'APROBADO', now(), now()),
-  ('22080022-9', 'ANTECEDENTES', 'antecedentes_22080022.pdf', '/uploads/documentos_tecnicos/antecedentes_22080022.pdf', true, 'APROBADO', now(), now())
 ON CONFLICT DO NOTHING;
 
