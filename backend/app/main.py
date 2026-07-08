@@ -117,9 +117,33 @@ def apply_database_migrations():
             connection.exec_driver_sql(migration_path.read_text(encoding="utf-8"))
 
 
+def reseed_demo_if_requested():
+    """Reseed limpio de usuarios de demostración, guardado por env.
+
+    Mecanismo de mantenimiento para dejar la BD (local o producción) con el
+    conjunto limpio y válido de usuarios. Solo corre si RESEED_DEMO está activo
+    y sobre PostgreSQL. Es determinista (TRUNCATE + inserción del set fijo), así
+    que repetirlo deja siempre el mismo estado. ACTIVAR una sola vez y luego
+    APAGAR la variable (si no, se re-aplica en cada reinicio del contenedor).
+    """
+    if os.getenv("RESEED_DEMO", "").strip().lower() not in {"1", "true", "yes", "si"}:
+        return
+    if engine.dialect.name != "postgresql":
+        return
+    try:
+        from reseed_demo import apply as aplicar_reseed_demo
+
+        print("[reseed] RESEED_DEMO activo: aplicando reseed limpio de usuarios...", flush=True)
+        aplicar_reseed_demo()
+        print("[reseed] Reseed demo completado. Recuerda APAGAR RESEED_DEMO.", flush=True)
+    except Exception as error:  # noqa: BLE001 — no debe impedir el arranque
+        print(f"[reseed] Error aplicando el reseed demo: {error}", flush=True)
+
+
 Base.metadata.create_all(bind=engine)
 apply_database_migrations()
 seed_database()
+reseed_demo_if_requested()
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
