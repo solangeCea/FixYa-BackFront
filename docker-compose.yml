@@ -40,9 +40,6 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      # Modo demostración: sin SMTP, la API devuelve el enlace de recuperación
-      # para poder completar el flujo sin correo. Apagar en producción real.
-      DEMO_MODE: ${DEMO_MODE:-true}
       # Reseed limpio de usuarios al arrancar (mantenimiento). Activar una sola
       # vez y volver a apagar; es determinista (TRUNCATE + set fijo).
       RESEED_DEMO: ${RESEED_DEMO:-false}

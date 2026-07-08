@@ -12,7 +12,6 @@ export default function RecuperarPassword() {
 
   const [correo, setCorreo] = useState("");
   const [enviado, setEnviado] = useState(false);
-  const [enlaceDemo, setEnlaceDemo] = useState("");
   const [error, setError] = useState("");
   const [fieldError, setFieldError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,12 +32,7 @@ export default function RecuperarPassword() {
 
     try {
       setLoading(true);
-      const respuesta = await requestPasswordReset(correo.trim());
-      // Ruta interna del enlace demo (mismo origen) para no depender de FRONTEND_URL.
-      if (respuesta.enlace_demo) {
-        const idx = respuesta.enlace_demo.indexOf("/restablecer");
-        setEnlaceDemo(idx >= 0 ? respuesta.enlace_demo.slice(idx) : respuesta.enlace_demo);
-      }
+      await requestPasswordReset(correo.trim());
       setEnviado(true);
     } catch (err) {
       setError(
@@ -84,27 +78,9 @@ export default function RecuperarPassword() {
             </div>
             <p className="leading-6">
               Si <strong>{correo}</strong> está registrado, te enviamos un enlace
-              para restablecer tu contraseña. El enlace expira en 60 minutos.
+              para restablecer tu contraseña. Revisa tu bandeja de entrada (y la
+              carpeta de spam). El enlace expira en 60 minutos.
             </p>
-
-            {enlaceDemo && (
-              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide">
-                  Modo demostración (sin correo configurado)
-                </p>
-                <p className="mb-3 text-sm leading-6">
-                  No hay servidor de correo configurado, así que puedes continuar
-                  directamente con este enlace:
-                </p>
-                <Link
-                  to={enlaceDemo}
-                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700"
-                >
-                  <Send className="h-4 w-4" />
-                  Restablecer mi contraseña ahora
-                </Link>
-              </div>
-            )}
 
             <Link
               to="/login"

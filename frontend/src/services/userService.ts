@@ -63,7 +63,7 @@ export async function setUserEstado(
 
 export async function requestPasswordReset(
   correo: string
-): Promise<{ mensaje: string; enlace_demo?: string }> {
+): Promise<{ mensaje: string }> {
   const response = await fetch(`${API_URL}/usuarios/password/recuperar`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
