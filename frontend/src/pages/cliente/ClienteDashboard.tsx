@@ -76,10 +76,6 @@ const initialForm = {
   numero_departamento: "",
   tiene_conserjeria: "",
   requiere_autorizacion: "",
-  horario_permitido_trabajos: "",
-  horario_atencion: "",
-  trabajo_fuera_horario: "",
-  local_funcionando: "",
   condiciones_acceso: "",
   instrucciones_acceso: "",
   persona_contacto: "",
@@ -151,10 +147,6 @@ const camposContextoInmueble = [
   "numero_departamento",
   "tiene_conserjeria",
   "requiere_autorizacion",
-  "horario_permitido_trabajos",
-  "horario_atencion",
-  "trabajo_fuera_horario",
-  "local_funcionando",
   "condiciones_acceso",
   "instrucciones_acceso",
   "persona_contacto",
@@ -253,16 +245,6 @@ function booleanFromSelect(value: string) {
   if (value === "SI") return true;
   if (value === "NO") return false;
   return null;
-}
-
-function booleanText(value: string) {
-  if (value === "SI") return "Sí";
-  if (value === "NO") return "No";
-  return "";
-}
-
-function joinDetails(items: Array<string | null | undefined>) {
-  return items.filter((item): item is string => Boolean(item?.trim())).join(" | ");
 }
 
 function getDayLabel(day: DiaSemana) {
@@ -834,25 +816,13 @@ function ClienteDashboard() {
         if (!form.requiere_autorizacion) {
           nextErrors.requiere_autorizacion = "Indica si requiere autorización de administración.";
         }
-        if (!form.horario_permitido_trabajos.trim()) {
-          nextErrors.horario_permitido_trabajos = "Indica el horario permitido para trabajos.";
-        }
       }
       if (muestraCamposComercial) {
-        if (!form.horario_atencion.trim()) {
-          nextErrors.horario_atencion = "Ingresa el horario de atención.";
-        }
-        if (!form.trabajo_fuera_horario) {
-          nextErrors.trabajo_fuera_horario = "Indica si el trabajo debe hacerse fuera de horario.";
-        }
         if (!form.persona_contacto.trim()) {
           nextErrors.persona_contacto = "Ingresa la persona de contacto.";
         }
         if (!form.telefono_contacto.trim()) {
           nextErrors.telefono_contacto = "Ingresa el teléfono de contacto.";
-        }
-        if (!form.local_funcionando) {
-          nextErrors.local_funcionando = "Indica si el lugar estará funcionando durante el trabajo.";
         }
       }
       if (!form.instrucciones_acceso.trim()) {
@@ -872,29 +842,13 @@ function ClienteDashboard() {
       setError("");
       setSuccess("");
 
-      const horarioDisponible = joinDetails([
-        disponibilidadResumen
-          ? `Disponibilidad cliente: ${disponibilidadResumen}`
-          : null,
-        muestraCamposDepartamento
-          ? `Horario permitido para trabajos: ${form.horario_permitido_trabajos.trim()}`
-          : null,
-        muestraCamposComercial
-          ? `Horario de atención: ${form.horario_atencion.trim()}`
-          : null,
-      ]);
+      const horarioDisponible = disponibilidadResumen
+        ? `Disponibilidad cliente: ${disponibilidadResumen}`
+        : "";
 
-      const condicionesAcceso = joinDetails([
-        muestraCamposComercial
-          ? `Trabajo fuera de horario: ${booleanText(form.trabajo_fuera_horario)}`
-          : null,
-        muestraCamposComercial
-          ? `Lugar funcionando durante el trabajo: ${booleanText(form.local_funcionando)}`
-          : null,
-        muestraAdvertenciaEspacioPublico
-          ? "Puede requerir permisos municipales o autorización previa"
-          : null,
-      ]);
+      const condicionesAcceso = muestraAdvertenciaEspacioPublico
+        ? "Puede requerir permisos municipales o autorización previa"
+        : "";
 
       const payload: SolicitudCreate = {
         usuario_rut: usuario.rut,
@@ -1608,68 +1562,11 @@ function ClienteDashboard() {
                       </select>
                       <FieldError message={fieldErrors.requiere_autorizacion} />
                     </div>
-
-                    <div className="md:col-span-2">
-                      <label
-                        htmlFor="horario_permitido_trabajos"
-                        className="mb-2 block text-sm font-bold text-slate-700"
-                      >
-                        Horario permitido para trabajos
-                      </label>
-                      <input
-                        id="horario_permitido_trabajos"
-                        name="horario_permitido_trabajos"
-                        value={form.horario_permitido_trabajos}
-                        onChange={handleChange}
-                        placeholder="Ej: lunes a viernes de 09:00 a 18:00"
-                        className={fieldClass(fieldErrors.horario_permitido_trabajos)}
-                      />
-                      <FieldError message={fieldErrors.horario_permitido_trabajos} />
-                    </div>
                   </div>
                 )}
 
                 {muestraCamposComercial && (
                   <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor="horario_atencion"
-                        className="mb-2 block text-sm font-bold text-slate-700"
-                      >
-                        Horario de atención
-                      </label>
-                      <input
-                        id="horario_atencion"
-                        name="horario_atencion"
-                        value={form.horario_atencion}
-                        onChange={handleChange}
-                        placeholder="Ej: lunes a sábado de 10:00 a 20:00"
-                        className={fieldClass(fieldErrors.horario_atencion)}
-                      />
-                      <FieldError message={fieldErrors.horario_atencion} />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="trabajo_fuera_horario"
-                        className="mb-2 block text-sm font-bold text-slate-700"
-                      >
-                        ¿El trabajo debe hacerse fuera de horario?
-                      </label>
-                      <select
-                        id="trabajo_fuera_horario"
-                        name="trabajo_fuera_horario"
-                        value={form.trabajo_fuera_horario}
-                        onChange={handleChange}
-                        className={fieldClass(fieldErrors.trabajo_fuera_horario)}
-                      >
-                        <option value="">Selecciona una opción</option>
-                        <option value="SI">Sí</option>
-                        <option value="NO">No</option>
-                      </select>
-                      <FieldError message={fieldErrors.trabajo_fuera_horario} />
-                    </div>
-
                     <div>
                       <label
                         htmlFor="persona_contacto"
@@ -1704,27 +1601,6 @@ function ClienteDashboard() {
                         className={fieldClass(fieldErrors.telefono_contacto)}
                       />
                       <FieldError message={fieldErrors.telefono_contacto} />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label
-                        htmlFor="local_funcionando"
-                        className="mb-2 block text-sm font-bold text-slate-700"
-                      >
-                        ¿El local estará funcionando durante el trabajo?
-                      </label>
-                      <select
-                        id="local_funcionando"
-                        name="local_funcionando"
-                        value={form.local_funcionando}
-                        onChange={handleChange}
-                        className={fieldClass(fieldErrors.local_funcionando)}
-                      >
-                        <option value="">Selecciona una opción</option>
-                        <option value="SI">Sí</option>
-                        <option value="NO">No</option>
-                      </select>
-                      <FieldError message={fieldErrors.local_funcionando} />
                     </div>
                   </div>
                 )}

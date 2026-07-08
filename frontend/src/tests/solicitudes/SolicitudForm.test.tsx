@@ -183,17 +183,6 @@ function fillDepartamentoContext(
   fireEvent.change(solicitudForm.getByLabelText(/requiere autorizaci.n/i), {
     target: { value: tipoInmueble === "Edificio" ? "SI" : "NO" },
   })
-  fireEvent.change(
-    solicitudForm.getByLabelText(/horario permitido para trabajos/i),
-    {
-      target: {
-        value:
-          tipoInmueble === "Edificio"
-            ? "Martes y jueves de 14:00 a 18:00"
-            : "Lunes a viernes de 09:00 a 18:00",
-      },
-    }
-  )
   fireEvent.change(solicitudForm.getByLabelText(/instrucciones para ingresar/i), {
     target: {
       value:
@@ -223,20 +212,11 @@ function fillLocalComercialContext(solicitudForm: ReturnType<typeof within>) {
       target: { value: "Local comercial" },
     }
   )
-  fireEvent.change(solicitudForm.getByLabelText(/horario de atenci.n/i), {
-    target: { value: "Lunes a sabado 10:00 a 20:00" },
-  })
-  fireEvent.change(solicitudForm.getByLabelText(/fuera de horario/i), {
-    target: { value: "SI" },
-  })
   fireEvent.change(solicitudForm.getByLabelText(/persona de contacto/i), {
     target: { value: "Camila Perez" },
   })
   fireEvent.change(solicitudForm.getByLabelText(/tel.fono de contacto/i), {
     target: { value: "+56912345678" },
-  })
-  fireEvent.change(solicitudForm.getByLabelText(/local estar. funcionando/i), {
-    target: { value: "NO" },
   })
   fireEvent.change(solicitudForm.getByLabelText(/instrucciones para ingresar/i), {
     target: { value: "Ingreso por caja principal" },
@@ -717,7 +697,7 @@ describe("SolicitudForm", () => {
         tiene_conserjeria: true,
         requiere_autorizacion: false,
         horario_disponible:
-          "Disponibilidad cliente: miércoles de 15:00 a 19:00 | Horario permitido para trabajos: Lunes a viernes de 09:00 a 18:00",
+          "Disponibilidad cliente: miércoles de 15:00 a 19:00",
         disponibilidad_horaria: [
           { dia: "MIERCOLES", hora_inicio: "15:00", hora_fin: "19:00" },
         ],
@@ -748,7 +728,7 @@ describe("SolicitudForm", () => {
         tiene_conserjeria: true,
         requiere_autorizacion: true,
         horario_disponible:
-          "Disponibilidad cliente: miércoles de 15:00 a 19:00 | Horario permitido para trabajos: Martes y jueves de 14:00 a 18:00",
+          "Disponibilidad cliente: miércoles de 15:00 a 19:00",
         disponibilidad_horaria: [
           { dia: "MIERCOLES", hora_inicio: "15:00", hora_fin: "19:00" },
         ],
@@ -777,19 +757,13 @@ describe("SolicitudForm", () => {
         disponibilidad_horaria: [
           { dia: "SABADO", hora_inicio: "09:00", hora_fin: "13:00" },
         ],
-        condiciones_acceso: expect.stringContaining("Trabajo fuera de horario"),
+        condiciones_acceso: null,
         instrucciones_acceso: "Coordinar apertura con administrador",
       })
     )
     const localPayload = mockCreateSolicitud.mock.calls[0][0]
-    expect(localPayload.horario_disponible).toContain("sábado de 09:00 a 13:00")
-    expect(localPayload.horario_disponible).toContain("Horario de")
-    expect(mockCreateSolicitud).toHaveBeenCalledWith(
-      expect.objectContaining({
-        condiciones_acceso: expect.stringContaining(
-          "Lugar funcionando durante el trabajo"
-        ),
-      })
+    expect(localPayload.horario_disponible).toBe(
+      "Disponibilidad cliente: sábado de 09:00 a 13:00"
     )
   }, 10000)
 
@@ -1001,7 +975,7 @@ describe("SolicitudForm", () => {
       tiene_conserjeria: true,
       requiere_autorizacion: false,
       horario_disponible:
-        "Disponibilidad cliente: miércoles de 15:00 a 19:00 | Horario permitido para trabajos: Lunes a viernes de 09:00 a 18:00",
+        "Disponibilidad cliente: miércoles de 15:00 a 19:00",
       disponibilidad_horaria: [
         { dia: "MIERCOLES", hora_inicio: "15:00", hora_fin: "19:00" },
       ],
