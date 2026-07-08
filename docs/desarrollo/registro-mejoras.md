@@ -1808,3 +1808,43 @@ En vivo (Docker): al aprobar **solo el carnet** el técnico siguió **PENDIENTE*
 **carnet + antecedentes** pasó a **APROBADO / verificado**. Datos de prueba revertidos (técnico
 a PENDIENTE, documentos y archivos eliminados, `audit_log` truncada); semilla intacta. Trabajado
 en la rama `feature/auditoria-conflictos`.
+
+## M-46 · 2026-07-07 — Revisión integral final (recuperación, reseed, UX, validaciones)
+**Categoría:** Corrección + calidad + UX (preparación para la presentación final)
+
+### 1. Recuperación de contraseña
+**Causa raíz:** el código del flujo era correcto (token, hash, expiración 60 min, enlace, envío
+con degradación). El fallo real: las cuentas de demo usan **correos ficticios** (no son buzones
+reales) y en **producción** las `SMTP_*` no están seteadas. **Solución:** `DEMO_MODE` (env)
+devuelve `enlace_demo` en `POST /usuarios/password/recuperar` y la página lo muestra en pantalla
+para completar el flujo sin correo (apagar en prod real). Verificado end-to-end: recuperar →
+enlace → restablecer → login; token de un solo uso; expiración. Archivos:
+`password_reset_service.py`, `usuario_router.py`, `RecuperarPassword.tsx`, `docker-compose.yml`.
+
+### 2-3. Limpieza y creación de usuarios
+Reseed limpio (`backend/reseed_demo.py`, integrado en `seed.sql`): **2 admins · 16 técnicos
+(2 por cada uno de los 8 servicios, verificados + docs Carnet/Antecedentes aprobados) · 4
+clientes**, todos con RUT de DV válido, teléfono `9########`, correo válido y contraseña de
+política (**Admin1234 / Tecnico1234 / Cliente1234**). `seed.sql` queda auto-suficiente desde una
+BD vacía. Cambios en BD: `TRUNCATE ... CASCADE` de datos + inserción del set limpio.
+**Pendiente prod:** requiere la External DB URL de Render (no disponible) o reset de la BD.
+
+### 4-5. Formulario Crear Solicitud y selección de horarios (UX)
+- **Simplificado:** se eliminaron 4 campos de horario redundantes (`horario_permitido_trabajos`,
+  `horario_atencion`, `trabajo_fuera_horario`, `local_funcionando`) que ahora cubre el calendario.
+- **Calendario semanal:** la selección de horarios pasó de dropdowns (día + jornada + desde/hasta)
+  a un **calendario semanal de bloques clicables** (Mañana 09-13, Tarde 15-19, Noche 19-22): clic
+  para seleccionar, otro clic para desmarcar; responsive. Mantiene la forma de datos
+  `disponibilidad_horaria: [{dia, hora_inicio, hora_fin}]` (backend intacto).
+
+### 6-7. Validaciones y calidad
+- Política de contraseña **centralizada** en `backend/app/validators.py` (dedup de 3 copias);
+  consistente frontend/backend.
+- **Código muerto eliminado:** `addAvailabilityDay/updateAvailabilityDay/handleJornadaChange/
+  removeAvailabilityDay`, `booleanText`, `joinDetails` y los 4 campos redundantes.
+
+### Verificación
+`py_compile`, `tsc -b`, `vite build` OK; Vitest 66/72 (6 preexistentes de `TecnicoDashboard`);
+`SolicitudForm` 18/18 con el calendario nuevo. En vivo: reseed desde cero (8 servicios, 2/16/4,
+16 en catálogo, 32 docs), logins de los 3 roles, recuperación completa, y creación de solicitud
+con el payload simplificado (creada y limpiada). Trabajado en la rama `feature/auditoria-conflictos`.
